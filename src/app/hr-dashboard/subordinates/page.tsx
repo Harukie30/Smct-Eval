@@ -43,7 +43,7 @@ type StaffRow = {
   role: string;
   /** Shown in Corresponding Staff table; from API when backend sends it. */
   lastQuarterEvaluated: string | null;
-  /** ISO timestamp from `employee_last_evaluation.created_at` (UI: date only, no time). */
+  /** ISO `created_at`; UI shows calendar year only under the quarter label. */
   lastQuarterEvaluatedAt: string | null;
 };
 const STAFF_MODAL_PER_PAGE = 10;
@@ -248,17 +248,16 @@ function formatProbationaryQuarterLabel(value: string): string {
   return t;
 }
 
-/** Evaluation `created_at`: full date, no time of day. */
-function formatEvaluationCreatedAt(iso: string | null): string | null {
+/** Calendar year from `created_at` only (no month, day, or time of day). */
+function formatEvaluationYearOnly(iso: string | null): string | null {
   if (!iso) return null;
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return null;
   try {
-    return new Intl.DateTimeFormat(undefined, {
-      dateStyle: "medium",
-    }).format(d);
+    return new Intl.DateTimeFormat(undefined, { year: "numeric" }).format(d);
   } catch {
-    return iso.split("T")[0] ?? null;
+    const y = d.getFullYear();
+    return Number.isNaN(y) ? null : String(y);
   }
 }
 
@@ -353,7 +352,7 @@ function normalizeStaff(raw: Record<string, unknown>): StaffRow {
   };
 }
 
-/** Used to detect quarter column changes (label or evaluation record date). */
+/** Used to detect quarter column changes (label or raw `created_at` from API). */
 function staffQuarterHighlightSnapshot(row: StaffRow): string {
   return `${row.lastQuarterEvaluated ?? ""}\u001f${row.lastQuarterEvaluatedAt ?? ""}`;
 }
@@ -636,7 +635,7 @@ export default function HRSubordinatesPage() {
     return staffRows.filter((row) => {
       const quarter = (row.lastQuarterEvaluated ?? "").toLowerCase();
       const atRaw = (row.lastQuarterEvaluatedAt ?? "").toLowerCase();
-      const atFmt = (formatEvaluationCreatedAt(row.lastQuarterEvaluatedAt) ?? "").toLowerCase();
+      const yearStr = (formatEvaluationYearOnly(row.lastQuarterEvaluatedAt) ?? "").toLowerCase();
       return (
         row.name.toLowerCase().includes(q) ||
         row.email.toLowerCase().includes(q) ||
@@ -645,7 +644,7 @@ export default function HRSubordinatesPage() {
         row.role.toLowerCase().includes(q) ||
         quarter.includes(q) ||
         atRaw.includes(q) ||
-        atFmt.includes(q)
+        yearStr.includes(q)
       );
     });
   }, [staffRows, staffSearch]);
@@ -973,8 +972,8 @@ export default function HRSubordinatesPage() {
                 aria-hidden
               />
               <span>
-                Amber means the quarter value changed after a refresh; the line below is the
-                evaluation record date when the API sends it (no time of day). Highlights stay for 24 hours,
+                Amber means the quarter value changed after a refresh. The smaller line is the
+                evaluation year (from the record date, no month/day/time). Highlights stay for 24 hours,
                 including after you close this window.
               </span>
             </span>
@@ -1037,7 +1036,7 @@ export default function HRSubordinatesPage() {
                       <TableCell className="text-center align-top">
                         <div className="mx-auto flex w-full max-w-[11rem] flex-col items-center gap-1 py-0.5">
                           <Skeleton className="h-4 w-16" />
-                          <Skeleton className="h-3 w-28" />
+                          <Skeleton className="h-3 w-10" />
                         </div>
                       </TableCell>
                     </TableRow>
@@ -1071,24 +1070,29 @@ export default function HRSubordinatesPage() {
                           "text-center align-top transition-colors duration-500",
                           staffQuarterHighlightState.activeIds.has(String(staff.id))
                             ? "bg-amber-100/95 ring-1 ring-inset ring-amber-200/90"
-                            : "text-slate-700"
+                            : "text-slate-900"
                         )}
                       >
                         {(() => {
                           const highlighted = staffQuarterHighlightState.activeIds.has(
                             String(staff.id)
                           );
-                          const label = staff.lastQuarterEvaluated;
-                          const atFmt = formatEvaluationCreatedAt(staff.lastQuarterEvaluatedAt);
-                          if (!label && !atFmt) {
+                          const label = staff.lastQuarterEvaluated?.trim();
+                          const yearStr = formatEvaluationYearOnly(staff.lastQuarterEvaluatedAt);
+                          if (!label && !yearStr) {
                             return (
-                              <span className={highlighted ? "text-amber-950" : "text-slate-500"}>
+                              <span
+                                className={cn(
+                                  "text-sm font-normal",
+                                  highlighted ? "text-amber-950" : "text-slate-500"
+                                )}
+                              >
                                 —
                               </span>
                             );
                           }
                           return (
-                            <div className="mx-auto flex w-full min-w-0 max-w-[9.5rem] flex-col items-center gap-1 py-0.5 leading-tight break-words sm:max-w-[11rem] lg:max-w-[14rem]">
+                            <div className="mx-auto flex w-full min-w-0 max-w-[9.5rem] flex-col items-center gap-0.5 py-0.5 leading-tight sm:max-w-[11rem]">
                               {label ? (
                                 <span
                                   className={cn(
@@ -1099,15 +1103,15 @@ export default function HRSubordinatesPage() {
                                   {label}
                                 </span>
                               ) : null}
-                              {atFmt ? (
+                              {yearStr ? (
                                 <span
                                   className={cn(
-                                    "text-[11px] sm:text-xs",
+                                    "text-[11px] tabular-nums sm:text-xs",
                                     highlighted ? "text-amber-900/85" : "text-slate-500"
                                   )}
                                   title={staff.lastQuarterEvaluatedAt ?? undefined}
                                 >
-                                  {atFmt}
+                                  {yearStr}
                                 </span>
                               ) : null}
                             </div>
