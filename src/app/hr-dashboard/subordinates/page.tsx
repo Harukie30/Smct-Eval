@@ -40,6 +40,8 @@ type StaffRow = {
   position: string;
   branch: string;
   role: string;
+  /** Shown in Corresponding Staff table; from API when backend sends it. */
+  lastQuarterEvaluated: string | null;
 };
 const STAFF_MODAL_PER_PAGE = 10;
 /** Rows per page for the main evaluators table (requested from the API). */
@@ -175,6 +177,32 @@ function extractEvaluatorsPaginated(
   return empty;
 }
 
+function pickLastQuarterEvaluated(raw: Record<string, unknown>): string | null {
+  const nested =
+    raw.last_evaluation && typeof raw.last_evaluation === "object"
+      ? (raw.last_evaluation as Record<string, unknown>)
+      : null;
+  const sources: unknown[] = [
+    raw.last_quarter_evaluated,
+    raw.lastQuarterEvaluated,
+    raw.last_evaluated_quarter,
+    raw.lastEvaluatedQuarter,
+    raw.last_completed_quarter,
+    raw.lastCompletedQuarter,
+    raw.evaluation_quarter,
+    raw.evaluated_quarter,
+    nested?.quarter,
+    nested?.evaluation_quarter,
+    nested?.label,
+  ];
+  for (const v of sources) {
+    if (v == null) continue;
+    const s = String(v).trim();
+    if (s !== "") return s;
+  }
+  return null;
+}
+
 function normalizeStaff(raw: Record<string, unknown>): StaffRow {
   const firstName = String(raw.fname ?? "").trim();
   const lastName = String(raw.lname ?? "").trim();
@@ -197,6 +225,7 @@ function normalizeStaff(raw: Record<string, unknown>): StaffRow {
         "Unassigned"
     ),
     role: getDisplayRole(raw.roles),
+    lastQuarterEvaluated: pickLastQuarterEvaluated(raw),
   };
 }
 
@@ -432,12 +461,14 @@ export default function HRSubordinatesPage() {
     const q = staffSearch.trim().toLowerCase();
     if (!q) return staffRows;
     return staffRows.filter((row) => {
+      const quarter = (row.lastQuarterEvaluated ?? "").toLowerCase();
       return (
         row.name.toLowerCase().includes(q) ||
         row.email.toLowerCase().includes(q) ||
         row.position.toLowerCase().includes(q) ||
         row.branch.toLowerCase().includes(q) ||
-        row.role.toLowerCase().includes(q)
+        row.role.toLowerCase().includes(q) ||
+        quarter.includes(q)
       );
     });
   }, [staffRows, staffSearch]);
@@ -568,7 +599,7 @@ export default function HRSubordinatesPage() {
           <div
             className={`rounded-xl border border-slate-200/80 bg-white shadow-sm ${loading || refreshing ? "min-h-[280px] border-blue-100 bg-slate-50/40" : ""}`}
           >
-            <Table>
+            <Table className="[&_th]:h-auto [&_th]:min-h-12 [&_th]:px-4 [&_th]:py-3.5 [&_th]:align-middle [&_td]:px-4 [&_td]:py-4 [&_td]:align-middle [&_td]:leading-relaxed">
               <TableHeader>
                 <TableRow className="bg-slate-100/80">
                   <TableHead>Name</TableHead>
@@ -584,28 +615,28 @@ export default function HRSubordinatesPage() {
                   Array.from({ length: 6 }).map((_, idx) => (
                     <TableRow key={`sk-${idx}`}>
                       <TableCell>
-                        <Skeleton className="h-5 w-36" />
+                        <Skeleton className="h-6 w-36" />
                       </TableCell>
                       <TableCell>
-                        <Skeleton className="h-5 w-48" />
+                        <Skeleton className="h-6 w-48" />
                       </TableCell>
                       <TableCell>
-                        <Skeleton className="h-5 w-32" />
+                        <Skeleton className="h-6 w-32" />
                       </TableCell>
                       <TableCell>
-                        <Skeleton className="h-5 w-32" />
+                        <Skeleton className="h-6 w-32" />
                       </TableCell>
                       <TableCell>
-                        <Skeleton className="h-5 w-24" />
+                        <Skeleton className="h-6 w-24" />
                       </TableCell>
                       <TableCell>
-                        <Skeleton className="ml-auto h-8 w-20" />
+                        <Skeleton className="ml-auto h-9 w-24" />
                       </TableCell>
                     </TableRow>
                   ))
                 ) : rows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="py-12 text-center text-sm text-slate-500">
+                    <TableCell colSpan={6} className="py-14 text-center text-sm text-slate-500">
                       No evaluators found.
                     </TableCell>
                   </TableRow>
@@ -613,7 +644,7 @@ export default function HRSubordinatesPage() {
                   rows.map((row) => (
                     <TableRow key={row.id} className="hover:bg-slate-50/80">
                       <TableCell className="font-medium text-slate-900">{row.name}</TableCell>
-                      <TableCell>{row.email}</TableCell>
+                      <TableCell className="max-w-[220px] break-words">{row.email}</TableCell>
                       <TableCell>{row.position}</TableCell>
                       <TableCell>{row.branch}</TableCell>
                       <TableCell>{row.role}</TableCell>
@@ -694,7 +725,7 @@ export default function HRSubordinatesPage() {
           <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex w-full items-center gap-2 sm:max-w-md">
             <Input
-              placeholder="Search staff by name, email, position, branch, or role..."
+              placeholder="Search staff by name, email, position, branch, role, or last quarter evaluated..."
               value={staffSearch}
               onChange={(e) => setStaffSearch(e.target.value)}
               disabled={loadingStaff}
@@ -721,7 +752,7 @@ export default function HRSubordinatesPage() {
             </div>
           </div>
           <div className="max-h-[60vh] overflow-auto rounded-xl border border-slate-200/80 bg-white shadow-sm ring-1 ring-slate-950/[0.03]">
-            <Table>
+            <Table className="[&_th]:h-auto [&_th]:min-h-12 [&_th]:px-4 [&_th]:py-3.5 [&_th]:align-middle [&_td]:px-4 [&_td]:py-4 [&_td]:align-middle [&_td]:leading-relaxed">
               <TableHeader className="sticky top-0 z-10 bg-slate-50 shadow-[0_1px_0_0_rgb(226_232_240)] [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600">
                 <TableRow>
                   <TableHead className="text-xs font-semibold uppercase tracking-wide text-slate-600">Name</TableHead>
@@ -729,6 +760,9 @@ export default function HRSubordinatesPage() {
                   <TableHead className="text-xs font-semibold uppercase tracking-wide text-slate-600">Position</TableHead>
                   <TableHead className="text-xs font-semibold uppercase tracking-wide text-slate-600">Branch</TableHead>
                   <TableHead className="text-xs font-semibold uppercase tracking-wide text-slate-600">Role</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                    Last Quarter Evaluated
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -736,25 +770,28 @@ export default function HRSubordinatesPage() {
                   Array.from({ length: 6 }).map((_, idx) => (
                     <TableRow key={`staff-sk-${idx}`}>
                       <TableCell>
-                        <Skeleton className="h-5 w-36" />
+                        <Skeleton className="h-6 w-36" />
                       </TableCell>
                       <TableCell>
-                        <Skeleton className="h-5 w-44" />
+                        <Skeleton className="h-6 w-44" />
                       </TableCell>
                       <TableCell>
-                        <Skeleton className="h-5 w-28" />
+                        <Skeleton className="h-6 w-28" />
                       </TableCell>
                       <TableCell>
-                        <Skeleton className="h-5 w-24" />
+                        <Skeleton className="h-6 w-24" />
                       </TableCell>
                       <TableCell>
-                        <Skeleton className="h-5 w-20" />
+                        <Skeleton className="h-6 w-20" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-6 w-28" />
                       </TableCell>
                     </TableRow>
                   ))
                 ) : filteredStaffRows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="py-12 text-center text-sm text-slate-500">
+                    <TableCell colSpan={6} className="py-14 text-center text-sm text-slate-500">
                       No corresponding staff found for this evaluator.
                     </TableCell>
                   </TableRow>
@@ -762,10 +799,13 @@ export default function HRSubordinatesPage() {
                   paginatedStaffRows.map((staff) => (
                     <TableRow key={staff.id} className="odd:bg-white even:bg-slate-50/40 hover:bg-blue-50/60">
                       <TableCell className="font-medium text-slate-900">{staff.name}</TableCell>
-                      <TableCell>{staff.email}</TableCell>
+                      <TableCell className="max-w-[240px] break-words">{staff.email}</TableCell>
                       <TableCell>{staff.position}</TableCell>
                       <TableCell>{staff.branch}</TableCell>
                       <TableCell>{staff.role}</TableCell>
+                      <TableCell className="text-slate-700">
+                        {staff.lastQuarterEvaluated ?? "—"}
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
