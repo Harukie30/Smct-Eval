@@ -86,6 +86,12 @@ function HRLayout({ children }: { children: React.ReactNode }) {
         icon: "🎯",
         path: "/hr-dashboard/areaManagers",
       },
+      {
+        id: "violation-summary",
+        label: "Violation Summary",
+        icon: "📋",
+        path: "/hr-dashboard/violation-summary",
+      },
     ];
   }, [user?.position_id]);
 

@@ -436,6 +436,33 @@ export const apiService = {
     return response.data;
   },
 
+  /**
+   * HR: paginated memorandum violations across employees.
+   * GET `/memorandumViolationsths` — query: search, per_page, month, year.
+   */
+  getMemorandumViolations: async (params: {
+    search?: string;
+    per_page?: number;
+    month?: string | number;
+    year?: string | number;
+  }): Promise<any> => {
+    const response = await api.get("/memorandumViolationsths", {
+      params: {
+        search: params.search?.trim() ?? "",
+        per_page: params.per_page ?? 50,
+        month:
+          params.month === undefined || params.month === ""
+            ? ""
+            : String(params.month),
+        year:
+          params.year === undefined || params.year === ""
+            ? ""
+            : String(params.year),
+      },
+    });
+    return response.data;
+  },
+
   // Bulk register users (Excel/CSV upload)
   bulkRegisterUser: async (payload: Record<string, any>): Promise<any> => {
     const response = await api.post("/bulkRegisterUser", payload);

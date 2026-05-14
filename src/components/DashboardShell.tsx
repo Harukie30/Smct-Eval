@@ -245,9 +245,15 @@ export default function DashboardShell(props: DashboardShellProps) {
 
     if (isHRDashboard) {
       if (
-        ["departments", "branches", "branch-heads", "area-managers", "subordinates"].includes(
-          activeItemId
-        ) &&
+        [
+          "departments",
+          "branches",
+          "branch-heads",
+          "area-managers",
+          "subordinates",
+          "positions",
+          "violation-summary",
+        ].includes(activeItemId) &&
         !isManagementOpen
       ) {
         setIsManagementOpen(true);
@@ -816,6 +822,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                               "branch-heads",
                               "positions",
                               "area-managers",
+                              "violation-summary",
                             ].includes(id)
                         )
                     : isEmployeeDashboard
@@ -844,6 +851,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                         "branch-heads",
                         "positions",
                         "area-managers",
+                        "violation-summary",
                       ]
                     : ["departments", "branches", "positions"];
                   const leadershipItems = ["branch-heads", "area-managers"];
