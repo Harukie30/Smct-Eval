@@ -446,7 +446,7 @@ export const apiService = {
     month?: string | number;
     year?: string | number;
   }): Promise<any> => {
-    const response = await api.get("/memorandumViolationsths", {
+    const response = await api.get("/memorandumViolations", {
       params: {
         search: params.search?.trim() ?? "",
         per_page: params.per_page ?? 50,
