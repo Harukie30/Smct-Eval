@@ -26,6 +26,10 @@ import {
   getQuarterColor,
 } from "@/lib/quarterUtils";
 import apiService from "@/lib/apiService";
+import {
+  formatRatingDisplay,
+  getPerformanceRatingBand,
+} from "@/lib/performanceRatingDisplay";
 import { Progress } from "@/components/ui/progress";
 import EvaluationsPagination from "@/components/paginationComponent";
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
@@ -626,7 +630,13 @@ export default function OverviewTab() {
                           rowClassName =
                             "bg-orange-50 hover:bg-orange-100 border-l-4 border-l-orange-500 transition-colors";
                         }
-                        // console.log(review);
+                        const ratingBand = getPerformanceRatingBand(review.rating);
+                        const {
+                          label: ratingLabel,
+                          badgeClassName,
+                          textClassName,
+                        } = ratingBand;
+
                         return (
                           <TableRow key={review.id} className={rowClassName}>
                             <TableCell className="px-6 py-4">
@@ -666,9 +676,16 @@ export default function OverviewTab() {
                               </div>
                             </TableCell>
                             <TableCell className="w-1/5 pl-4">
-                              <div className="flex justify-center">
-                                <span className="font-semibold">
-                                  {review.rating ? review.rating : "N/A"}
+                              <div
+                                className={`flex items-center justify-center gap-2 ${textClassName}`}
+                              >
+                                <span
+                                  className={`px-2 py-1 rounded-full text-xs font-medium ${badgeClassName}`}
+                                >
+                                  {ratingLabel}
+                                </span>
+                                <span className="font-bold">
+                                  {formatRatingDisplay(review.rating)}
                                 </span>
                               </div>
                             </TableCell>

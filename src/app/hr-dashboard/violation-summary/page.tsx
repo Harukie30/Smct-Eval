@@ -558,11 +558,11 @@ export default function ViolationSummaryPage() {
                     variant="outline"
                     disabled={loading}
                     onClick={openExportModal}
-                    className="h-8 flex-1 cursor-pointer gap-1.5 border-slate-200 bg-white px-2 text-xs text-slate-800 hover:bg-slate-50 lg:flex-initial lg:px-3 sm:h-9 sm:gap-2 sm:text-sm"
+                    className="h-8 flex-1 cursor-pointer gap-1.5 border-slate-200 bg-green-600 text-white px-2 text-xs hover:bg-slate-50 lg:flex-initial hover:bg-green-700 hover:text-whitea lg:px-3 sm:h-9 sm:gap-2 sm:text-sm"
                     title="Export memorandum violations to CSV"
                   >
                     <FileType className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" aria-hidden />
-                    CSV
+                   Export File
                   </Button>
                   <Button
                     type="button"
@@ -715,10 +715,9 @@ export default function ViolationSummaryPage() {
       <Dialog open={exportModalOpen} onOpenChangeAction={setExportModalOpen}>
         <DialogContent className="max-w-md overflow-hidden p-0 sm:max-w-lg">
           <DialogHeader className="border-b border-slate-100 px-5 py-4 sm:px-6">
-            <DialogTitle className="text-base sm:text-lg">Export to CSV</DialogTitle>
+            <DialogTitle className="text-base sm:text-lg">Export File to xlsx</DialogTitle>
             <DialogDescription className="text-xs leading-relaxed sm:text-sm">
-              Choose month and year. All employees returned by the API for that period are
-              written to one CSV file (up to {EXPORT_MAX_PAGES * EXPORT_FETCH_PER_PAGE} rows).
+              Choose month and year. 
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 px-5 py-4 sm:px-6">
@@ -767,7 +766,7 @@ export default function ViolationSummaryPage() {
             <Button
               type="button"
               variant="outline"
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto bg-red-600 text-white hover:bg-red-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:text-white active:translate-y-0"
               disabled={exportBusy}
               onClick={() => setExportModalOpen(false)}
             >
@@ -775,7 +774,7 @@ export default function ViolationSummaryPage() {
             </Button>
             <Button
               type="button"
-              className="w-full gap-2 bg-blue-600 text-white hover:bg-blue-700 sm:w-auto"
+              className="w-full gap-2 bg-blue-600 text-white hover:bg-blue-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:text-white sm:w-auto"
               disabled={exportBusy}
               onClick={async () => {
                 await runExportCsv();

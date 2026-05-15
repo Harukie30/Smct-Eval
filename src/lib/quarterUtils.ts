@@ -69,6 +69,42 @@ export const getQuarterFromDate = (dateString: string): string => {
 };
 
 /**
+ * Chart / table period label from a submission row (matches HR performance reviews table).
+ */
+export function getPerformanceReviewPeriodLabel(
+  submission: {
+    reviewTypeRegular?: string | number | null;
+    reviewTypeProbationary?: string | number | null;
+    created_at?: string | null;
+  } | null
+  | undefined
+): string {
+  if (!submission) return "Others";
+
+  const regular = submission.reviewTypeRegular;
+  if (regular != null && String(regular).trim() !== "") {
+    return String(regular).trim();
+  }
+
+  const prob = submission.reviewTypeProbationary;
+  if (
+    prob != null &&
+    String(prob).trim() !== "" &&
+    String(prob).trim().toLowerCase() !== "null"
+  ) {
+    return `M${prob}`;
+  }
+
+  if (submission.created_at) {
+    const fromDate = getQuarterFromDate(submission.created_at);
+    const [period] = fromDate.split(" ");
+    return period || fromDate;
+  }
+
+  return "Others";
+}
+
+/**
  * Get quarter color for UI display
  */
 export const getQuarterColor = (quarter: string | number | null | undefined) => {

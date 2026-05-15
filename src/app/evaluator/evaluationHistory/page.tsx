@@ -22,6 +22,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiService } from "@/lib/apiService";
+import {
+  formatRatingDisplay,
+  getPerformanceRatingBand,
+} from "@/lib/performanceRatingDisplay";
 import EvaluationsPagination from "@/components/paginationComponent";
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
 import {
@@ -849,10 +853,14 @@ export default function OverviewTab() {
                         .filter(Boolean)
                         .join(" ")
                         .trim();
-                      const ratingNum = Number(submission.rating);
-                      const ratingDisplay = Number.isFinite(ratingNum)
-                        ? `${ratingNum}/5`
-                        : "—";
+                      const ratingBand = getPerformanceRatingBand(
+                        submission.rating
+                      );
+                      const {
+                        label: ratingLabel,
+                        badgeClassName,
+                        textClassName,
+                      } = ratingBand;
 
                       // Determine row background color
                       let rowClassName = "hover:bg-gray-100 transition-colors";
@@ -910,7 +918,18 @@ export default function OverviewTab() {
                             </div>
                           </TableCell>
                           <TableCell className="w-1/6 text-center">
-                            {ratingDisplay}
+                            <div
+                              className={`flex items-center justify-center gap-2 ${textClassName}`}
+                            >
+                              <span
+                                className={`px-2 py-1 rounded-full text-xs font-medium ${badgeClassName}`}
+                              >
+                                {ratingLabel}
+                              </span>
+                              <span className="font-bold">
+                                {formatRatingDisplay(submission.rating)}
+                              </span>
+                            </div>
                           </TableCell>
 
                           <TableCell className="w-1/6">
