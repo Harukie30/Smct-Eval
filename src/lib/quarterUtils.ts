@@ -104,6 +104,76 @@ export function getPerformanceReviewPeriodLabel(
   return "Others";
 }
 
+const PERFORMANCE_PERIOD_SORT_ORDER: Record<string, number> = {
+  M3: 0,
+  M5: 1,
+  Q1: 2,
+  Q2: 3,
+  Q3: 4,
+  Q4: 5,
+  Others: 99,
+};
+
+function getPerformancePeriodSortKey(
+  submission: Parameters<typeof getPerformanceReviewPeriodLabel>[0]
+): number {
+  const label = getPerformanceReviewPeriodLabel(submission);
+  const quarterMatch = label.match(/^Q[1-4]/);
+  if (quarterMatch) return PERFORMANCE_PERIOD_SORT_ORDER[quarterMatch[0]] ?? 50;
+  if (label.startsWith("M3")) return PERFORMANCE_PERIOD_SORT_ORDER.M3;
+  if (label.startsWith("M5")) return PERFORMANCE_PERIOD_SORT_ORDER.M5;
+  return PERFORMANCE_PERIOD_SORT_ORDER.Others;
+}
+
+/** Oldest → newest for Performance Trend charts (Q1, then Q2, … left to right). */
+export function sortSubmissionsForPerformanceChart<
+  T extends {
+    created_at?: string | null;
+    reviewTypeRegular?: string | number | null;
+    reviewTypeProbationary?: string | number | null;
+  },
+>(submissions: T[]): T[] {
+  return [...submissions].sort((a, b) => {
+    const periodDiff =
+      getPerformancePeriodSortKey(a) - getPerformancePeriodSortKey(b);
+    if (periodDiff !== 0) return periodDiff;
+
+    const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+    const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+    if (Number.isFinite(timeA) && Number.isFinite(timeB) && timeA !== timeB) {
+      return timeA - timeB;
+    }
+    return 0;
+  });
+}
+
+export type PerformanceTrendChartPoint = {
+  review: string;
+  rating: number | null | undefined;
+  quarter: string;
+  fullDate: string;
+};
+
+export function buildPerformanceTrendChartData(
+  submissions: {
+    rating?: number | null;
+    created_at?: string | null;
+    reviewTypeRegular?: string | number | null;
+    reviewTypeProbationary?: string | number | null;
+  }[]
+): PerformanceTrendChartPoint[] {
+  return sortSubmissionsForPerformanceChart(submissions).map(
+    (submission, index) => ({
+      review: `Review ${index + 1}`,
+      rating: submission.rating,
+      quarter: getPerformanceReviewPeriodLabel(submission),
+      fullDate: submission.created_at
+        ? new Date(submission.created_at).toLocaleDateString()
+        : "—",
+    })
+  );
+}
+
 /**
  * Get quarter color for UI display
  */
