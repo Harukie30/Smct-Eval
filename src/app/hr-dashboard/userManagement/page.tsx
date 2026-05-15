@@ -2801,7 +2801,7 @@ export default function UserManagementTab() {
                   className="cursor-pointer bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-sm transition-all hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Download className="h-4 w-4 mr-2" />
-                  Export CSV
+                  Export to xlsx
                 </Button>
               </div>
             )}
@@ -3150,7 +3150,7 @@ export default function UserManagementTab() {
                   className="cursor-pointer bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-sm transition-all hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Download className="h-4 w-4 mr-2" />
-                  Export CSV
+                  Export to xlsx
                 </Button>
               </div>
             )}
