@@ -116,9 +116,7 @@ export default function OverviewTab() {
 
   useEffect(() => {
     const handler = setTimeout(() => {
-      searchTerm === "" ? currentPage : setCurrentPage(1);
       setDebouncedSearchTerm(searchTerm);
-      // Reset to page 1 when search term changes (if there's a value)
       if (searchTerm.trim() !== "") {
         setCurrentPage(1);
       }

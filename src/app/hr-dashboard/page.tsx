@@ -215,8 +215,7 @@ export default function OverviewTab() {
               Recent Evaluation Records
               {(() => {
                 const now = new Date();
-                const newCount = 0;
-                submissions.filter((sub) => {
+                const newCount = submissions.filter((sub) => {
                   const hoursDiff =
                     (now.getTime() - new Date(sub.created_at).getTime()) /
                     (1000 * 60 * 60);

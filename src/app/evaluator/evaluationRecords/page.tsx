@@ -189,7 +189,9 @@ export default function OverviewTab() {
 
   useEffect(() => {
     const handler = setTimeout(() => {
-      searchTerm === "" ? currentPage : setCurrentPage(1);
+      if (searchTerm.trim() !== "") {
+        setCurrentPage(1);
+      }
       setDebouncedSearchTerm(searchTerm);
       setDebouncedStatusFilter(statusFilter);
       setDebouncedQuarterFilter(quarterFilter);

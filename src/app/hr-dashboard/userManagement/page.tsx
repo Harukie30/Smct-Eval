@@ -642,7 +642,9 @@ export default function UserManagementTab() {
   useEffect(() => {
     const handler = setTimeout(() => {
       if (tab === "active") {
-        activeSearchTerm === "" ? currentPageActive : setCurrentPageActive(1);
+        if (activeSearchTerm.trim() !== "") {
+          setCurrentPageActive(1);
+        }
         setDebouncedActiveSearchTerm(activeSearchTerm);
         setDebouncedRoleFilter(roleFilter);
         setDebouncedActiveBranchFilter(activeBranchFilter);
@@ -705,9 +707,9 @@ export default function UserManagementTab() {
   useEffect(() => {
     const handler = setTimeout(() => {
       if (tab === "new") {
-        pendingSearchTerm === ""
-          ? currentPagePending
-          : setCurrentPagePending(1);
+        if (pendingSearchTerm.trim() !== "") {
+          setCurrentPagePending(1);
+        }
         setDebouncedPendingSearchTerm(pendingSearchTerm);
         setDebouncedStatusFilter(statusFilter);
       }
