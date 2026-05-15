@@ -48,6 +48,41 @@ interface EditUserModalProps {
   onRefresh?: () => void | Promise<void>;
 }
 
+/** API / table rows use mixed keys; ViewEmployeeModal already checks these. */
+function pickRawDateHired(user: object | null | undefined): unknown {
+  if (!user || typeof user !== "object") return undefined;
+  const u = user as Record<string, unknown>;
+  return (
+    u.date_hired ??
+    u.dateHired ??
+    u.hireDate ??
+    u.hire_date ??
+    u.date_joined ??
+    u.dateJoined
+  );
+}
+
+/** `<input type="date" />` requires `YYYY-MM-DD` in the value attribute. */
+function toDateInputValue(raw: unknown): string {
+  if (raw === null || raw === undefined || raw === "") return "";
+  if (raw instanceof Date) {
+    if (Number.isNaN(raw.getTime())) return "";
+    const y = raw.getFullYear();
+    const m = String(raw.getMonth() + 1).padStart(2, "0");
+    const d = String(raw.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+  const s = String(raw).trim();
+  if (!s || s === "null" || s === "undefined") return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const parsed = new Date(s);
+  if (Number.isNaN(parsed.getTime())) return "";
+  const y = parsed.getFullYear();
+  const m = String(parsed.getMonth() + 1).padStart(2, "0");
+  const d = String(parsed.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 const EditUserModal: React.FC<EditUserModalProps> = ({
   isOpen,
   onClose,
@@ -801,7 +836,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         username: user.username || "",
         password: user.password || "",
         contact: user.contact || "",
-        date_hired: (user as any).date_hired || (user as any).dateHired || "",
+        date_hired: toDateInputValue(pickRawDateHired(user)),
         isActive:
           user.isActive !== undefined
             ? user.isActive
