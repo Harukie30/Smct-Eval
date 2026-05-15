@@ -27,7 +27,10 @@ import {
 } from "@/components/ui/chart";
 import { Line, LineChart, XAxis, YAxis, CartesianGrid } from "recharts";
 import { useUser } from "@/contexts/UserContext";
-import { getPerformanceReviewPeriodLabel } from "@/lib/quarterUtils";
+import {
+  buildPerformanceTrendChartData,
+  getPerformanceReviewPeriodLabel,
+} from "@/lib/quarterUtils";
 import {
   formatRatingDisplay,
   getPerformanceRatingBand,
@@ -283,16 +286,10 @@ export default function PerformanceReviews() {
 
   // Chart data
 
-  const chartData = useMemo(() => {
-    return userEval
-      .map((submission: any, index: number) => ({
-        review: `Review ${userEval.length - index}`,
-        rating: submission.rating,
-        quarter: getPerformanceReviewPeriodLabel(submission),
-        fullDate: new Date(submission.created_at).toLocaleDateString(),
-      }))
-      .reverse();
-  }, [userEval]);
+  const chartData = useMemo(
+    () => buildPerformanceTrendChartData(userEval),
+    [userEval]
+  );
 
   // Performance insights
   const insights = useMemo(() => {

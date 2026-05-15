@@ -29,6 +29,7 @@ import { Line, LineChart, XAxis, YAxis, CartesianGrid } from "recharts";
 import { useUser } from "@/contexts/UserContext";
 import { useToast } from "@/hooks/useToast";
 import {
+  buildPerformanceTrendChartData,
   getPerformanceReviewPeriodLabel,
   getQuarterColor,
 } from "@/lib/quarterUtils";
@@ -202,16 +203,10 @@ export default function PerformanceReviews() {
 
   // Chart data
 
-  const chartData = useMemo(() => {
-    return userEval
-      .map((submission: any, index: number) => ({
-        review: `Review ${userEval.length - index}`,
-        rating: submission.rating,
-        quarter: getPerformanceReviewPeriodLabel(submission),
-        fullDate: new Date(submission.created_at).toLocaleDateString(),
-      }))
-      .reverse();
-  }, [userEval]);
+  const chartData = useMemo(
+    () => buildPerformanceTrendChartData(userEval),
+    [userEval]
+  );
 
   // Performance insights
   const insights = useMemo(() => {
@@ -544,22 +539,16 @@ export default function PerformanceReviews() {
                     </div>
                     <Badge
                       className={
-                        parseFloat(average) >= 4.5
-                          ? "bg-green-100 text-green-800"
-                          : parseFloat(average) >= 4.0
-                          ? "bg-blue-100 text-blue-800"
-                          : parseFloat(average) >= 3.5
-                          ? "bg-yellow-100 text-yellow-800"
-                          : "bg-red-100 text-red-800"
+                        getPerformanceRatingBand(
+                          submissions.length > 0 ? parseFloat(average) : null
+                        ).badgeClassName
                       }
                     >
-                      {parseFloat(average) >= 4.5
-                        ? "Outstanding"
-                        : parseFloat(average) >= 4.0
-                        ? "Exceeds Expectations"
-                        : parseFloat(average) >= 3.5
-                        ? "Meets Expectations"
-                        : "Needs Improvement"}
+                      {
+                        getPerformanceRatingBand(
+                          submissions.length > 0 ? parseFloat(average) : null
+                        ).label
+                      }
                     </Badge>
                   </div>
                 </CardContent>
