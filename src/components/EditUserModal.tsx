@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -111,6 +111,29 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
           "hr"
       ));
   const canEditEmployeeId = isAdmin || isHR;
+
+  /** HR must not assign Admin; admins keep full role list. */
+  const hideAdminRoleInPicker = isHR && !isAdmin;
+  const editingUserIsAdmin =
+    String(formData.role ?? "")
+      .trim()
+      .toLowerCase() === "admin";
+  const rolePickerLockedForHrOnAdminUser =
+    hideAdminRoleInPicker && editingUserIsAdmin;
+
+  const rolePickerOptions = useMemo(() => {
+    const all: { value: string; label: string }[] = [
+      { value: "admin", label: "Admin" },
+      { value: "hr", label: "HR" },
+      { value: "evaluator", label: "Evaluator" },
+      { value: "employee", label: "Employee" },
+    ];
+    if (!hideAdminRoleInPicker) return all;
+    if (editingUserIsAdmin) {
+      return [{ value: "admin", label: "Admin" }];
+    }
+    return all.filter((o) => o.value !== "admin");
+  }, [hideAdminRoleInPicker, editingUserIsAdmin]);
 
   // Debug: Log role check
   useEffect(() => {
@@ -1519,12 +1542,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
             <div className="space-y-2 w-1/2">
               <Label htmlFor="role">Role *</Label>
               <Combobox
-                options={[
-                  { value: "admin", label: "Admin" },
-                  { value: "hr", label: "HR" },
-                  { value: "evaluator", label: "Evaluator" },
-                  { value: "employee", label: "Employee" },
-                ]}
+                options={rolePickerOptions}
                 value={formData.role || ""}
                 onValueChangeAction={(value) =>
                   handleInputChange("role", value as string)
@@ -1532,8 +1550,14 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 placeholder="Select role"
                 searchPlaceholder="Search roles..."
                 emptyText="No roles found."
+                disabled={rolePickerLockedForHrOnAdminUser}
                 className={errors.role ? "border-red-500" : "cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"}
               />
+              {rolePickerLockedForHrOnAdminUser && (
+                <p className="text-xs text-muted-foreground">
+                  Administrator accounts can only have their role changed by an admin.
+                </p>
+              )}
               {errors.role && (
                 <p className="text-sm text-red-500">{errors.role}</p>
               )}
