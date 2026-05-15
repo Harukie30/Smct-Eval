@@ -22,6 +22,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiService } from "@/lib/apiService";
+import {
+  formatRatingDisplay,
+  getPerformanceRatingBand,
+} from "@/lib/performanceRatingDisplay";
 import EvaluationsPagination from "@/components/paginationComponent";
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
 import { useAuth } from "../../contexts/UserContext";
@@ -726,10 +730,14 @@ export default function OverviewTab() {
                         .filter(Boolean)
                         .join(" ")
                         .trim();
-                      const ratingNum = Number(submission.rating);
-                      const ratingDisplay = Number.isFinite(ratingNum)
-                        ? `${ratingNum}/5`
-                        : "—";
+                      const ratingBand = getPerformanceRatingBand(
+                        submission.rating
+                      );
+                      const {
+                        label: ratingLabel,
+                        badgeClassName,
+                        textClassName,
+                      } = ratingBand;
 
                       return (
                         <TableRow key={submission.id} className={rowClassName}>
@@ -760,7 +768,18 @@ export default function OverviewTab() {
                             </div>
                           </TableCell>
                           <TableCell className="w-1/6 text-right font-semibold pr-4">
-                            {ratingDisplay}
+                            <div
+                              className={`flex items-center justify-end gap-2 ${textClassName}`}
+                            >
+                              <span
+                                className={`px-2 py-1 rounded-full text-xs font-medium ${badgeClassName}`}
+                              >
+                                {ratingLabel}
+                              </span>
+                              <span className="font-bold">
+                                {formatRatingDisplay(submission.rating)}
+                              </span>
+                            </div>
                           </TableCell>
                           <TableCell className="w-1/6 pl-6">
                             <div className="flex flex-col">

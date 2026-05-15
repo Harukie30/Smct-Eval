@@ -27,6 +27,11 @@ import {
 } from "@/components/ui/chart";
 import { Line, LineChart, XAxis, YAxis, CartesianGrid } from "recharts";
 import { useUser } from "@/contexts/UserContext";
+import { getPerformanceReviewPeriodLabel } from "@/lib/quarterUtils";
+import {
+  formatRatingDisplay,
+  getPerformanceRatingBand,
+} from "@/lib/performanceRatingDisplay";
 import { apiService } from "@/lib/apiService";
 import EvaluationsPagination from "@/components/paginationComponent";
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
@@ -280,14 +285,10 @@ export default function PerformanceReviews() {
 
   const chartData = useMemo(() => {
     return userEval
-
-      .map((submission: any, index: any) => ({
+      .map((submission: any, index: number) => ({
         review: `Review ${userEval.length - index}`,
         rating: submission.rating,
-        date: new Date(submission.created_at).toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-        }),
+        quarter: getPerformanceReviewPeriodLabel(submission),
         fullDate: new Date(submission.created_at).toLocaleDateString(),
       }))
       .reverse();
@@ -444,7 +445,7 @@ export default function PerformanceReviews() {
                     📈 Performance Trend
                   </CardTitle>
                   <CardDescription>
-                    Your rating progression over time
+                    Your rating progression by evaluation period (quarter)
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -486,12 +487,11 @@ export default function PerformanceReviews() {
                             opacity={0.3}
                           />
                           <XAxis
-                            dataKey="date"
+                            dataKey="quarter"
                             tickLine={false}
                             axisLine={false}
                             tickMargin={16}
                             tick={{ fontSize: 11, fill: "#6b7280" }}
-                            tickFormatter={(value) => value}
                             interval={0}
                             angle={-45}
                             textAnchor="end"
@@ -519,10 +519,13 @@ export default function PerformanceReviews() {
                                   "Rating",
                                 ]}
                                 labelFormatter={(label, payload) => {
-                                  if (payload && payload[0]) {
-                                    return payload[0].payload.review;
+                                  const row = payload?.[0]?.payload as
+                                    | { quarter?: string; fullDate?: string }
+                                    | undefined;
+                                  if (row?.quarter && row?.fullDate) {
+                                    return `${row.quarter} · ${row.fullDate}`;
                                   }
-                                  return label;
+                                  return row?.quarter ?? label;
                                 }}
                                 className="bg-white border border-gray-200 shadow-lg rounded-lg"
                               />
@@ -622,22 +625,16 @@ export default function PerformanceReviews() {
                     </div>
                     <Badge
                       className={
-                        parseFloat(average) >= 4.5
-                          ? "bg-green-100 text-green-800"
-                          : parseFloat(average) >= 4.0
-                          ? "bg-blue-100 text-blue-800"
-                          : parseFloat(average) >= 3.5
-                          ? "bg-yellow-100 text-yellow-800"
-                          : "bg-red-100 text-red-800"
+                        getPerformanceRatingBand(
+                          submissions.length > 0 ? parseFloat(average) : null
+                        ).badgeClassName
                       }
                     >
-                      {parseFloat(average) >= 4.5
-                        ? "Outstanding"
-                        : parseFloat(average) >= 4.0
-                        ? "Exceeds Expectations"
-                        : parseFloat(average) >= 3.5
-                        ? "Meets Expectations"
-                        : "Needs Improvement"}
+                      {
+                        getPerformanceRatingBand(
+                          submissions.length > 0 ? parseFloat(average) : null
+                        ).label
+                      }
                     </Badge>
                   </div>
                 </CardContent>
@@ -874,10 +871,16 @@ export default function PerformanceReviews() {
                         </TableHeader>
                         <TableBody>
                           {submissions.map((submission: any) => {
-                            const ratingNum = Number(submission.rating);
-                            const hasRating = Number.isFinite(ratingNum);
-                            const isLowPerformance = hasRating && ratingNum < 3.0;
-                            const isPoorPerformance = hasRating && ratingNum < 2.5;
+                            const ratingBand = getPerformanceRatingBand(
+                              submission.rating
+                            );
+                            const {
+                              isLowPerformance,
+                              isPoorPerformance,
+                              label: ratingLabel,
+                              badgeClassName,
+                              textClassName,
+                            } = ratingBand;
                             const supervisorName = [
                               submission.evaluator?.fname,
                               submission.evaluator?.lname,
@@ -922,43 +925,15 @@ export default function PerformanceReviews() {
                                 </TableCell>
                                 <TableCell className="w-1/5 text-right font-semibold pr-4">
                                   <div
-                                    className={`flex items-center justify-end gap-2 ${
-                                      isPoorPerformance
-                                        ? "text-red-700"
-                                        : isLowPerformance
-                                        ? "text-orange-600"
-                                        : "text-gray-900"
-                                    }`}
+                                    className={`flex items-center justify-end gap-2 ${textClassName}`}
                                   >
                                     <span
-                                      className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                        !hasRating
-                                          ? "bg-gray-100 text-gray-700"
-                                          : isPoorPerformance
-                                          ? "bg-red-100 text-red-800"
-                                          : isLowPerformance
-                                          ? "bg-orange-100 text-orange-800"
-                                          : ratingNum >= 4.0
-                                          ? "bg-green-100 text-green-800"
-                                          : ratingNum >= 3.5
-                                          ? "bg-blue-100 text-blue-800"
-                                          : "bg-blue-100 text-blue-800"
-                                      }`}
+                                      className={`px-2 py-1 rounded-full text-xs font-medium ${badgeClassName}`}
                                     >
-                                      {!hasRating
-                                        ? "N/A"
-                                        : isPoorPerformance
-                                        ? "POOR"
-                                        : isLowPerformance
-                                        ? "LOW"
-                                        : ratingNum >= 4.0
-                                        ? "EXCELLENT"
-                                        : ratingNum >= 3.5
-                                        ? "GOOD"
-                                        : "FAIR"}
+                                      {ratingLabel}
                                     </span>
                                     <span className="font-bold">
-                                      {hasRating ? `${ratingNum}/5` : "—"}
+                                      {formatRatingDisplay(submission.rating)}
                                     </span>
                                   </div>
                                 </TableCell>
