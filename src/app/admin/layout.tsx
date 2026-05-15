@@ -25,6 +25,18 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
         path: "/admin/userManagement",
       },
       {
+        id: "signature-reset",
+        label: "Signature Requests",
+        icon: "✍️",
+        path: "/admin/signatureResetRequests",
+      },
+      {
+        id: "subordinates",
+        label: "Subordinates",
+        icon: "🧾",
+        path: "/admin/subordinates",
+      },
+      {
         id: "departments",
         label: "Departments",
         icon: "🏢",
@@ -55,11 +67,12 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
         path: "/admin/areaManagers",
       },
       {
-        id: "signature-reset",
-        label: "Signature Requests",
-        icon: "✍️",
-        path: "/admin/signatureResetRequests",
+        id: "violation-summary",
+        label: "Violation Summary",
+        icon: "📋",
+        path: "/admin/violation-summary",
       },
+      
     ],
     []
   );

@@ -803,7 +803,7 @@ export default function HRSubordinatesPage() {
           <div
             className={`rounded-xl border border-slate-200/80 bg-white shadow-sm ${loading || refreshing ? "min-h-[280px] border-blue-100 bg-slate-50/40" : ""}`}
           >
-            <Table className="[&_th]:h-auto [&_th]:min-h-12 [&_th]:px-4 [&_th]:py-3.5 [&_th]:align-middle [&_td]:px-4 [&_td]:py-4 [&_td]:align-middle [&_td]:leading-relaxed">
+            <Table className="[&_th]:h-auto [&_th]:min-h-10 [&_th]:px-3 [&_th]:py-2.5 sm:[&_th]:px-4 [&_th]:align-middle [&_td]:px-3 [&_td]:py-2.5 sm:[&_td]:px-4 [&_td]:align-middle [&_td]:text-sm [&_td]:leading-snug">
               <TableHeader>
                 <TableRow className="bg-slate-100/80">
                   <TableHead>Name</TableHead>
@@ -819,22 +819,22 @@ export default function HRSubordinatesPage() {
                   Array.from({ length: 6 }).map((_, idx) => (
                     <TableRow key={`sk-${idx}`}>
                       <TableCell>
-                        <Skeleton className="h-6 w-36" />
+                        <Skeleton className="h-5 w-36" />
                       </TableCell>
                       <TableCell>
-                        <Skeleton className="h-6 w-48" />
+                        <Skeleton className="h-5 w-48" />
                       </TableCell>
                       <TableCell>
-                        <Skeleton className="h-6 w-32" />
+                        <Skeleton className="h-5 w-32" />
                       </TableCell>
                       <TableCell>
-                        <Skeleton className="h-6 w-32" />
+                        <Skeleton className="h-5 w-32" />
                       </TableCell>
                       <TableCell>
-                        <Skeleton className="h-6 w-24" />
+                        <Skeleton className="h-5 w-24" />
                       </TableCell>
                       <TableCell>
-                        <Skeleton className="ml-auto h-9 w-24" />
+                        <Skeleton className="ml-auto h-8 w-24" />
                       </TableCell>
                     </TableRow>
                   ))
@@ -1000,7 +1000,7 @@ export default function HRSubordinatesPage() {
           <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm ring-1 ring-slate-950/[0.03]">
             <Table
               wrapperClassName="min-h-0 flex-1 overflow-auto overscroll-contain"
-              className="min-w-[52rem] [&_th]:h-auto [&_th]:min-h-12 [&_th]:px-3 [&_th]:py-3.5 sm:[&_th]:px-4 [&_th]:align-middle [&_td]:min-w-0 [&_td]:px-3 [&_td]:py-4 sm:[&_td]:px-4 [&_td]:align-middle [&_td]:leading-relaxed"
+              className="min-w-[52rem] [&_th]:h-auto [&_th]:min-h-10 [&_th]:px-3 [&_th]:py-2.5 sm:[&_th]:px-4 [&_th]:align-middle [&_td]:min-w-0 [&_td]:px-3 [&_td]:py-2.5 sm:[&_td]:px-4 [&_td]:align-middle [&_td]:text-sm [&_td]:leading-snug"
             >
               <TableHeader className="sticky top-0 z-10 bg-slate-50 shadow-[0_1px_0_0_rgb(226_232_240)] [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600">
                 <TableRow>
@@ -1019,23 +1019,23 @@ export default function HRSubordinatesPage() {
                   Array.from({ length: 6 }).map((_, idx) => (
                     <TableRow key={`staff-sk-${idx}`}>
                       <TableCell>
-                        <Skeleton className="h-6 w-36" />
+                        <Skeleton className="h-5 w-36" />
                       </TableCell>
                       <TableCell>
-                        <Skeleton className="h-6 w-44" />
+                        <Skeleton className="h-5 w-44" />
                       </TableCell>
                       <TableCell>
-                        <Skeleton className="h-6 w-28" />
+                        <Skeleton className="h-5 w-28" />
                       </TableCell>
                       <TableCell>
-                        <Skeleton className="h-6 w-24" />
+                        <Skeleton className="h-5 w-24" />
                       </TableCell>
                       <TableCell>
-                        <Skeleton className="h-6 w-20" />
+                        <Skeleton className="h-5 w-20" />
                       </TableCell>
-                      <TableCell className="text-center align-top">
+                      <TableCell className="text-center align-middle">
                         <div className="mx-auto flex w-full max-w-[11rem] flex-col items-center gap-1 py-0.5">
-                          <Skeleton className="h-4 w-16" />
+                          <Skeleton className="h-3.5 w-16" />
                           <Skeleton className="h-3 w-10" />
                         </div>
                       </TableCell>
@@ -1067,7 +1067,7 @@ export default function HRSubordinatesPage() {
                       </TableCell>
                       <TableCell
                         className={cn(
-                          "text-center align-top transition-colors duration-500",
+                          "text-center align-middle transition-colors duration-500",
                           staffQuarterHighlightState.activeIds.has(String(staff.id))
                             ? "bg-amber-100/95 ring-1 ring-inset ring-amber-200/90"
                             : "text-slate-900"

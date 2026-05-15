@@ -102,7 +102,6 @@ export default function DashboardShell(props: DashboardShellProps) {
   // Collapsible states for sidebar groups
   const [isManagementOpen, setIsManagementOpen] = useState(false);
   const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
-  const [isLeadershipOpen, setIsLeadershipOpen] = useState(false);
 
   /** Help floaters (Guide + Contact) start hidden; footer toggle shows them. */
   const [isHelpButtonsVisible, setIsHelpButtonsVisible] = useState(false);
@@ -225,20 +224,22 @@ export default function DashboardShell(props: DashboardShellProps) {
 
   // Auto-open collapsible groups when their items are active
   useEffect(() => {
-    // For admin dashboard, handle management group (departments, branches, positions)
-    // and leadership group (branch-heads, area-managers)
+    // For admin dashboard, management group includes subordinates, departments, branches,
+    // positions, branch-heads, area-managers, and violation-summary (single collapsible).
     if (isAdminDashboard) {
       if (
-        ["departments", "branches", "positions"].includes(activeItemId) &&
+        [
+          "subordinates",
+          "departments",
+          "branches",
+          "positions",
+          "branch-heads",
+          "area-managers",
+          "violation-summary",
+        ].includes(activeItemId) &&
         !isManagementOpen
       ) {
         setIsManagementOpen(true);
-      }
-      if (
-        ["branch-heads", "area-managers"].includes(activeItemId) &&
-        !isLeadershipOpen
-      ) {
-        setIsLeadershipOpen(true);
       }
       return;
     }
@@ -279,7 +280,6 @@ export default function DashboardShell(props: DashboardShellProps) {
     activeItemId,
     isManagementOpen,
     isAnalyticsOpen,
-    isLeadershipOpen,
     isEmployeeDashboard,
     isEvaluatorDashboard,
     isAdminDashboard,
@@ -320,7 +320,6 @@ export default function DashboardShell(props: DashboardShellProps) {
     activeItemId,
     isManagementOpen,
     isAnalyticsOpen,
-    isLeadershipOpen,
     sidebarItems,
     dashboardType,
   ]);
@@ -795,19 +794,22 @@ export default function DashboardShell(props: DashboardShellProps) {
                   // For employee dashboard: overview, reviews
                   // For evaluator dashboard: overview, employees, feedback, reviews
                   // For HR dashboard: overview, evaluation-records, employees (management items go in collapsible group)
-                  // For admin dashboard: all items except departments, branches, positions,
-                  // branch-heads, and area-managers (they go in collapsible groups)
+                  // For admin dashboard: all items except management group (subordinates,
+                  // departments, branches, positions, branch-heads, area-managers,
+                  // violation-summary)
                   const visibleItems = isAdminDashboard
                     ? sidebarItems
                         .map((item) => item.id)
                         .filter(
                           (id) =>
                             ![
+                              "subordinates",
                               "departments",
                               "branches",
                               "positions",
                               "branch-heads",
                               "area-managers",
+                              "violation-summary",
                             ].includes(id)
                         )
                     : isHRDashboard
@@ -840,9 +842,9 @@ export default function DashboardShell(props: DashboardShellProps) {
 
                   // Define collapsible groups
                   // For HR dashboard, management includes departments, branches, positions,
-                  // branch-heads, and area-managers.
-                  // For admin dashboard, management includes departments, branches, positions;
-                  // leadership includes branch-heads and area-managers.
+                  // branch-heads, area-managers, subordinates, violation-summary.
+                  // For admin dashboard, management includes subordinates, org structure,
+                  // and violation summary (no separate Leadership section).
                   const managementItems = isHRDashboard
                     ? [
                         "subordinates",
@@ -853,8 +855,15 @@ export default function DashboardShell(props: DashboardShellProps) {
                         "area-managers",
                         "violation-summary",
                       ]
-                    : ["departments", "branches", "positions"];
-                  const leadershipItems = ["branch-heads", "area-managers"];
+                    : [
+                        "subordinates",
+                        "departments",
+                        "branches",
+                        "positions",
+                        "branch-heads",
+                        "area-managers",
+                        "violation-summary",
+                      ];
                   // Analytics items vary by dashboard type - exclude items that are already visible
                   const analyticsItems = isEmployeeDashboard
                     ? [] // No analytics items for employee dashboard - history is now visible
@@ -865,7 +874,6 @@ export default function DashboardShell(props: DashboardShellProps) {
                   return sidebarItems.map((item) => {
                     const isVisible = visibleItems.includes(item.id);
                     const isManagementItem = managementItems.includes(item.id);
-                    const isLeadershipItem = leadershipItems.includes(item.id);
                     const isAnalyticsItem = analyticsItems.includes(item.id);
 
                     // For admin and HR dashboards, handle management items in collapsible group
@@ -901,7 +909,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                           </CollapsibleTrigger>
                           <CollapsibleContent
                             className={`pl-4 mt-2 space-y-1 ${
-                              isHRDashboard
+                              isHRDashboard || isAdminDashboard
                                 ? "max-h-[220px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-transparent scrollbar-track-transparent"
                                 : ""
                             }`}
@@ -931,74 +939,8 @@ export default function DashboardShell(props: DashboardShellProps) {
                       );
                     }
 
-                    // For admin dashboard only, handle leadership items in collapsible group (HR uses management group)
-                    if (
-                      isAdminDashboard &&
-                      isLeadershipItem &&
-                      item.id === "branch-heads"
-                    ) {
-                      return (
-                        <Collapsible
-                          key="leadership"
-                          open={isLeadershipOpen}
-                          onOpenChange={setIsLeadershipOpen}
-                        >
-                          <CollapsibleTrigger asChild>
-                            <button
-                              className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
-                                leadershipItems.includes(activeItemId)
-                                  ? "bg-white/20 text-white border border-white/30"
-                                  : "text-blue-100 hover:bg-white/10"
-                              }`}
-                            >
-                              <div className="flex items-center space-x-3">
-                                <span className="text-lg">👥</span>
-                                <span className="font-medium">Leadership</span>
-                              </div>
-                              <ChevronDown
-                                className={`h-4 w-4 transition-transform ${
-                                  isLeadershipOpen ? "transform rotate-180" : ""
-                                }`}
-                              />
-                            </button>
-                          </CollapsibleTrigger>
-                          <CollapsibleContent
-                            className={`pl-4 mt-2 space-y-1 ${
-                              isHRDashboard
-                                ? "max-h-[220px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-transparent scrollbar-track-transparent"
-                                : ""
-                            }`}
-                          >
-                            {sidebarItems
-                              .filter((i) => leadershipItems.includes(i.id))
-                              .map((subItem) => (
-                                <button
-                                  key={subItem.id}
-                                  onClick={() => onChangeActive(subItem.id)}
-                                  className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 cursor-pointer ${
-                                    activeItemId === subItem.id
-                                      ? "bg-white/20 text-white border border-white/30"
-                                      : "text-blue-100 hover:bg-white/10"
-                                  }`}
-                                >
-                                  <span className="text-lg">
-                                    {subItem.icon}
-                                  </span>
-                                  <span className="font-medium text-sm">
-                                    {subItem.label}
-                                  </span>
-                                </button>
-                              ))}
-                          </CollapsibleContent>
-                        </Collapsible>
-                      );
-                    }
-
-                    // For admin dashboard, skip management and leadership items (already handled above)
-                    if (
-                      isAdminDashboard &&
-                      (isManagementItem || isLeadershipItem)
-                    ) {
+                    // For admin dashboard, skip management items (already handled above)
+                    if (isAdminDashboard && isManagementItem) {
                       return null;
                     }
 

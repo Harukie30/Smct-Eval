@@ -75,14 +75,17 @@ function pickRoleName(rawRoles: unknown): string {
   return String(nonAdmin?.name ?? (rawRoles[0] as { name?: string })?.name ?? "N/A");
 }
 
-/** Include employees and evaluators in assignable directory; exclude other roles (e.g. admin-only). */
+/** Include employees, evaluators, and HR in assignable directory; exclude other roles (e.g. admin-only). */
 function isAssignableStaffRole(rawRoles: unknown): boolean {
   const role = pickRoleName(rawRoles).toLowerCase();
   return (
     role === "employee" ||
     role === "evaluator" ||
     role === "evaluation" ||
-    role.includes("evaluator")
+    role.includes("evaluator") ||
+    role === "hr" ||
+    role === "human resources" ||
+    role === "human resource"
   );
 }
 
@@ -161,6 +164,13 @@ function getRoleBadgeClass(role: string): string {
     normalized.includes("evaluator")
   ) {
     return "border-emerald-200 bg-emerald-50/90 text-emerald-700";
+  }
+  if (
+    normalized === "hr" ||
+    normalized === "human resources" ||
+    normalized === "human resource"
+  ) {
+    return "border-violet-200 bg-violet-50/90 text-violet-800";
   }
   return "border-slate-200 bg-slate-50/90 text-slate-700";
 }
@@ -379,7 +389,7 @@ export default function AddEmployeeToEvaluatorModal({
     if (idsToAssign.length === 0) {
       toastMessages.generic.warning(
         "No one selected",
-        "Select at least one employee or evaluator to assign."
+        "Select at least one employee, evaluator, or HR user to assign."
       );
       return;
     }
@@ -550,7 +560,7 @@ export default function AddEmployeeToEvaluatorModal({
                       </div>
                       <div className="min-w-0 space-y-1">
                         <DialogTitle className="bg-gradient-to-r from-blue-950 to-indigo-950 bg-clip-text text-base font-bold tracking-tight text-white sm:text-[1.02rem] sm:leading-snug">
-                          Assign employees
+                          Assign staff
                         </DialogTitle>
                         {evaluator ? (
                           <div className="space-y-1">
@@ -613,8 +623,8 @@ export default function AddEmployeeToEvaluatorModal({
             </div>
             <DialogDescription className="sr-only">
               {evaluator
-                ? `Assign employees under ${evaluator.name}. Use the current assignments and available lists.`
-                : "Select employees to assign to the evaluator."}
+                ? `Assign employees, evaluators, or HR staff under ${evaluator.name}. Use the current assignments and available lists.`
+                : "Select employees, evaluators, or HR users to assign to the evaluator."}
             </DialogDescription>
           </DialogHeader>
 
@@ -772,7 +782,7 @@ export default function AddEmployeeToEvaluatorModal({
                         Available to assign
                       </h3>
                       <p className="text-xs text-slate-500">
-                        Employees and evaluators not on this team — select to add
+                        Employees, evaluators, and HR not on this team — select to add
                       </p>
                     </div>
                   </div>
