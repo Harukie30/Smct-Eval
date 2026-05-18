@@ -785,7 +785,7 @@ export default function ViolationSummaryPage() {
               ) : (
                 <FileType className="h-4 w-4 shrink-0" aria-hidden />
               )}
-              {exportBusy ? "Working…" : "Download CSV"}
+              {exportBusy ? "Working…" : "Download xlsx"}
             </Button>
           </DialogFooter>
         </DialogContent>
