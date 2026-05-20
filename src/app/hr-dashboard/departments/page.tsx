@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Loader2 } from "lucide-react";
 
 import {
@@ -45,11 +45,23 @@ interface Department {
   employees_count: string;
 }
 
+type CachedDepartmentUsers = {
+  employees: DepartmentEmployee[];
+  evaluators: DepartmentManager[];
+};
+
+function getDepartmentHeadcounts(dept: Department) {
+  const employees = Number.isNaN(Number(dept.employees_count))
+    ? 0
+    : Number(dept.employees_count);
+  const evaluators = Number.isNaN(Number(dept.managers_count))
+    ? 0
+    : Number(dept.managers_count);
+  return { employees, evaluators, total: employees + evaluators };
+}
+
 export default function DepartmentsTab() {
   const [departments, setDepartments] = useState<Department[]>([]);
-  const [cardSplitCounts, setCardSplitCounts] = useState<
-    Record<number, { employees: number; evaluators: number }>
-  >({});
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -93,14 +105,18 @@ export default function DepartmentsTab() {
   const departmentsInFlightKeyRef = useRef<string | null>(null);
   const departmentsInFlightPromiseRef = useRef<Promise<void> | null>(null);
   const prevSearchTermForDebounceRef = useRef<string | null>(null);
+  const departmentUsersCacheRef = useRef<Map<number, CachedDepartmentUsers>>(
+    new Map()
+  );
+  const fetchGenerationRef = useRef(0);
 
-  // Function to load data (single source for list + pagination + search)
-  const loadData = async (search: string) => {
-    const requestKey = JSON.stringify({
-      search,
-      currentPage,
-      itemsPerPage,
-    });
+  const clearDepartmentUsersCache = useCallback(() => {
+    departmentUsersCacheRef.current.clear();
+  }, []);
+
+  const loadData = useCallback(
+    async (search: string, page: number, perPage: number) => {
+    const requestKey = JSON.stringify({ search, page, perPage });
 
     if (
       departmentsInFlightKeyRef.current === requestKey &&
@@ -114,21 +130,21 @@ export default function DepartmentsTab() {
       try {
         const response = await apiService.getTotalEmployeesDepartments(
           search,
-          currentPage,
-          itemsPerPage
+          page,
+          perPage
         );
 
         let departmentsData: Department[] = [];
         let total = 0;
         let lastPage = 1;
-        let perPageValue = itemsPerPage;
+        let perPageValue = perPage;
 
         if (response) {
           if (response.data && Array.isArray(response.data)) {
             departmentsData = response.data;
             total = response.total || 0;
             lastPage = response.last_page || 1;
-            perPageValue = response.per_page || itemsPerPage;
+            perPageValue = response.per_page || perPage;
           } else if (Array.isArray(response)) {
             departmentsData = response;
             total = response.length;
@@ -138,7 +154,7 @@ export default function DepartmentsTab() {
             departmentsData = response.departments;
             total = response.total || response.departments.length;
             lastPage = response.last_page || 1;
-            perPageValue = response.per_page || itemsPerPage;
+            perPageValue = response.per_page || perPage;
           }
         }
 
@@ -151,7 +167,7 @@ export default function DepartmentsTab() {
         setDepartments([]);
         setOverviewTotal(0);
         setTotalPages(1);
-        setPerPage(itemsPerPage);
+        setPerPage(perPage);
       } finally {
         if (departmentsInFlightKeyRef.current === requestKey) {
           departmentsInFlightKeyRef.current = null;
@@ -163,7 +179,9 @@ export default function DepartmentsTab() {
     departmentsInFlightKeyRef.current = requestKey;
     departmentsInFlightPromiseRef.current = requestPromise;
     await requestPromise;
-  };
+  },
+    []
+  );
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -181,25 +199,33 @@ export default function DepartmentsTab() {
   }, [searchTerm]);
 
   useEffect(() => {
+    const generation = ++fetchGenerationRef.current;
+
     const fetchData = async () => {
       setIsRefreshing(true);
       try {
-        await loadData(debouncedSearchTerm);
+        await loadData(debouncedSearchTerm, currentPage, itemsPerPage);
       } catch (error) {
         console.error("Error fetching departments:", error);
       } finally {
-        setLoading(false);
-        setIsRefreshing(false);
+        if (fetchGenerationRef.current === generation) {
+          setLoading(false);
+          setIsRefreshing(false);
+        }
       }
     };
 
     void fetchData();
-  }, [debouncedSearchTerm, currentPage]);
+    return () => {
+      fetchGenerationRef.current += 1;
+    };
+  }, [debouncedSearchTerm, currentPage, itemsPerPage, loadData]);
 
   const refreshData = async () => {
+    clearDepartmentUsersCache();
     setIsRefreshing(true);
     try {
-      await loadData(debouncedSearchTerm);
+      await loadData(debouncedSearchTerm, currentPage, itemsPerPage);
     } catch (error) {
       console.error("Error refreshing departments:", error);
     } finally {
@@ -211,7 +237,8 @@ export default function DepartmentsTab() {
   const handleAddDepartment = async () => {
     try {
       await apiService.addDepartment(newDepartmentName);
-      await loadData(debouncedSearchTerm);
+      clearDepartmentUsersCache();
+      await loadData(debouncedSearchTerm, currentPage, itemsPerPage);
       toastMessages.generic.success(
         "Success " + newDepartmentName + " has been added",
         "A new department has been save."
@@ -246,9 +273,9 @@ export default function DepartmentsTab() {
 
       // Actually delete the department
       await apiService.deleteDepartment(departmentToDelete.id);
+      departmentUsersCacheRef.current.delete(departmentToDelete.id);
 
-      // Refresh data first, then reset deleting state after data loads
-      await loadData(debouncedSearchTerm);
+      await loadData(debouncedSearchTerm, currentPage, itemsPerPage);
       setDeletingDepartmentId(null);
 
       toastMessages.generic.success(
@@ -280,19 +307,6 @@ export default function DepartmentsTab() {
     return String((nonAdminRole ?? roles[0])?.name ?? "N/A");
   };
 
-  const getDepartmentUsers = async (
-    departmentId: number
-  ): Promise<{ employees: any[]; evaluators: any[] }> => {
-    const response = await apiService.getSubordinate({
-      department_id: departmentId,
-      page: 1,
-      per_page: 1000,
-    });
-    const { employees, evaluators } =
-      parseSubordinateEmployeesAndEvaluators(response);
-    return { employees: employees as any[], evaluators: evaluators as any[] };
-  };
-
   const normalizeDepartmentUser = (user: any) => {
     const firstName = String(user?.fname ?? "").trim();
     const lastName = String(user?.lname ?? "").trim();
@@ -316,68 +330,33 @@ export default function DepartmentsTab() {
     };
   };
 
-  // Derive card counts from the same `/getSubordinate` + split logic used by the modals,
-  // so Employees/Evaluators numbers cannot drift.
-  useEffect(() => {
-    if (!departments || departments.length === 0) {
-      setCardSplitCounts({});
-      return;
-    }
+  const loadDepartmentUsers = useCallback(
+    async (departmentId: number): Promise<CachedDepartmentUsers> => {
+      const cached = departmentUsersCacheRef.current.get(departmentId);
+      if (cached) return cached;
 
-    let cancelled = false;
-    (async () => {
-      const next: Record<number, { employees: number; evaluators: number }> = {};
+      const response = await apiService.getSubordinate({
+        department_id: departmentId,
+        page: 1,
+        per_page: 1000,
+      });
+      const { employees, evaluators } =
+        parseSubordinateEmployeesAndEvaluators(response);
 
-      await Promise.all(
-        departments.map(async (dept) => {
-          try {
-            const resp = await apiService.getSubordinate({
-              department_id: dept.id,
-              page: 1,
-              per_page: 1000,
-            });
-            const { employees, evaluators } =
-              parseSubordinateEmployeesAndEvaluators(resp);
+      const result: CachedDepartmentUsers = {
+        employees: (employees as any[]).map((user) =>
+          normalizeDepartmentUser(user)
+        ),
+        evaluators: (evaluators as any[]).map((user) =>
+          normalizeDepartmentUser(user)
+        ),
+      };
 
-            const empUnique = new Map<string, DepartmentEmployee>();
-            for (const u of employees as any[]) {
-              const norm = normalizeDepartmentUser(u);
-              empUnique.set(String(norm.id), norm);
-            }
-
-            const evalUnique = new Map<string, DepartmentEmployee>();
-            for (const u of evaluators as any[]) {
-              const norm = normalizeDepartmentUser(u);
-              evalUnique.set(String(norm.id), norm);
-            }
-
-            next[dept.id] = {
-              employees: empUnique.size,
-              evaluators: evalUnique.size,
-            };
-          } catch {
-            const fbEmployees = isNaN(Number(dept.employees_count))
-              ? 0
-              : Number(dept.employees_count);
-            const fbEvaluators = isNaN(Number(dept.managers_count))
-              ? 0
-              : Number(dept.managers_count);
-
-            next[dept.id] = {
-              employees: fbEmployees,
-              evaluators: fbEvaluators,
-            };
-          }
-        })
-      );
-
-      if (!cancelled) setCardSplitCounts(next);
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [departments]);
+      departmentUsersCacheRef.current.set(departmentId, result);
+      return result;
+    },
+    []
+  );
 
   const openDepartmentEmployeesModal = async (department: Department) => {
     setSelectedDepartmentForEmployees(department);
@@ -386,8 +365,8 @@ export default function DepartmentsTab() {
     setDepartmentEmployees([]);
 
     try {
-      const { employees } = await getDepartmentUsers(department.id);
-      setDepartmentEmployees(employees.map((user: any) => normalizeDepartmentUser(user)));
+      const { employees } = await loadDepartmentUsers(department.id);
+      setDepartmentEmployees(employees);
     } catch (error) {
       console.error("Error loading department employees:", error);
       toastMessages.generic.error(
@@ -407,8 +386,8 @@ export default function DepartmentsTab() {
     setDepartmentManagers([]);
 
     try {
-      const { evaluators } = await getDepartmentUsers(department.id);
-      setDepartmentManagers(evaluators.map((user: any) => normalizeDepartmentUser(user)));
+      const { evaluators } = await loadDepartmentUsers(department.id);
+      setDepartmentManagers(evaluators);
     } catch (error) {
       console.error("Error loading department managers:", error);
       toastMessages.generic.error(
@@ -588,37 +567,11 @@ export default function DepartmentsTab() {
 
           <div className={cn(isRefreshing && "min-h-[420px]")}>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {isRefreshing ? (
-                Array.from({ length: itemsPerPage }).map((_, index) => (
-                  <Card
-                    key={`department-refresh-skel-${index}`}
-                    className="animate-pulse border-gray-200 bg-gray-50/50"
-                  >
-                    <CardHeader>
-                      <div className="flex justify-between items-center">
-                        <Skeleton className="h-6 w-32" />
-                        <Skeleton className="h-5 w-20 rounded-full" />
-                      </div>
-                      <Skeleton className="h-4 w-40 mt-2" />
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="text-center p-3 bg-gray-100 rounded-lg">
-                          <Skeleton className="h-6 w-12 mx-auto mb-2" />
-                          <Skeleton className="h-3 w-16 mx-auto" />
-                        </div>
-                        <div className="text-center p-3 bg-gray-100 rounded-lg">
-                          <Skeleton className="h-6 w-12 mx-auto mb-2" />
-                          <Skeleton className="h-3 w-16 mx-auto" />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              ) : departments &&
+              {departments &&
                 Array.isArray(departments) &&
                 departments.length > 0 ? (
                 departments.map((dept) => {
+                    const headcounts = getDepartmentHeadcounts(dept);
                     const isDeleting = deletingDepartmentId === dept.id;
                     return (
                       <Card
@@ -664,18 +617,7 @@ export default function DepartmentsTab() {
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => {
-                                      const split = cardSplitCounts[dept.id];
-                                      const totalEmployees =
-                                        split != null
-                                          ? split.employees + split.evaluators
-                                          : (isNaN(Number(dept.employees_count))
-                                              ? 0
-                                              : Number(dept.employees_count)) +
-                                            (isNaN(Number(dept.managers_count))
-                                              ? 0
-                                              : Number(dept.managers_count));
-                                      
-                                      if (totalEmployees > 0) {
+                                      if (headcounts.total > 0) {
                                         setDepartmentWithEmployees(dept);
                                         setIsAlertDialogOpen(true);
                                       } else {
@@ -698,8 +640,7 @@ export default function DepartmentsTab() {
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="text-center p-3 bg-blue-50 rounded-lg">
                                   <div className="text-lg font-bold text-blue-600">
-                                    {cardSplitCounts[dept.id]?.employees ??
-                                      dept.employees_count}
+                                    {headcounts.employees}
                                   </div>
                                   <div className="text-xs text-gray-600">
                                     
@@ -718,8 +659,7 @@ export default function DepartmentsTab() {
                                 </div>
                                 <div className="text-center p-3 bg-green-50 rounded-lg">
                                   <div className="text-lg font-bold text-green-600">
-                                    {cardSplitCounts[dept.id]?.evaluators ??
-                                      dept.managers_count}
+                                    {headcounts.evaluators}
                                   </div>
                                   <div className="text-xs text-gray-600">
                                     
@@ -1004,12 +944,9 @@ export default function DepartmentsTab() {
         }}
         title="Cannot Delete Department"
         description={`The department "${departmentWithEmployees?.department_name}" cannot be deleted because it has ${
-          departmentWithEmployees?.id != null &&
-          cardSplitCounts[departmentWithEmployees.id] != null
-            ? cardSplitCounts[departmentWithEmployees.id]!.employees +
-              cardSplitCounts[departmentWithEmployees.id]!.evaluators
-            : (isNaN(Number(departmentWithEmployees?.employees_count)) ? 0 : Number(departmentWithEmployees?.employees_count)) +
-              (isNaN(Number(departmentWithEmployees?.managers_count)) ? 0 : Number(departmentWithEmployees?.managers_count))
+          departmentWithEmployees
+            ? getDepartmentHeadcounts(departmentWithEmployees).total
+            : 0
         } employee(s) assigned to it. Please remove or reassign all employees before deleting this department.`}
         type="warning"
         confirmText="OK"

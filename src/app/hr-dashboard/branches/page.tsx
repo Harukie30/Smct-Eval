@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Loader2 } from "lucide-react";
 import {
   Card,
@@ -96,11 +96,19 @@ function getManagersCount(branch: Partial<Branches> & Record<string, any>): numb
   );
 }
 
+type CachedBranchUsers = {
+  employees: BranchEmployee[];
+  evaluators: BranchManager[];
+};
+
+function getBranchHeadcounts(branch: Branches) {
+  const employees = getEmployeesCount(branch);
+  const evaluators = getManagersCount(branch);
+  return { employees, evaluators, total: employees + evaluators };
+}
+
 export default function DepartmentsTab() {
   const [branches, setBranches] = useState<Branches[]>([]);
-  const [cardSplitCounts, setCardSplitCounts] = useState<
-    Record<number, { employees: number; evaluators: number }>
-  >({});
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -196,13 +204,16 @@ export default function DepartmentsTab() {
   const branchesInFlightKeyRef = useRef<string | null>(null);
   const branchesInFlightPromiseRef = useRef<Promise<void> | null>(null);
   const prevSearchTermForDebounceRef = useRef<string | null>(null);
+  const branchUsersCacheRef = useRef<Map<number, CachedBranchUsers>>(new Map());
+  const fetchGenerationRef = useRef(0);
 
-  const loadData = async (search: string) => {
-    const requestKey = JSON.stringify({
-      search,
-      currentPage,
-      itemsPerPage,
-    });
+  const clearBranchUsersCache = useCallback(() => {
+    branchUsersCacheRef.current.clear();
+  }, []);
+
+  const loadData = useCallback(
+    async (search: string, page: number, perPage: number) => {
+    const requestKey = JSON.stringify({ search, page, perPage });
 
     if (
       branchesInFlightKeyRef.current === requestKey &&
@@ -216,21 +227,21 @@ export default function DepartmentsTab() {
       try {
         const response = await apiService.getTotalEmployeesBranch(
           search,
-          currentPage,
-          itemsPerPage
+          page,
+          perPage
         );
 
         let branchesData: Branches[] = [];
         let total = 0;
         let lastPage = 1;
-        let perPageValue = itemsPerPage;
+        let perPageValue = perPage;
 
         if (response) {
           if (response.data && Array.isArray(response.data)) {
             branchesData = response.data;
             total = response.total || 0;
             lastPage = response.last_page || 1;
-            perPageValue = response.per_page || itemsPerPage;
+            perPageValue = response.per_page || perPage;
           } else if (Array.isArray(response)) {
             branchesData = response;
             total = response.length;
@@ -240,7 +251,7 @@ export default function DepartmentsTab() {
             branchesData = response.branches;
             total = response.total || response.branches.length;
             lastPage = response.last_page || 1;
-            perPageValue = response.per_page || itemsPerPage;
+            perPageValue = response.per_page || perPage;
           }
         }
 
@@ -253,7 +264,7 @@ export default function DepartmentsTab() {
         setBranches([]);
         setOverviewTotal(0);
         setTotalPages(1);
-        setPerPage(itemsPerPage);
+        setPerPage(perPage);
       } finally {
         if (branchesInFlightKeyRef.current === requestKey) {
           branchesInFlightKeyRef.current = null;
@@ -265,7 +276,9 @@ export default function DepartmentsTab() {
     branchesInFlightKeyRef.current = requestKey;
     branchesInFlightPromiseRef.current = requestPromise;
     await requestPromise;
-  };
+  },
+    []
+  );
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -283,25 +296,33 @@ export default function DepartmentsTab() {
   }, [searchTerm]);
 
   useEffect(() => {
+    const generation = ++fetchGenerationRef.current;
+
     const fetchData = async () => {
       setIsRefreshing(true);
       try {
-        await loadData(debouncedSearchTerm);
+        await loadData(debouncedSearchTerm, currentPage, itemsPerPage);
       } catch (error) {
         console.error("Error fetching branches:", error);
       } finally {
-        setLoading(false);
-        setIsRefreshing(false);
+        if (fetchGenerationRef.current === generation) {
+          setLoading(false);
+          setIsRefreshing(false);
+        }
       }
     };
 
     void fetchData();
-  }, [debouncedSearchTerm, currentPage]);
+    return () => {
+      fetchGenerationRef.current += 1;
+    };
+  }, [debouncedSearchTerm, currentPage, itemsPerPage, loadData]);
 
   const refreshData = async () => {
+    clearBranchUsersCache();
     setIsRefreshing(true);
     try {
-      await loadData(debouncedSearchTerm);
+      await loadData(debouncedSearchTerm, currentPage, itemsPerPage);
     } catch (error) {
       console.error("Error refreshing branches:", error);
     } finally {
@@ -317,7 +338,8 @@ export default function DepartmentsTab() {
     if (validation()) {
       try {
         await apiService.addBranch(formData);
-        await loadData(debouncedSearchTerm);
+        clearBranchUsersCache();
+        await loadData(debouncedSearchTerm, currentPage, itemsPerPage);
         toastMessages.generic.success(
           "Success " + formData.branch_name + " has been added",
           "A new department has been save."
@@ -353,9 +375,9 @@ export default function DepartmentsTab() {
 
       // Actually delete the branch
       await apiService.deleteBranches(branchesToDelete.id);
+      branchUsersCacheRef.current.delete(branchesToDelete.id);
 
-      // Refresh data first, then reset deleting state after data loads
-      await loadData(debouncedSearchTerm);
+      await loadData(debouncedSearchTerm, currentPage, itemsPerPage);
       setDeletingBranchId(null);
 
       toastMessages.generic.success(
@@ -387,19 +409,6 @@ export default function DepartmentsTab() {
     return String((nonAdminRole ?? roles[0])?.name ?? "N/A");
   };
 
-  const getBranchUsers = async (
-    branchId: number
-  ): Promise<{ employees: any[]; evaluators: any[] }> => {
-    const response = await apiService.getSubordinate({
-      branch_id: branchId,
-      page: 1,
-      per_page: 1000,
-    });
-    const { employees, evaluators } =
-      parseSubordinateEmployeesAndEvaluators(response);
-    return { employees: employees as any[], evaluators: evaluators as any[] };
-  };
-
   const normalizeBranchUser = (user: any) => {
     const firstName = String(user?.fname ?? "").trim();
     const lastName = String(user?.lname ?? "").trim();
@@ -423,61 +432,31 @@ export default function DepartmentsTab() {
     };
   };
 
-  // Derive card counts from the same `/getSubordinate` + split logic used by the modals.
-  // This keeps the Employees/Evaluators numbers consistent with what the user sees.
-  useEffect(() => {
-    if (!branches || branches.length === 0) {
-      setCardSplitCounts({});
-      return;
-    }
+  const loadBranchUsers = useCallback(
+    async (branchId: number): Promise<CachedBranchUsers> => {
+      const cached = branchUsersCacheRef.current.get(branchId);
+      if (cached) return cached;
 
-    let cancelled = false;
-    (async () => {
-      const next: Record<number, { employees: number; evaluators: number }> = {};
+      const response = await apiService.getSubordinate({
+        branch_id: branchId,
+        page: 1,
+        per_page: 1000,
+      });
+      const { employees, evaluators } =
+        parseSubordinateEmployeesAndEvaluators(response);
 
-      await Promise.all(
-        branches.map(async (branch) => {
-          try {
-            const resp = await apiService.getSubordinate({
-              branch_id: branch.id,
-              page: 1,
-              per_page: 1000,
-            });
-            const { employees, evaluators } =
-              parseSubordinateEmployeesAndEvaluators(resp);
+      const result: CachedBranchUsers = {
+        employees: (employees as any[]).map((user) => normalizeBranchUser(user)),
+        evaluators: (evaluators as any[]).map((user) =>
+          normalizeBranchUser(user)
+        ),
+      };
 
-            const empUnique = new Map<string, BranchEmployee>();
-            for (const u of employees as any[]) {
-              const norm = normalizeBranchUser(u);
-              empUnique.set(String(norm.id), norm);
-            }
-
-            const evalUnique = new Map<string, BranchEmployee>();
-            for (const u of evaluators as any[]) {
-              const norm = normalizeBranchUser(u);
-              evalUnique.set(String(norm.id), norm);
-            }
-
-            next[branch.id] = {
-              employees: empUnique.size,
-              evaluators: evalUnique.size,
-            };
-          } catch {
-            next[branch.id] = {
-              employees: getEmployeesCount(branch),
-              evaluators: getManagersCount(branch),
-            };
-          }
-        })
-      );
-
-      if (!cancelled) setCardSplitCounts(next);
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [branches]);
+      branchUsersCacheRef.current.set(branchId, result);
+      return result;
+    },
+    []
+  );
 
   const openBranchEmployeesModal = async (branch: Branches) => {
     setSelectedBranchForEmployees(branch);
@@ -486,8 +465,8 @@ export default function DepartmentsTab() {
     setBranchEmployees([]);
 
     try {
-      const { employees } = await getBranchUsers(branch.id);
-      setBranchEmployees(employees.map((user: any) => normalizeBranchUser(user)));
+      const { employees } = await loadBranchUsers(branch.id);
+      setBranchEmployees(employees);
     } catch (error) {
       console.error("Error loading branch employees:", error);
       toastMessages.generic.error(
@@ -507,8 +486,8 @@ export default function DepartmentsTab() {
     setBranchManagers([]);
 
     try {
-      const { evaluators } = await getBranchUsers(branch.id);
-      setBranchManagers(evaluators.map((user: any) => normalizeBranchUser(user)));
+      const { evaluators } = await loadBranchUsers(branch.id);
+      setBranchManagers(evaluators);
     } catch (error) {
       console.error("Error loading branch managers:", error);
       toastMessages.generic.error(
@@ -688,35 +667,9 @@ export default function DepartmentsTab() {
 
           <div className={cn(isRefreshing && "min-h-[420px]")}>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {isRefreshing ? (
-                Array.from({ length: itemsPerPage }).map((_, index) => (
-                  <Card
-                    key={`branch-refresh-skel-${index}`}
-                    className="animate-pulse border-gray-200 bg-gray-50/50"
-                  >
-                    <CardHeader>
-                      <div className="flex justify-between items-center">
-                        <Skeleton className="h-6 w-32" />
-                        <Skeleton className="h-5 w-20 rounded-full" />
-                      </div>
-                      <Skeleton className="h-4 w-40 mt-2" />
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="text-center p-3 bg-gray-100 rounded-lg">
-                          <Skeleton className="h-6 w-12 mx-auto mb-2" />
-                          <Skeleton className="h-3 w-16 mx-auto" />
-                        </div>
-                        <div className="text-center p-3 bg-gray-100 rounded-lg">
-                          <Skeleton className="h-6 w-12 mx-auto mb-2" />
-                          <Skeleton className="h-3 w-16 mx-auto" />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              ) : branches && Array.isArray(branches) && branches.length > 0 ? (
+              {branches && Array.isArray(branches) && branches.length > 0 ? (
                 branches.map((branch) => {
+                    const headcounts = getBranchHeadcounts(branch);
                     const isDeleting = deletingBranchId === branch.id;
                     return (
                       <Card
@@ -763,14 +716,7 @@ export default function DepartmentsTab() {
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => {
-                                      const split = cardSplitCounts[branch.id];
-                                      const totalEmployees =
-                                        split != null
-                                          ? split.employees + split.evaluators
-                                          : getEmployeesCount(branch) +
-                                            getManagersCount(branch);
-                                      
-                                      if (totalEmployees > 0) {
+                                      if (headcounts.total > 0) {
                                         setBranchWithEmployees(branch);
                                         setIsAlertDialogOpen(true);
                                       } else {
@@ -796,8 +742,7 @@ export default function DepartmentsTab() {
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="text-center p-3 bg-blue-50 rounded-lg">
                                   <div className="text-lg font-bold text-blue-600">
-                                    {cardSplitCounts[branch.id]?.employees ??
-                                      getEmployeesCount(branch)}
+                                    {headcounts.employees}
                                   </div>
                                   <div className="text-xs text-gray-600">
                                     Employees
@@ -814,8 +759,7 @@ export default function DepartmentsTab() {
                                 </div>
                                 <div className="text-center p-3 bg-green-50 rounded-lg">
                                   <div className="text-lg font-bold text-green-600">
-                                    {cardSplitCounts[branch.id]?.evaluators ??
-                                      getManagersCount(branch)}
+                                    {headcounts.evaluators}
                                   </div>
                                   <div className="text-xs text-gray-600">
                                     Managers
@@ -1178,12 +1122,9 @@ export default function DepartmentsTab() {
         }}
         title="Cannot Delete Branch"
         description={`The branch "${branchWithEmployees?.branch_name} / ${branchWithEmployees?.branch_code}" cannot be deleted because it has ${
-          branchWithEmployees?.id != null &&
-          cardSplitCounts[branchWithEmployees.id] != null
-            ? cardSplitCounts[branchWithEmployees.id]!.employees +
-              cardSplitCounts[branchWithEmployees.id]!.evaluators
-            : getEmployeesCount(branchWithEmployees ?? {}) +
-              getManagersCount(branchWithEmployees ?? {})
+          branchWithEmployees
+            ? getBranchHeadcounts(branchWithEmployees).total
+            : 0
         } employee(s) assigned to it. Please remove or reassign all employees before deleting this branch.`}
         type="warning"
         confirmText="OK"
