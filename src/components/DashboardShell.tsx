@@ -759,13 +759,13 @@ export default function DashboardShell(props: DashboardShellProps) {
       <div className="flex overflow-hidden mt-20">
         {/* Sidebar */}
         <div
-          className={`relative overflow-hidden bg-blue-600 transition-all duration-400  ${
+          className={`relative overflow-hidden bg-blue-600 transition-all duration-400 rounded-r-2xl ${
             isSidebarOpen ? "w-64" : "w-0"
           }`}
         >
           <aside
             ref={sidebarAsideRef}
-            className="relative bg-blue-600 text-blue-50 min-h-[calc(100vh-5rem)] w-64 rounded-bl-lg"
+            className="relative bg-blue-600 text-blue-50 min-h-[calc(100vh-5rem)] w-64 rounded-r-2xl shadow-[4px_0_24px_-8px_rgba(30,64,175,0.45)]"
           >
             <div
               ref={sidebarMainBlockRef}
