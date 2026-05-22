@@ -70,7 +70,7 @@ type DashboardShellProps = {
 
 const APP_VERSION = String((appMeta as { version?: string })?.version ?? "1.0.0");
 
-/** Scrollable without a visible scrollbar (wheel/touch still works). */
+/** Main sidebar nav: scroll when needed, no visible scrollbar. */
 const SIDEBAR_SCROLL_HIDE_CLASS =
   "[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden";
 
@@ -79,11 +79,14 @@ const SIDEBAR_NAV_SCROLL_CLASS = cn(
   SIDEBAR_SCROLL_HIDE_CLASS
 );
 
-/** Management submenu: capped height so items scroll inside the panel. */
-const MANAGEMENT_DROPDOWN_MAX_PX = 220;
+/** Management submenu: show all items by default; scroll only when viewport/sidebar space is tight. */
+const MANAGEMENT_OVERFLOW_SCROLL_CLASS =
+  "overflow-y-auto overflow-x-hidden overscroll-contain scrollbar-thin scrollbar-thumb-white/30 scrollbar-track-transparent hover:scrollbar-thumb-white/50";
 
-const MANAGEMENT_DROPDOWN_CONTENT_CLASS =
-  "mt-2 space-y-1 overflow-y-auto overscroll-contain pl-3 pr-1 scrollbar-thin scrollbar-thumb-white/30 scrollbar-track-transparent sm:pl-4";
+const MANAGEMENT_DROPDOWN_CONTENT_CLASS = cn(
+  "mt-2 space-y-1 pl-3 pr-1 sm:pl-4",
+  MANAGEMENT_OVERFLOW_SCROLL_CLASS
+);
 
 /** Sidebar width tracks viewport so labels fit without feeling oversized. */
 const SIDEBAR_WIDTH_CLASS = "w-56 xl:w-64";
@@ -152,9 +155,14 @@ export default function DashboardShell(props: DashboardShellProps) {
   const sidebarAsideRef = useRef<HTMLElement>(null);
   const sidebarNavEndRef = useRef<HTMLDivElement>(null);
   const managementTriggerRef = useRef<HTMLButtonElement>(null);
-  const [managementMenuMaxH, setManagementMenuMaxH] = useState(240);
+  const managementContentRef = useRef<HTMLDivElement>(null);
+  const hideSidebarBottomArtRef = useRef(false);
+  const [managementMenuMaxH, setManagementMenuMaxH] = useState<number | undefined>(
+    undefined
+  );
   /** Hide bottom art when nav/dropdown content extends into the decoration zone. */
   const [hideSidebarBottomArt, setHideSidebarBottomArt] = useState(false);
+  hideSidebarBottomArtRef.current = hideSidebarBottomArt;
 
   // Collapsible states for sidebar groups
   const [isManagementOpen, setIsManagementOpen] = useState(false);
@@ -279,23 +287,71 @@ export default function DashboardShell(props: DashboardShellProps) {
   );
   const isHRDashboard = useMemo(() => dashboardType === "hr", [dashboardType]);
 
+  /** Stable key so effect dependency arrays never change length between renders. */
+  const sidebarItemsKey = useMemo(
+    () => sidebarItems.map((item) => item.id).join(","),
+    [sidebarItems]
+  );
+
   const updateManagementMenuMaxH = useCallback(() => {
     if (!isManagementOpen || !managementTriggerRef.current) return;
+    const contentEl = managementContentRef.current;
+    if (!contentEl) return;
+
     const rect = managementTriggerRef.current.getBoundingClientRect();
-    const reservedBottom = 28;
-    const available = window.innerHeight - rect.bottom - reservedBottom;
-    // Cap panel height so the list scrolls; shrink only when viewport has less room.
-    setManagementMenuMaxH(
-      Math.max(112, Math.min(available, MANAGEMENT_DROPDOWN_MAX_PX))
-    );
+    const artReserve = hideSidebarBottomArtRef.current
+      ? 8
+      : SIDEBAR_BOTTOM_ART_ZONE_PX;
+    let available = window.innerHeight - rect.bottom - artReserve;
+
+    const aside = sidebarAsideRef.current;
+    if (aside) {
+      const asideRect = aside.getBoundingClientRect();
+      available = Math.min(available, asideRect.bottom - rect.bottom - 8);
+    }
+
+    // Measure full list height (ignore any applied max-height cap).
+    const prevMax = contentEl.style.maxHeight;
+    contentEl.style.maxHeight = "none";
+    const contentH = contentEl.scrollHeight;
+    contentEl.style.maxHeight = prevMax;
+
+    if (contentH <= 0) return;
+
+    const MIN_SCROLL_PX = 96;
+    if (contentH <= available) {
+      setManagementMenuMaxH(undefined);
+    } else {
+      setManagementMenuMaxH(Math.max(MIN_SCROLL_PX, available));
+    }
   }, [isManagementOpen]);
+
+  useEffect(() => {
+    if (!isManagementOpen) {
+      setManagementMenuMaxH(undefined);
+      return;
+    }
+    updateManagementMenuMaxH();
+    const contentEl = managementContentRef.current;
+    const ro =
+      contentEl &&
+      new ResizeObserver(() => {
+        requestAnimationFrame(updateManagementMenuMaxH);
+      });
+    if (contentEl && ro) ro.observe(contentEl);
+    window.addEventListener("resize", updateManagementMenuMaxH);
+    const t = window.setTimeout(updateManagementMenuMaxH, 320);
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener("resize", updateManagementMenuMaxH);
+      window.clearTimeout(t);
+    };
+  }, [isManagementOpen, updateManagementMenuMaxH, sidebarItemsKey]);
 
   useEffect(() => {
     if (!isManagementOpen) return;
     updateManagementMenuMaxH();
-    window.addEventListener("resize", updateManagementMenuMaxH);
-    return () => window.removeEventListener("resize", updateManagementMenuMaxH);
-  }, [isManagementOpen, updateManagementMenuMaxH]);
+  }, [hideSidebarBottomArt, isManagementOpen, updateManagementMenuMaxH]);
 
   useEffect(() => {
     if (!isManagementOpen || !managementTriggerRef.current) return;
@@ -366,6 +422,7 @@ export default function DashboardShell(props: DashboardShellProps) {
     isEmployeeDashboard,
     isEvaluatorDashboard,
     isAdminDashboard,
+    isHRDashboard,
   ]);
 
   /** Show bottom role art only when the last nav item sits above the decoration zone. */
@@ -404,7 +461,7 @@ export default function DashboardShell(props: DashboardShellProps) {
     isManagementOpen,
     isAnalyticsOpen,
     managementMenuMaxH,
-    sidebarItems,
+    sidebarItemsKey,
     dashboardType,
   ]);
 
@@ -1004,11 +1061,16 @@ export default function DashboardShell(props: DashboardShellProps) {
                             </button>
                           </CollapsibleTrigger>
                           <CollapsibleContent
-                            className={MANAGEMENT_DROPDOWN_CONTENT_CLASS}
+                            ref={managementContentRef}
+                            className={cn(
+                              MANAGEMENT_DROPDOWN_CONTENT_CLASS,
+                              "!overflow-y-auto"
+                            )}
                             style={{
-                              maxHeight: isManagementOpen
-                                ? managementMenuMaxH
-                                : undefined,
+                              maxHeight:
+                                isManagementOpen && managementMenuMaxH != null
+                                  ? managementMenuMaxH
+                                  : undefined,
                             }}
                           >
                             {sidebarItems
@@ -1112,11 +1174,16 @@ export default function DashboardShell(props: DashboardShellProps) {
                             </button>
                           </CollapsibleTrigger>
                           <CollapsibleContent
-                            className={MANAGEMENT_DROPDOWN_CONTENT_CLASS}
+                            ref={managementContentRef}
+                            className={cn(
+                              MANAGEMENT_DROPDOWN_CONTENT_CLASS,
+                              "!overflow-y-auto"
+                            )}
                             style={{
-                              maxHeight: isManagementOpen
-                                ? managementMenuMaxH
-                                : undefined,
+                              maxHeight:
+                                isManagementOpen && managementMenuMaxH != null
+                                  ? managementMenuMaxH
+                                  : undefined,
                             }}
                           >
                             {sidebarItems
