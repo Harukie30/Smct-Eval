@@ -16,6 +16,7 @@ import DeletePositionModal, { Position } from "@/components/hr/DeletePositionMod
 import UpdatePositionModal from "@/components/hr/UpdatePositionModal";
 import EvaluationsPagination from "@/components/paginationComponent";
 import { cn } from "@/lib/utils";
+import SmctLoadingOverlay from "@/components/SmctLoadingOverlay";
 
 function isCreatedWithinLast24Hours(createdAt: string | null | undefined): boolean {
   if (createdAt == null || createdAt === "") return false;
@@ -185,28 +186,7 @@ export default function PositionsTab() {
     setCurrentPage((p) => Math.min(p, totalPages));
   }, [totalPages]);
 
-  if (loading) {
-    return (
-      <div className="relative overflow-y-auto pr-2 min-h-[400px]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Positions</CardTitle>
-            <CardDescription>Loading positions...</CardDescription>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {Array.from({ length: itemsPerPage }).map((_, i) => (
-              <Card key={i} className="animate-pulse">
-                <CardHeader>
-                  <Skeleton className="h-5 w-40" />
-                  <Skeleton className="h-4 w-24 mt-2" />
-                </CardHeader>
-              </Card>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const listBusy = loading || isRefreshing;
 
   return (
     <div className="relative overflow-y-auto pr-2 min-h-[400px]">
@@ -321,32 +301,26 @@ export default function PositionsTab() {
         </CardHeader>
 
         <CardContent className="relative">
-          {isRefreshing && (
-            <div className="absolute inset-0 z-50 flex items-center justify-center rounded-lg bg-white/55 backdrop-blur-[1px] pointer-events-none">
-              <div className="flex flex-col items-center gap-3 rounded-lg bg-white/90 px-8 py-6 shadow-lg ring-1 ring-gray-200/80">
-                <div className="relative">
-                  <div className="h-16 w-16 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <img
-                      src="/smct.png"
-                      alt="SMCT"
-                      className="h-10 w-10 object-contain"
-                      width={40}
-                      height={40}
-                      decoding="async"
-                    />
-                  </div>
-                </div>
-                <p className="text-sm font-medium text-gray-600">Refreshing...</p>
-              </div>
-            </div>
-          )}
+          {listBusy ? (
+            <SmctLoadingOverlay
+              label={
+                isRefreshing && !loading
+                  ? "Refreshing positions…"
+                  : "Loading positions…"
+              }
+            />
+          ) : null}
 
-          <div className={cn("space-y-3", isRefreshing && "min-h-[280px]")}>
-            {isRefreshing ? (
+          <div
+            className={cn(
+              "space-y-3",
+              listBusy && "pointer-events-none opacity-40 min-h-[280px]"
+            )}
+          >
+            {loading ? (
               Array.from({ length: itemsPerPage }).map((_, i) => (
                 <div
-                  key={`refresh-skel-${i}`}
+                  key={`load-skel-${i}`}
                   className="flex animate-pulse items-center justify-between rounded-lg border border-gray-200 bg-gray-50/80 px-4 py-3"
                 >
                   <div className="space-y-2">
@@ -427,7 +401,7 @@ export default function PositionsTab() {
             )}
           </div>
 
-          {!isRefreshing && totalPages > 1 && (
+          {!listBusy && totalPages > 1 && (
             <EvaluationsPagination
               currentPage={currentPage}
               totalPages={totalPages}

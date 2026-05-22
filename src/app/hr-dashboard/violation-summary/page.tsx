@@ -28,6 +28,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import SmctLoadingOverlay from "@/components/SmctLoadingOverlay";
 import apiService from "@/lib/apiService";
 import { toastMessages } from "@/lib/toastMessages";
 import { FileType, FileWarning, Loader2, RefreshCw, Search } from "lucide-react";
@@ -468,7 +469,22 @@ export default function ViolationSummaryPage() {
           </div>
         </div>
 
-        <CardContent className="space-y-3 border-t border-slate-100 bg-gradient-to-b from-slate-50/50 to-white pt-3 sm:space-y-3.5 sm:pt-4">
+        <CardContent className="relative space-y-3 border-t border-slate-100 bg-gradient-to-b from-slate-50/50 to-white pt-3 sm:space-y-3.5 sm:pt-4">
+          {listBusy ? (
+            <SmctLoadingOverlay
+              label={
+                refreshing && !loading
+                  ? "Refreshing violation summary…"
+                  : "Loading violation summary…"
+              }
+            />
+          ) : null}
+          <div
+            className={cn(
+              "space-y-3 sm:space-y-3.5",
+              listBusy && "pointer-events-none opacity-40"
+            )}
+          >
           <div className="rounded-lg border border-slate-200/80 bg-white/90 p-2.5 shadow-sm backdrop-blur-sm sm:rounded-xl sm:p-3">
             <div className="flex flex-col gap-2.5 lg:flex-row lg:items-end lg:justify-between lg:gap-3">
               <div className="grid w-full min-w-0 flex-1 gap-2.5 sm:grid-cols-2 sm:gap-3 lg:grid-cols-12 lg:items-end">
@@ -582,13 +598,12 @@ export default function ViolationSummaryPage() {
             </div>
           </div>
 
-          <div className="relative overflow-hidden rounded-lg border border-slate-200/80 bg-white shadow-sm sm:rounded-xl">
-            {refreshing && !loading && rows.length > 0 ? (
-              <div
-                className="pointer-events-none absolute inset-0 z-[5] bg-white/50 backdrop-blur-[1px]"
-                aria-hidden
-              />
-            ) : null}
+          <div
+            className={cn(
+              "overflow-hidden rounded-lg border border-slate-200/80 bg-white shadow-sm sm:rounded-xl",
+              listBusy && "min-h-[280px] border-blue-100 bg-slate-50/40"
+            )}
+          >
             <Table
               className="[&_th]:h-auto [&_th]:min-h-8 [&_th]:px-2.5 [&_th]:py-2 [&_th]:align-middle [&_th]:text-[0.6rem] [&_th]:uppercase [&_th]:tracking-wide sm:[&_th]:min-h-9 sm:[&_th]:px-3 sm:[&_th]:py-2.5 sm:[&_th]:text-[0.65rem] [&_td]:min-w-0 [&_td]:px-2.5 [&_td]:py-2 [&_td]:align-top [&_td]:text-xs [&_td]:leading-snug sm:[&_td]:px-3 sm:[&_td]:py-2.5 sm:[&_td]:text-sm sm:[&_td]:leading-snug"
               wrapperClassName="overflow-x-auto"
@@ -709,6 +724,7 @@ export default function ViolationSummaryPage() {
               ) : null}
             </div>
           ) : null}
+          </div>
         </CardContent>
       </Card>
 

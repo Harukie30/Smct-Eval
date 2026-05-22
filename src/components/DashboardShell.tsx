@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -69,6 +70,61 @@ type DashboardShellProps = {
 
 const APP_VERSION = String((appMeta as { version?: string })?.version ?? "1.0.0");
 
+/** Scrollable without a visible scrollbar (wheel/touch still works). */
+const SIDEBAR_SCROLL_HIDE_CLASS =
+  "[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden";
+
+const SIDEBAR_NAV_SCROLL_CLASS = cn(
+  "min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain",
+  SIDEBAR_SCROLL_HIDE_CLASS
+);
+
+/** Management submenu: capped height so items scroll inside the panel. */
+const MANAGEMENT_DROPDOWN_MAX_PX = 220;
+
+const MANAGEMENT_DROPDOWN_CONTENT_CLASS =
+  "mt-2 space-y-1 overflow-y-auto overscroll-contain pl-3 pr-1 scrollbar-thin scrollbar-thumb-white/30 scrollbar-track-transparent sm:pl-4";
+
+/** Sidebar width tracks viewport so labels fit without feeling oversized. */
+const SIDEBAR_WIDTH_CLASS = "w-56 xl:w-64";
+
+const SIDEBAR_HEADING_CLASS =
+  "mb-3 shrink-0 text-sm font-semibold tracking-wide text-white sm:mb-4 sm:text-base";
+
+const SIDEBAR_NAV_ICON_CLASS = "shrink-0 text-sm leading-none sm:text-base";
+
+const SIDEBAR_NAV_LABEL_CLASS =
+  "min-w-0 truncate font-medium text-xs leading-snug sm:text-sm";
+
+const SIDEBAR_NAV_SUB_LABEL_CLASS =
+  "min-w-0 truncate font-medium text-[11px] leading-snug sm:text-xs";
+
+const SIDEBAR_NAV_ITEM_BASE_CLASS =
+  "w-full rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 cursor-pointer";
+
+const SIDEBAR_NAV_ROW_CLASS =
+  "flex items-center space-x-2.5 px-3 py-2 sm:space-x-3 sm:px-4 sm:py-2.5";
+
+const SIDEBAR_NAV_ROW_SUB_CLASS =
+  "flex items-center space-x-2.5 px-3 py-1.5 sm:space-x-3 sm:px-4 sm:py-2";
+
+const SIDEBAR_NAV_TRIGGER_ROW_CLASS =
+  "flex w-full items-center justify-between px-3 py-2 sm:px-4 sm:py-2.5";
+
+const SIDEBAR_CHEVRON_CLASS = "h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4";
+
+/** Bottom area reserved for faded role art (must match absolute art height classes). */
+const SIDEBAR_BOTTOM_ART_ZONE_PX = 128;
+
+const SIDEBAR_BOTTOM_ART_ABSOLUTE_CLASS =
+  "absolute bottom-0 left-0 right-0 z-0 h-28 bg-contain bg-center bg-no-repeat pointer-events-none sm:h-32 xl:h-36";
+
+function sidebarNavActiveClass(isActive: boolean) {
+  return isActive
+    ? "bg-white/20 text-white border border-white/30"
+    : "text-blue-100 hover:bg-white/10";
+}
+
 export default function DashboardShell(props: DashboardShellProps) {
   const {
     title,
@@ -94,9 +150,10 @@ export default function DashboardShell(props: DashboardShellProps) {
     useState<Notification | null>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
   const sidebarAsideRef = useRef<HTMLElement>(null);
-  /** Full padded block above bottom art (collapse, heading, nav). */
-  const sidebarMainBlockRef = useRef<HTMLDivElement>(null);
-  /** Hide bottom decorative artwork when nav extends into that area (overlap). */
+  const sidebarNavEndRef = useRef<HTMLDivElement>(null);
+  const managementTriggerRef = useRef<HTMLButtonElement>(null);
+  const [managementMenuMaxH, setManagementMenuMaxH] = useState(240);
+  /** Hide bottom art when nav/dropdown content extends into the decoration zone. */
   const [hideSidebarBottomArt, setHideSidebarBottomArt] = useState(false);
 
   // Collapsible states for sidebar groups
@@ -222,6 +279,32 @@ export default function DashboardShell(props: DashboardShellProps) {
   );
   const isHRDashboard = useMemo(() => dashboardType === "hr", [dashboardType]);
 
+  const updateManagementMenuMaxH = useCallback(() => {
+    if (!isManagementOpen || !managementTriggerRef.current) return;
+    const rect = managementTriggerRef.current.getBoundingClientRect();
+    const reservedBottom = 28;
+    const available = window.innerHeight - rect.bottom - reservedBottom;
+    // Cap panel height so the list scrolls; shrink only when viewport has less room.
+    setManagementMenuMaxH(
+      Math.max(112, Math.min(available, MANAGEMENT_DROPDOWN_MAX_PX))
+    );
+  }, [isManagementOpen]);
+
+  useEffect(() => {
+    if (!isManagementOpen) return;
+    updateManagementMenuMaxH();
+    window.addEventListener("resize", updateManagementMenuMaxH);
+    return () => window.removeEventListener("resize", updateManagementMenuMaxH);
+  }, [isManagementOpen, updateManagementMenuMaxH]);
+
+  useEffect(() => {
+    if (!isManagementOpen || !managementTriggerRef.current) return;
+    managementTriggerRef.current.scrollIntoView({
+      block: "nearest",
+      behavior: "smooth",
+    });
+  }, [isManagementOpen]);
+
   // Auto-open collapsible groups when their items are active
   useEffect(() => {
     // For admin dashboard, management group includes subordinates, departments, branches,
@@ -285,13 +368,11 @@ export default function DashboardShell(props: DashboardShellProps) {
     isAdminDashboard,
   ]);
 
-  /** Bottom ~200px of sidebar is reserved for faded role art; hide art if nav overlaps. */
+  /** Show bottom role art only when the last nav item sits above the decoration zone. */
   useEffect(() => {
     const aside = sidebarAsideRef.current;
-    const mainBlock = sidebarMainBlockRef.current;
-    if (!aside || !mainBlock) return;
-
-    const DECORATION_ZONE_PX = 200;
+    const navEnd = sidebarNavEndRef.current;
+    if (!aside || !navEnd) return;
 
     const updateOverlap = () => {
       if (!isSidebarOpen) {
@@ -299,27 +380,30 @@ export default function DashboardShell(props: DashboardShellProps) {
         return;
       }
       const asideRect = aside.getBoundingClientRect();
-      const blockRect = mainBlock.getBoundingClientRect();
-      const decorationZoneTop = asideRect.bottom - DECORATION_ZONE_PX;
-      setHideSidebarBottomArt(blockRect.bottom > decorationZoneTop);
+      const endRect = navEnd.getBoundingClientRect();
+      const decorationZoneTop = asideRect.bottom - SIDEBAR_BOTTOM_ART_ZONE_PX;
+      setHideSidebarBottomArt(endRect.bottom > decorationZoneTop);
     };
 
     const ro = new ResizeObserver(() => {
       requestAnimationFrame(updateOverlap);
     });
     ro.observe(aside);
-    ro.observe(mainBlock);
+    ro.observe(navEnd);
     window.addEventListener("resize", updateOverlap);
     updateOverlap();
+    const t = window.setTimeout(updateOverlap, 320);
     return () => {
       ro.disconnect();
       window.removeEventListener("resize", updateOverlap);
+      window.clearTimeout(t);
     };
   }, [
     isSidebarOpen,
     activeItemId,
     isManagementOpen,
     isAnalyticsOpen,
+    managementMenuMaxH,
     sidebarItems,
     dashboardType,
   ]);
@@ -759,25 +843,30 @@ export default function DashboardShell(props: DashboardShellProps) {
       <div className="flex overflow-hidden mt-20">
         {/* Sidebar */}
         <div
-          className={`relative overflow-hidden bg-blue-600 transition-all duration-400 rounded-r-2xl ${
-            isSidebarOpen ? "w-64" : "w-0"
-          }`}
+          className={cn(
+            "relative overflow-hidden bg-blue-600 transition-all duration-400 rounded-r-2xl",
+            isSidebarOpen ? SIDEBAR_WIDTH_CLASS : "w-0"
+          )}
         >
           <aside
             ref={sidebarAsideRef}
-            className="relative bg-blue-600 text-blue-50 min-h-[calc(100vh-5rem)] w-64 rounded-r-2xl shadow-[4px_0_24px_-8px_rgba(30,64,175,0.45)]"
+            className={cn(
+              "relative flex h-[calc(100vh-5rem)] max-h-[calc(100vh-5rem)] flex-col overflow-hidden bg-blue-600 text-blue-50 rounded-r-2xl shadow-[4px_0_24px_-8px_rgba(30,64,175,0.45)]",
+              SIDEBAR_WIDTH_CLASS
+            )}
           >
             <div
-              ref={sidebarMainBlockRef}
-              className={`relative p-6 transition-opacity duration-400 ${
+              className={cn(
+                "relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden p-4 transition-opacity duration-400 sm:p-5 xl:p-6",
+                !hideSidebarBottomArt && "mb-28 sm:mb-32 xl:mb-36",
                 isSidebarOpen ? "opacity-100" : "opacity-0"
-              }`}
+              )}
             >
               <Button
                 variant="outline"
                 size="lg"
                 onClick={() => setIsSidebarOpen(false)}
-                className="w-1/3 mb-4 bg-white/10 text-white hover:bg-white/20 border-white/30 cursor-pointer"
+                className="mb-4 w-1/3 shrink-0 bg-white/10 text-white hover:bg-white/20 border-white/30 cursor-pointer"
               >
                 <div className="flex items-center">
                   <ChevronLeft className="w-10 h-10 mr-[-6px]" />
@@ -785,8 +874,8 @@ export default function DashboardShell(props: DashboardShellProps) {
                 </div>
               </Button>
 
-              <h2 className="text-lg font-bold text-white mb-6">Navigation</h2>
-              <nav className="space-y-2">
+              <h2 className={SIDEBAR_HEADING_CLASS}>Navigation</h2>
+              <nav className={cn("space-y-2", SIDEBAR_NAV_SCROLL_CLASS)}>
                 {(() => {
                   // Use the memoized dashboard type values
 
@@ -890,29 +979,37 @@ export default function DashboardShell(props: DashboardShellProps) {
                         >
                           <CollapsibleTrigger asChild>
                             <button
-                              className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 cursor-pointer ${
-                                managementItems.includes(activeItemId)
-                                  ? "bg-white/20 text-white border border-white/30"
-                                  : "text-blue-100 hover:bg-white/10"
-                              }`}
+                              ref={managementTriggerRef}
+                              type="button"
+                              data-management-trigger
+                              className={cn(
+                                SIDEBAR_NAV_ITEM_BASE_CLASS,
+                                SIDEBAR_NAV_TRIGGER_ROW_CLASS,
+                                sidebarNavActiveClass(
+                                  managementItems.includes(activeItemId)
+                                )
+                              )}
                             >
-                              <div className="flex items-center space-x-3">
-                                <span className="text-lg">⚙️</span>
-                                <span className="font-medium">Management</span>
+                              <div className={cn(SIDEBAR_NAV_ROW_CLASS, "w-auto flex-1 py-0 px-0")}>
+                                <span className={SIDEBAR_NAV_ICON_CLASS}>⚙️</span>
+                                <span className={SIDEBAR_NAV_LABEL_CLASS}>Management</span>
                               </div>
                               <ChevronDown
-                                className={`h-4 w-4 transition-transform ${
-                                  isManagementOpen ? "transform rotate-180" : ""
-                                }`}
+                                className={cn(
+                                  SIDEBAR_CHEVRON_CLASS,
+                                  "transition-transform",
+                                  isManagementOpen && "rotate-180"
+                                )}
                               />
                             </button>
                           </CollapsibleTrigger>
                           <CollapsibleContent
-                            className={`pl-4 mt-2 space-y-1 ${
-                              isHRDashboard || isAdminDashboard
-                                ? "max-h-[220px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-transparent scrollbar-track-transparent"
-                                : ""
-                            }`}
+                            className={MANAGEMENT_DROPDOWN_CONTENT_CLASS}
+                            style={{
+                              maxHeight: isManagementOpen
+                                ? managementMenuMaxH
+                                : undefined,
+                            }}
                           >
                             {sidebarItems
                               .filter((i) => managementItems.includes(i.id))
@@ -920,16 +1017,16 @@ export default function DashboardShell(props: DashboardShellProps) {
                                 <button
                                   key={subItem.id}
                                   onClick={() => onChangeActive(subItem.id)}
-                                  className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 cursor-pointer ${
-                                    activeItemId === subItem.id
-                                      ? "bg-white/20 text-white border border-white/30"
-                                      : "text-blue-100 hover:bg-white/10"
-                                  }`}
+                                  className={cn(
+                                    SIDEBAR_NAV_ITEM_BASE_CLASS,
+                                    SIDEBAR_NAV_ROW_SUB_CLASS,
+                                    sidebarNavActiveClass(activeItemId === subItem.id)
+                                  )}
                                 >
-                                  <span className="text-lg">
+                                  <span className={SIDEBAR_NAV_ICON_CLASS}>
                                     {subItem.icon}
                                   </span>
-                                  <span className="font-medium text-sm">
+                                  <span className={SIDEBAR_NAV_SUB_LABEL_CLASS}>
                                     {subItem.label}
                                   </span>
                                 </button>
@@ -950,14 +1047,14 @@ export default function DashboardShell(props: DashboardShellProps) {
                         <button
                           key={item.id}
                           onClick={() => onChangeActive(item.id)}
-                          className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 cursor-pointer ${
-                            activeItemId === item.id
-                              ? "bg-white/20 text-white border border-white/30"
-                              : "text-blue-100 hover:bg-white/10"
-                          }`}
+                          className={cn(
+                            SIDEBAR_NAV_ITEM_BASE_CLASS,
+                            SIDEBAR_NAV_ROW_CLASS,
+                            sidebarNavActiveClass(activeItemId === item.id)
+                          )}
                         >
-                          <span className="text-lg">{item.icon}</span>
-                          <span className="font-medium">{item.label}</span>
+                          <span className={SIDEBAR_NAV_ICON_CLASS}>{item.icon}</span>
+                          <span className={SIDEBAR_NAV_LABEL_CLASS}>{item.label}</span>
                         </button>
                       );
                     }
@@ -968,14 +1065,14 @@ export default function DashboardShell(props: DashboardShellProps) {
                         <button
                           key={item.id}
                           onClick={() => onChangeActive(item.id)}
-                          className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 cursor-pointer ${
-                            activeItemId === item.id
-                              ? "bg-white/20 text-white border border-white/30"
-                              : "text-blue-100 hover:bg-white/10"
-                          }`}
+                          className={cn(
+                            SIDEBAR_NAV_ITEM_BASE_CLASS,
+                            SIDEBAR_NAV_ROW_CLASS,
+                            sidebarNavActiveClass(activeItemId === item.id)
+                          )}
                         >
-                          <span className="text-lg">{item.icon}</span>
-                          <span className="font-medium">{item.label}</span>
+                          <span className={SIDEBAR_NAV_ICON_CLASS}>{item.icon}</span>
+                          <span className={SIDEBAR_NAV_LABEL_CLASS}>{item.label}</span>
                         </button>
                       );
                     }
@@ -990,40 +1087,54 @@ export default function DashboardShell(props: DashboardShellProps) {
                         >
                           <CollapsibleTrigger asChild>
                             <button
-                              className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 cursor-pointer ${
-                                managementItems.includes(activeItemId)
-                                  ? "bg-white/20 text-white border border-white/30"
-                                  : "text-blue-100 hover:bg-white/10"
-                              }`}
+                              ref={managementTriggerRef}
+                              type="button"
+                              data-management-trigger
+                              className={cn(
+                                SIDEBAR_NAV_ITEM_BASE_CLASS,
+                                SIDEBAR_NAV_TRIGGER_ROW_CLASS,
+                                sidebarNavActiveClass(
+                                  managementItems.includes(activeItemId)
+                                )
+                              )}
                             >
-                              <div className="flex items-center space-x-3">
-                                <span className="text-lg">⚙️</span>
-                                <span className="font-medium">Management</span>
+                              <div className={cn(SIDEBAR_NAV_ROW_CLASS, "w-auto flex-1 py-0 px-0")}>
+                                <span className={SIDEBAR_NAV_ICON_CLASS}>⚙️</span>
+                                <span className={SIDEBAR_NAV_LABEL_CLASS}>Management</span>
                               </div>
                               <ChevronDown
-                                className={`h-4 w-4 transition-transform ${
-                                  isManagementOpen ? "transform rotate-180" : ""
-                                }`}
+                                className={cn(
+                                  SIDEBAR_CHEVRON_CLASS,
+                                  "transition-transform",
+                                  isManagementOpen && "rotate-180"
+                                )}
                               />
                             </button>
                           </CollapsibleTrigger>
-                          <CollapsibleContent className="pl-4 mt-2 space-y-1">
+                          <CollapsibleContent
+                            className={MANAGEMENT_DROPDOWN_CONTENT_CLASS}
+                            style={{
+                              maxHeight: isManagementOpen
+                                ? managementMenuMaxH
+                                : undefined,
+                            }}
+                          >
                             {sidebarItems
                               .filter((i) => managementItems.includes(i.id))
                               .map((subItem) => (
                                 <button
                                   key={subItem.id}
                                   onClick={() => onChangeActive(subItem.id)}
-                                  className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 cursor-pointer ${
-                                    activeItemId === subItem.id
-                                      ? "bg-white/20 text-white border border-white/30"
-                                      : "text-blue-100 hover:bg-white/10"
-                                  }`}
+                                  className={cn(
+                                    SIDEBAR_NAV_ITEM_BASE_CLASS,
+                                    SIDEBAR_NAV_ROW_SUB_CLASS,
+                                    sidebarNavActiveClass(activeItemId === subItem.id)
+                                  )}
                                 >
-                                  <span className="text-lg">
+                                  <span className={SIDEBAR_NAV_ICON_CLASS}>
                                     {subItem.icon}
                                   </span>
-                                  <span className="font-medium text-sm">
+                                  <span className={SIDEBAR_NAV_SUB_LABEL_CLASS}>
                                     {subItem.label}
                                   </span>
                                 </button>
@@ -1049,40 +1160,44 @@ export default function DashboardShell(props: DashboardShellProps) {
                         >
                           <CollapsibleTrigger asChild>
                             <button
-                              className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
-                                analyticsItems.includes(activeItemId)
-                                  ? "bg-white/20 text-white border border-white/30"
-                                  : "text-blue-100 hover:bg-white/10"
-                              }`}
+                              className={cn(
+                                SIDEBAR_NAV_ITEM_BASE_CLASS,
+                                SIDEBAR_NAV_TRIGGER_ROW_CLASS,
+                                sidebarNavActiveClass(
+                                  analyticsItems.includes(activeItemId)
+                                )
+                              )}
                             >
-                              <div className="flex items-center space-x-3">
-                                <span className="text-lg">📊</span>
-                                <span className="font-medium">Analytics</span>
+                              <div className={cn(SIDEBAR_NAV_ROW_CLASS, "w-auto flex-1 py-0 px-0")}>
+                                <span className={SIDEBAR_NAV_ICON_CLASS}>📊</span>
+                                <span className={SIDEBAR_NAV_LABEL_CLASS}>Analytics</span>
                               </div>
                               <ChevronDown
-                                className={`h-4 w-4 transition-transform ${
-                                  isAnalyticsOpen ? "transform rotate-180" : ""
-                                }`}
+                                className={cn(
+                                  SIDEBAR_CHEVRON_CLASS,
+                                  "transition-transform",
+                                  isAnalyticsOpen && "rotate-180"
+                                )}
                               />
                             </button>
                           </CollapsibleTrigger>
-                          <CollapsibleContent className="pl-4 mt-2 space-y-1">
+                          <CollapsibleContent className="mt-2 space-y-1 pl-3 sm:pl-4">
                             {sidebarItems
                               .filter((i) => analyticsItems.includes(i.id))
                               .map((subItem) => (
                                 <button
                                   key={subItem.id}
                                   onClick={() => onChangeActive(subItem.id)}
-                                  className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 cursor-pointer ${
-                                    activeItemId === subItem.id
-                                      ? "bg-white/20 text-white border border-white/30"
-                                      : "text-blue-100 hover:bg-white/10"
-                                  }`}
+                                  className={cn(
+                                    SIDEBAR_NAV_ITEM_BASE_CLASS,
+                                    SIDEBAR_NAV_ROW_SUB_CLASS,
+                                    sidebarNavActiveClass(activeItemId === subItem.id)
+                                  )}
                                 >
-                                  <span className="text-lg">
+                                  <span className={SIDEBAR_NAV_ICON_CLASS}>
                                     {subItem.icon}
                                   </span>
-                                  <span className="font-medium text-sm">
+                                  <span className={SIDEBAR_NAV_SUB_LABEL_CLASS}>
                                     {subItem.label}
                                   </span>
                                 </button>
@@ -1096,12 +1211,13 @@ export default function DashboardShell(props: DashboardShellProps) {
                     return null;
                   });
                 })()}
+                <div ref={sidebarNavEndRef} className="h-px w-full shrink-0" aria-hidden />
               </nav>
             </div>
-            {/* Faded role art at bottom — hidden when nav overlaps this zone */}
+            {/* Faded role art — shown when nav is short; hidden when dropdown/list reaches bottom zone */}
             {!hideSidebarBottomArt && isEmployeeDashboard && (
               <div
-                className="absolute bottom-2 left-0 right-0 h-50 bg-no-repeat bg-center bg-contain pointer-events-none"
+                className={SIDEBAR_BOTTOM_ART_ABSOLUTE_CLASS}
                 style={{
                   backgroundImage: "url(/emp.png)",
                   opacity: 0.25,
@@ -1111,7 +1227,7 @@ export default function DashboardShell(props: DashboardShellProps) {
             )}
             {!hideSidebarBottomArt && isEvaluatorDashboard && (
               <div
-                className="absolute bottom-3 left-0 right-0 h-50 bg-no-repeat bg-center bg-contain pointer-events-none"
+                className={SIDEBAR_BOTTOM_ART_ABSOLUTE_CLASS}
                 style={{
                   backgroundImage: "url(/survey.png)",
                   opacity: 0.25,
@@ -1121,20 +1237,20 @@ export default function DashboardShell(props: DashboardShellProps) {
             )}
             {!hideSidebarBottomArt && isHRDashboard && (
               <div
-                className="absolute bottom-1 left-0 right-0 h-45 bg-no-repeat bg-center bg-contain pointer-events-none"
+                className={SIDEBAR_BOTTOM_ART_ABSOLUTE_CLASS}
                 style={{
                   backgroundImage: "url(/human.png)",
-                  opacity: 0.13,
+                  opacity: 0.22,
                 }}
                 aria-hidden
               />
             )}
             {!hideSidebarBottomArt && isAdminDashboard && (
               <div
-                className="absolute bottom-3 left-0 right-0 h-50 bg-no-repeat bg-center bg-contain pointer-events-none"
+                className={SIDEBAR_BOTTOM_ART_ABSOLUTE_CLASS}
                 style={{
                   backgroundImage: "url(/admin.png)",
-                  opacity: 0.13,
+                  opacity: 0.18,
                 }}
                 aria-hidden
               />
@@ -1168,9 +1284,12 @@ export default function DashboardShell(props: DashboardShellProps) {
       </div>
 
       {/* Footer - Sticky */}
-      <footer className={`fixed bottom-0 z-40 bg-white border-t border-gray-200 shadow-sm transition-all duration-400 ${
-        isSidebarOpen ? "left-64 right-0" : "left-0 right-0"
-      }`}>
+      <footer
+        className={cn(
+          "fixed bottom-0 z-40 bg-white border-t border-gray-200 shadow-sm transition-all duration-400 right-0",
+          isSidebarOpen ? "left-56 xl:left-64" : "left-0"
+        )}
+      >
         <div className="px-6 py-4">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-2 md:space-y-0">
             <div className="flex items-center space-x-2">

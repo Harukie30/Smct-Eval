@@ -32,6 +32,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import SmctLoadingOverlay from "@/components/SmctLoadingOverlay";
 import { Combobox } from "@/components/ui/combobox";
 import EvaluationsPagination from "@/components/paginationComponent";
 import {
@@ -413,7 +414,6 @@ export default function MyViolationsPanel() {
 
   const listBusy = loading || refreshing;
   const showInitialSkeleton = loading && !refreshing;
-  const showSoftRefreshVeil = refreshing && rows.length > 0;
 
   const fetchAvailableMonths = useCallback(async (options?: { force?: boolean }) => {
     setMonthsLoading(true);
@@ -615,7 +615,22 @@ export default function MyViolationsPanel() {
             </div>
           </div>
         </div>
-        <CardContent className="space-y-4 border-t border-slate-100 bg-gradient-to-b from-slate-50/50 to-white pt-6">
+        <CardContent className="relative space-y-4 border-t border-slate-100 bg-gradient-to-b from-slate-50/50 to-white pt-6">
+          {listBusy ? (
+            <SmctLoadingOverlay
+              label={
+                refreshing && !loading
+                  ? "Refreshing violations…"
+                  : "Loading violations…"
+              }
+            />
+          ) : null}
+          <div
+            className={cn(
+              "space-y-4",
+              listBusy && "pointer-events-none opacity-40"
+            )}
+          >
           <div className="flex flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-end">
             <div className="flex min-w-0 w-full flex-1 flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-end">
               <div className="min-w-0 w-full flex-1 space-y-2 lg:max-w-md">
@@ -708,17 +723,10 @@ export default function MyViolationsPanel() {
 
           <div
             className={cn(
-              "relative overflow-hidden rounded-lg border border-slate-200/80 bg-white shadow-sm sm:rounded-xl",
-              showInitialSkeleton && "min-h-[240px]"
+              "overflow-hidden rounded-lg border border-slate-200/80 bg-white shadow-sm sm:rounded-xl",
+              listBusy && "min-h-[280px] border-blue-100 bg-slate-50/40"
             )}
           >
-            {showSoftRefreshVeil ? (
-              <div
-                className="pointer-events-none absolute inset-0 z-[5] bg-white/50 backdrop-blur-[1px]"
-                aria-hidden
-              />
-            ) : null}
-
             <Table
               className={VIOLATION_SUMMARY_TABLE_CLASS}
               wrapperClassName="overflow-x-auto"
@@ -852,6 +860,7 @@ export default function MyViolationsPanel() {
                 />
               </div>
             ) : null}
+          </div>
           </div>
 
           <Dialog

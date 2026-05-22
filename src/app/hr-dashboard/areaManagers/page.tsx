@@ -33,6 +33,7 @@ import { apiService } from "@/lib/apiService";
 import { toastMessages } from "@/lib/toastMessages";
 import { useErrorHandler } from "@/hooks/useErrorHandler";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
+import { cn } from "@/lib/utils";
 import {
   Pagination,
   PaginationContent,
@@ -42,6 +43,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import SmctLoadingOverlay from "@/components/SmctLoadingOverlay";
 
 interface Employee {
   id: number;
@@ -53,36 +55,6 @@ interface Employee {
   contact?: string;
   isActive?: boolean;
   role: string;
-}
-
-/** Spinner + SMCT logo over card content while refreshing (matches Branch Heads). */
-function SmctLoadingOverlay({ label }: { label?: string }) {
-  return (
-    <div
-      className="absolute inset-0 z-[70] flex items-center justify-center rounded-lg bg-white/55 backdrop-blur-[1px]"
-      aria-live="polite"
-      aria-busy="true"
-    >
-      <div className="pointer-events-none flex flex-col items-center gap-3 rounded-lg bg-white/90 px-8 py-6 shadow-lg ring-1 ring-gray-200/80">
-        <div className="relative">
-          <div className="h-16 w-16 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <img
-              src="/smct.png"
-              alt=""
-              className="h-10 w-10 object-contain"
-              width={40}
-              height={40}
-              decoding="async"
-            />
-          </div>
-        </div>
-        <p className="text-sm font-medium text-gray-600">
-          {label ?? "Loading..."}
-        </p>
-      </div>
-    </div>
-  );
 }
 
 export default function AreaManagersTab() {
@@ -125,6 +97,7 @@ export default function AreaManagersTab() {
   const [areaManagersData, setAreaManagersData] = useState<Employee[]>([]);
   const [loadingAreaManagers, setLoadingAreaManagers] = useState(true);
   const [areaManagersRefreshing, setAreaManagersRefreshing] = useState(false);
+  const areaManagersBusy = loadingAreaManagers || areaManagersRefreshing;
   const itemsPerPage = 8;
   const [isSavingAreaManager, setIsSavingAreaManager] = useState(false);
   const [editBranchSearchTerm, setEditBranchSearchTerm] = useState("");
@@ -664,13 +637,22 @@ export default function AreaManagersTab() {
           </div>
         </CardHeader>
         <CardContent className="relative">
-          {areaManagersRefreshing && (
-            <SmctLoadingOverlay label="Refreshing area managers..." />
-          )}
-          {/* Search Bar */}
+          {areaManagersBusy ? (
+            <SmctLoadingOverlay
+              label={
+                areaManagersRefreshing && !loadingAreaManagers
+                  ? "Refreshing area managers…"
+                  : "Loading area managers…"
+              }
+            />
+          ) : null}
           <div
-            className={`mb-6 ${areaManagersRefreshing ? "pointer-events-none opacity-40" : ""}`}
+            className={cn(
+              areaManagersBusy && "pointer-events-none opacity-40"
+            )}
           >
+          {/* Search Bar */}
+          <div className="mb-6">
             <div className="relative w-full md:w-1/3">
               <Label
                 htmlFor="area-managers-search"
@@ -723,7 +705,10 @@ export default function AreaManagersTab() {
             </div>
           </div>
           <div
-            className={`relative max-h-[600px] min-h-[280px] overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 ${areaManagersRefreshing ? "border-blue-100 bg-gray-50/40" : ""}`}
+            className={cn(
+              "relative max-h-[600px] min-h-[280px] overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100",
+              areaManagersBusy && "border-blue-100 bg-gray-50/40"
+            )}
           >
             <Table>
               <TableHeader className="sticky top-0 z-10 bg-white shadow-sm [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600">
@@ -882,7 +867,7 @@ export default function AreaManagersTab() {
           </div>
 
           {/* Pagination Controls */}
-          {!areaManagersRefreshing && areaManagersTotal > itemsPerPage && (
+          {!areaManagersBusy && areaManagersTotal > itemsPerPage && (
             <div className="flex items-center justify-between mt-4 px-2">
               <div className="text-sm text-gray-600">
                 Showing {areaManagersStartIndex + 1} to{" "}
@@ -956,6 +941,7 @@ export default function AreaManagersTab() {
               </Pagination>
             </div>
           )}
+          </div>
         </CardContent>
       </Card>
 
