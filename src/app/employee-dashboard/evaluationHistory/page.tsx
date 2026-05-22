@@ -27,6 +27,7 @@ import {
   getPerformanceRatingBand,
 } from "@/lib/performanceRatingDisplay";
 import EvaluationsPagination from "@/components/paginationComponent";
+import NotFoundEmptyState from "@/components/NotFoundEmptyState";
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
 import {
   Select,
@@ -746,39 +747,15 @@ export default function OverviewTab() {
               </Table>
             </div>
           ) : myEvaluations.length === 0 && debouncedSearchTerm === "" ? (
-            <div className="text-center py-8">
-              <div className="text-gray-500 text-lg mb-2">
-                No performance reviews yet
-              </div>
-              <div className="text-gray-400 text-sm">
-                Your evaluations will appear here once they are completed by
-                your manager.
-              </div>
-            </div>
+            <NotFoundEmptyState
+              title="No performance reviews yet"
+              description="Your evaluations will appear here once they are completed by your manager."
+            />
           ) : myEvaluations.length === 0 && debouncedSearchTerm !== "" ? (
-            <div className="text-center py-8">
-              <div className="flex flex-col items-center justify-center gap-4 mb-4">
-                <img
-                  src="/not-found.gif"
-                  alt="No data"
-                  className="w-25 h-25 object-contain"
-                  style={{
-                    imageRendering: "auto",
-                    willChange: "auto",
-                    transform: "translateZ(0)",
-                    backfaceVisibility: "hidden",
-                    WebkitBackfaceVisibility: "hidden",
-                  }}
-                />
-                <div className="text-gray-500">
-                  <p className="text-base font-medium mb-1">No results found</p>
-                  <p className="text-sm">
-                    No performance reviews match &quot;{debouncedSearchTerm}
-                    &quot;
-                  </p>
-                </div>
-              </div>
-            </div>
+            <NotFoundEmptyState
+              title="No results found"
+              description={`No performance reviews match "${debouncedSearchTerm}"`}
+            />
           ) : (
             <>
               {debouncedSearchTerm.trim() !== "" && (

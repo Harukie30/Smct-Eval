@@ -37,6 +37,7 @@ import {
 } from "@/lib/performanceRatingDisplay";
 import { apiService } from "@/lib/apiService";
 import EvaluationsPagination from "@/components/paginationComponent";
+import NotFoundEmptyState from "@/components/NotFoundEmptyState";
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
 import {
   Select,
@@ -1010,15 +1011,11 @@ export default function PerformanceReviews() {
                   />
                 </>
               ) : (
-                <div className="text-center py-12 px-6">
-                  <div className="text-gray-500 text-lg mb-2">
-                    No performance reviews yet
-                  </div>
-                  <div className="text-gray-400 text-sm">
-                    Your evaluation history will appear here once reviews are
-                    completed.
-                  </div>
-                </div>
+                <NotFoundEmptyState
+                  className="py-12"
+                  title="No performance reviews yet"
+                  description="Your evaluation history will appear here once reviews are completed."
+                />
               )}
             </CardContent>
           </Card>

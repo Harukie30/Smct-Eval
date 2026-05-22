@@ -38,6 +38,7 @@ import { parseSubordinateEmployeesAndEvaluators } from "@/lib/subordinateLists";
 import EvaluationsPagination from "@/components/paginationComponent";
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import SmctLoadingOverlay from "@/components/SmctLoadingOverlay";
 import BranchEmployeesModal, {
   BranchEmployee,
 } from "@/components/hr/BranchEmployeesModal";
@@ -500,38 +501,7 @@ export default function DepartmentsTab() {
     }
   };
 
-  // Show loading skeleton on initial load
-  if (loading) {
-    return (
-      <div className="relative  overflow-y-auto ">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 ">
-          {Array.from({ length: itemsPerPage }).map((_, index) => (
-            <Card key={`skeleton-dept-${index}`} className="animate-pulse">
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <Skeleton className="h-6 w-32" />
-                  <Skeleton className="h-5 w-20 rounded-full" />
-                </div>
-                <Skeleton className="h-4 w-40 mt-2" />
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center p-3 bg-gray-100 rounded-lg">
-                    <Skeleton className="h-6 w-12 mx-auto mb-2" />
-                    <Skeleton className="h-3 w-16 mx-auto" />
-                  </div>
-                  <div className="text-center p-3 bg-gray-100 rounded-lg">
-                    <Skeleton className="h-6 w-12 mx-auto mb-2" />
-                    <Skeleton className="h-3 w-16 mx-auto" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    );
-  }
+  const listBusy = loading || isRefreshing;
 
   return (
     <div className="relative  overflow-y-auto">
@@ -644,30 +614,48 @@ export default function DepartmentsTab() {
           </div>
         </CardHeader>
         <CardContent className="relative">
-          {isRefreshing && (
-            <div className="absolute inset-0 z-50 flex items-center justify-center rounded-lg bg-white/55 backdrop-blur-[1px] pointer-events-none">
-              <div className="flex flex-col items-center gap-3 rounded-lg bg-white/90 px-8 py-6 shadow-lg ring-1 ring-gray-200/80">
-                <div className="relative">
-                  <div className="h-16 w-16 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <img
-                      src="/smct.png"
-                      alt="SMCT Logo"
-                      className="h-10 w-10 object-contain"
-                      width={40}
-                      height={40}
-                      decoding="async"
-                    />
-                  </div>
-                </div>
-                <p className="text-sm font-medium text-gray-600">Refreshing...</p>
-              </div>
-            </div>
-          )}
+          {listBusy ? (
+            <SmctLoadingOverlay
+              label={
+                isRefreshing && !loading
+                  ? "Refreshing branches…"
+                  : "Loading branches…"
+              }
+            />
+          ) : null}
 
-          <div className={cn(isRefreshing && "min-h-[420px]")}>
+          <div
+            className={cn(
+              listBusy && "pointer-events-none opacity-40",
+              listBusy && "min-h-[420px]"
+            )}
+          >
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {branches && Array.isArray(branches) && branches.length > 0 ? (
+              {loading ? (
+                Array.from({ length: itemsPerPage }).map((_, index) => (
+                  <Card key={`skeleton-branch-${index}`} className="animate-pulse">
+                    <CardHeader>
+                      <div className="flex justify-between items-center">
+                        <Skeleton className="h-6 w-32" />
+                        <Skeleton className="h-5 w-20 rounded-full" />
+                      </div>
+                      <Skeleton className="h-4 w-40 mt-2" />
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="text-center p-3 bg-gray-100 rounded-lg">
+                          <Skeleton className="h-6 w-12 mx-auto mb-2" />
+                          <Skeleton className="h-3 w-16 mx-auto" />
+                        </div>
+                        <div className="text-center p-3 bg-gray-100 rounded-lg">
+                          <Skeleton className="h-6 w-12 mx-auto mb-2" />
+                          <Skeleton className="h-3 w-16 mx-auto" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : branches && Array.isArray(branches) && branches.length > 0 ? (
                 branches.map((branch) => {
                     const headcounts = getBranchHeadcounts(branch);
                     const isDeleting = deletingBranchId === branch.id;
@@ -784,7 +772,7 @@ export default function DepartmentsTab() {
               ) : null}
             </div>
           </div>
-          {!isRefreshing &&
+          {!listBusy &&
             branches &&
             Array.isArray(branches) &&
             branches.length === 0 && (
@@ -825,7 +813,7 @@ export default function DepartmentsTab() {
             </div>
           )}
           {/* Pagination Controls */}
-          {!isRefreshing && totalPages > 1 && (
+          {!listBusy && totalPages > 1 && (
             <EvaluationsPagination
               currentPage={currentPage}
               totalPages={totalPages}
