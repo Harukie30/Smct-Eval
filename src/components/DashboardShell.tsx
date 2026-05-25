@@ -79,16 +79,16 @@ const SIDEBAR_NAV_SCROLL_CLASS = cn(
   SIDEBAR_SCROLL_HIDE_CLASS
 );
 
-/** Management submenu: show all items by default; scroll only when viewport/sidebar space is tight. */
+/** Management submenu: natural height when all items fit; else fill sidebar and scroll inside. */
 const MANAGEMENT_OVERFLOW_SCROLL_CLASS =
-  "overflow-y-auto overflow-x-hidden overscroll-contain scrollbar-thin scrollbar-thumb-white/30 scrollbar-track-transparent hover:scrollbar-thumb-white/50";
+  "min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain scrollbar-thin scrollbar-thumb-white/30 scrollbar-track-transparent hover:scrollbar-thumb-white/50";
 
 /** Outer collapsible wrapper (Radix keeps overflow-hidden for open/close). */
 const MANAGEMENT_DROPDOWN_CONTENT_CLASS = "mt-2";
 
 /** Inner scroll list — ref + maxHeight apply here so all items stay reachable. */
 const MANAGEMENT_SCROLL_INNER_CLASS = cn(
-  "space-y-1 pl-3 pr-1 pb-2 sm:pl-4",
+  "space-y-1.5 pl-3 pr-2 pb-4 sm:pl-4 sm:pr-2.5",
   MANAGEMENT_OVERFLOW_SCROLL_CLASS
 );
 
@@ -114,6 +114,15 @@ const SIDEBAR_NAV_ROW_CLASS =
 
 const SIDEBAR_NAV_ROW_SUB_CLASS =
   "flex items-center space-x-2.5 px-3 py-1.5 sm:space-x-3 sm:px-4 sm:py-2";
+
+/** Management submenu rows — extra padding; labels may wrap (e.g. Violation Summary). */
+const MANAGEMENT_NAV_ROW_SUB_CLASS = cn(
+  SIDEBAR_NAV_ROW_SUB_CLASS,
+  "items-start py-2 sm:py-2.5"
+);
+
+const MANAGEMENT_NAV_SUB_LABEL_CLASS =
+  "min-w-0 flex-1 font-medium text-xs leading-snug sm:text-sm whitespace-normal break-words";
 
 const SIDEBAR_NAV_TRIGGER_ROW_CLASS =
   "flex w-full items-center justify-between px-3 py-2 sm:px-4 sm:py-2.5";
@@ -165,13 +174,11 @@ export default function DashboardShell(props: DashboardShellProps) {
   const sidebarNavEndRef = useRef<HTMLDivElement>(null);
   const managementTriggerRef = useRef<HTMLButtonElement>(null);
   const managementContentRef = useRef<HTMLDivElement>(null);
-  const hideSidebarBottomArtRef = useRef(false);
   const [managementMenuMaxH, setManagementMenuMaxH] = useState<number | undefined>(
     undefined
   );
   /** Hide bottom art when nav/dropdown content extends into the decoration zone. */
   const [hideSidebarBottomArt, setHideSidebarBottomArt] = useState(false);
-  hideSidebarBottomArtRef.current = hideSidebarBottomArt;
 
   // Collapsible states for sidebar groups
   const [isManagementOpen, setIsManagementOpen] = useState(false);
@@ -302,34 +309,33 @@ export default function DashboardShell(props: DashboardShellProps) {
     [sidebarItems]
   );
 
+  /** Hide bottom art while Management/Analytics menus are open (dropdown may overlap that zone). */
+  const showSidebarBottomArt =
+    !hideSidebarBottomArt && !isManagementOpen && !isAnalyticsOpen;
+
+  const reserveSidebarBottomArt = showSidebarBottomArt;
+
+  /**
+   * If every Management item fits below the trigger, expand naturally (no inner scroll).
+   * When open, use full sidebar height (bottom art hidden / not reserved).
+   */
   const updateManagementMenuMaxH = useCallback(() => {
     if (!isManagementOpen || !managementTriggerRef.current) return;
     const contentEl = managementContentRef.current;
     if (!contentEl) return;
 
     const triggerRect = managementTriggerRef.current.getBoundingClientRect();
-    let limitBottom = window.innerHeight;
-
     const aside = sidebarAsideRef.current;
+
+    let limitBottom = window.innerHeight;
     if (aside) {
-      const asideRect = aside.getBoundingClientRect();
-      limitBottom = asideRect.bottom;
-      if (!hideSidebarBottomArtRef.current) {
-        limitBottom = Math.min(
-          limitBottom,
-          asideRect.bottom - SIDEBAR_BOTTOM_ART_ZONE_PX
-        );
-      }
+      // Full sidebar to the bottom while Management is open (art hidden).
+      limitBottom = aside.getBoundingClientRect().bottom - 8;
     }
 
-    const nav = managementTriggerRef.current.closest("nav");
-    if (nav) {
-      limitBottom = Math.min(limitBottom, nav.getBoundingClientRect().bottom);
-    }
+    const available = Math.max(0, Math.floor(limitBottom - triggerRect.bottom - 4));
+    if (available <= 0) return;
 
-    let available = limitBottom - triggerRect.bottom - 8;
-
-    // Measure full list height (ignore any applied max-height cap).
     const prevMax = contentEl.style.maxHeight;
     contentEl.style.maxHeight = "none";
     const contentH = contentEl.scrollHeight;
@@ -337,33 +343,32 @@ export default function DashboardShell(props: DashboardShellProps) {
 
     if (contentH <= 0) return;
 
-    const MIN_SCROLL_PX = 120;
-    if (contentH <= available) {
-      setManagementMenuMaxH(undefined);
-    } else {
-      setManagementMenuMaxH(Math.max(MIN_SCROLL_PX, Math.floor(available)));
-    }
+    const next =
+      contentH <= available ? undefined : available;
+
+    setManagementMenuMaxH((prev) => (prev === next ? prev : next));
   }, [isManagementOpen]);
 
   useEffect(() => {
     if (!isManagementOpen) {
-      setManagementMenuMaxH(undefined);
+      setManagementMenuMaxH((prev) => (prev === undefined ? prev : undefined));
       return;
     }
     updateManagementMenuMaxH();
     const contentEl = managementContentRef.current;
-    const ro =
-      contentEl &&
-      new ResizeObserver(() => {
-        requestAnimationFrame(updateManagementMenuMaxH);
-      });
-    if (contentEl && ro) ro.observe(contentEl);
+    const ro = new ResizeObserver(() => {
+      requestAnimationFrame(updateManagementMenuMaxH);
+    });
+    const aside = sidebarAsideRef.current;
     const nav = managementTriggerRef.current?.closest("nav");
+    if (contentEl) ro.observe(contentEl);
+    if (aside) ro.observe(aside);
+    if (nav) ro.observe(nav);
     nav?.addEventListener("scroll", updateManagementMenuMaxH, { passive: true });
     window.addEventListener("resize", updateManagementMenuMaxH);
     const t = window.setTimeout(updateManagementMenuMaxH, 320);
     return () => {
-      ro?.disconnect();
+      ro.disconnect();
       nav?.removeEventListener("scroll", updateManagementMenuMaxH);
       window.removeEventListener("resize", updateManagementMenuMaxH);
       window.clearTimeout(t);
@@ -372,14 +377,10 @@ export default function DashboardShell(props: DashboardShellProps) {
 
   useEffect(() => {
     if (!isManagementOpen) return;
-    updateManagementMenuMaxH();
-  }, [hideSidebarBottomArt, isManagementOpen, updateManagementMenuMaxH]);
-
-  useEffect(() => {
-    if (!isManagementOpen) return;
-    const t = window.setTimeout(updateManagementMenuMaxH, 400);
+    requestAnimationFrame(updateManagementMenuMaxH);
+    const t = window.setTimeout(updateManagementMenuMaxH, 0);
     return () => window.clearTimeout(t);
-  }, [isManagementOpen, updateManagementMenuMaxH]);
+  }, [isManagementOpen, reserveSidebarBottomArt, updateManagementMenuMaxH]);
 
   // Auto-open collapsible groups when their items are active
   useEffect(() => {
@@ -453,13 +454,17 @@ export default function DashboardShell(props: DashboardShellProps) {
 
     const updateOverlap = () => {
       if (!isSidebarOpen) {
-        setHideSidebarBottomArt(false);
+        setHideSidebarBottomArt((prev) => (prev ? false : prev));
         return;
       }
       const asideRect = aside.getBoundingClientRect();
       const endRect = navEnd.getBoundingClientRect();
       const decorationZoneTop = asideRect.bottom - SIDEBAR_BOTTOM_ART_ZONE_PX;
-      setHideSidebarBottomArt(endRect.bottom > decorationZoneTop);
+      const nextHide =
+        isManagementOpen ||
+        isAnalyticsOpen ||
+        endRect.bottom > decorationZoneTop;
+      setHideSidebarBottomArt((prev) => (prev === nextHide ? prev : nextHide));
     };
 
     const ro = new ResizeObserver(() => {
@@ -480,7 +485,6 @@ export default function DashboardShell(props: DashboardShellProps) {
     activeItemId,
     isManagementOpen,
     isAnalyticsOpen,
-    managementMenuMaxH,
     sidebarItemsKey,
     dashboardType,
   ]);
@@ -942,7 +946,7 @@ export default function DashboardShell(props: DashboardShellProps) {
             <div
               className={cn(
                 "relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden p-4 transition-opacity duration-400 sm:p-5 xl:p-6",
-                !hideSidebarBottomArt && "mb-28 sm:mb-32 xl:mb-36",
+                reserveSidebarBottomArt && "mb-28 sm:mb-32 xl:mb-36",
                 isSidebarOpen ? "opacity-100" : "opacity-0"
               )}
             >
@@ -1106,14 +1110,19 @@ export default function DashboardShell(props: DashboardShellProps) {
                                     onClick={() => onChangeActive(subItem.id)}
                                     className={cn(
                                       SIDEBAR_NAV_ITEM_BASE_CLASS,
-                                      SIDEBAR_NAV_ROW_SUB_CLASS,
+                                      MANAGEMENT_NAV_ROW_SUB_CLASS,
                                       sidebarNavActiveClass(activeItemId === subItem.id)
                                     )}
                                   >
-                                    <span className={SIDEBAR_NAV_ICON_CLASS}>
+                                    <span
+                                      className={cn(
+                                        SIDEBAR_NAV_ICON_CLASS,
+                                        "mt-0.5"
+                                      )}
+                                    >
                                       {subItem.icon}
                                     </span>
-                                    <span className={SIDEBAR_NAV_SUB_LABEL_CLASS}>
+                                    <span className={MANAGEMENT_NAV_SUB_LABEL_CLASS}>
                                       {subItem.label}
                                     </span>
                                   </button>
@@ -1218,14 +1227,19 @@ export default function DashboardShell(props: DashboardShellProps) {
                                     onClick={() => onChangeActive(subItem.id)}
                                     className={cn(
                                       SIDEBAR_NAV_ITEM_BASE_CLASS,
-                                      SIDEBAR_NAV_ROW_SUB_CLASS,
+                                      MANAGEMENT_NAV_ROW_SUB_CLASS,
                                       sidebarNavActiveClass(activeItemId === subItem.id)
                                     )}
                                   >
-                                    <span className={SIDEBAR_NAV_ICON_CLASS}>
+                                    <span
+                                      className={cn(
+                                        SIDEBAR_NAV_ICON_CLASS,
+                                        "mt-0.5"
+                                      )}
+                                    >
                                       {subItem.icon}
                                     </span>
-                                    <span className={SIDEBAR_NAV_SUB_LABEL_CLASS}>
+                                    <span className={MANAGEMENT_NAV_SUB_LABEL_CLASS}>
                                       {subItem.label}
                                     </span>
                                   </button>
@@ -1306,8 +1320,8 @@ export default function DashboardShell(props: DashboardShellProps) {
                 <div ref={sidebarNavEndRef} className="h-px w-full shrink-0" aria-hidden />
               </nav>
             </div>
-            {/* Faded role art — shown when nav is short; hidden when dropdown/list reaches bottom zone */}
-            {!hideSidebarBottomArt && isEmployeeDashboard && (
+            {/* Faded role art — hidden while Management/Analytics open or when nav fills the zone */}
+            {showSidebarBottomArt && isEmployeeDashboard && (
               <div
                 className={SIDEBAR_BOTTOM_ART_ABSOLUTE_CLASS}
                 style={{
@@ -1317,7 +1331,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                 aria-hidden
               />
             )}
-            {!hideSidebarBottomArt && isEvaluatorDashboard && (
+            {showSidebarBottomArt && isEvaluatorDashboard && (
               <div
                 className={SIDEBAR_BOTTOM_ART_ABSOLUTE_CLASS}
                 style={{
@@ -1327,7 +1341,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                 aria-hidden
               />
             )}
-            {!hideSidebarBottomArt && isHRDashboard && (
+            {showSidebarBottomArt && isHRDashboard && (
               <div
                 className={SIDEBAR_BOTTOM_ART_ABSOLUTE_CLASS}
                 style={{
@@ -1337,7 +1351,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                 aria-hidden
               />
             )}
-            {!hideSidebarBottomArt && isAdminDashboard && (
+            {showSidebarBottomArt && isAdminDashboard && (
               <div
                 className={SIDEBAR_BOTTOM_ART_ABSOLUTE_CLASS}
                 style={{
