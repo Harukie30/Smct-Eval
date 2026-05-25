@@ -45,6 +45,7 @@ import {
 import { apiService } from "@/lib/apiService";
 import { toastMessages } from "@/lib/toastMessages";
 import { cn } from "@/lib/utils";
+import { SanctionTableHeadLabel } from "@/components/violations/SanctionTableHeadLabel";
 import { useAuth } from "@/contexts/UserContext";
 import { CONFIG } from "../../config/config";
 import ViolationRowHighlightLegend from "@/components/ViolationRowHighlightLegend";
@@ -742,8 +743,8 @@ export default function MyViolationsPanel() {
                   <TableHead className="min-w-[8rem] font-semibold text-slate-600 sm:min-w-[11rem]">
                     Offense
                   </TableHead>
-                  <TableHead className="min-w-[7rem] font-semibold text-slate-600 sm:min-w-[9rem]">
-                    Sanction
+                  <TableHead className="min-w-[7rem] font-semibold sm:min-w-[9rem]">
+                    <SanctionTableHeadLabel />
                   </TableHead>
                 </TableRow>
               </TableHeader>

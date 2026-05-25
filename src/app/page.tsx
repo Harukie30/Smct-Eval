@@ -268,7 +268,7 @@ function LandingLoginPage() {
       </div>
 
       {/* Single Geometric Elements - Hexagons only */}
-      <div className="absolute top-20 right-20 w-24 h-24 opacity-30">
+      <div className="absolute top-20 right-20 hidden h-24 w-24 opacity-30 lg:block">
         <svg viewBox="0 0 100 100" className="w-full h-full">
           <polygon
             points="50,10 80,30 80,70 50,90 20,70 20,30"
@@ -279,7 +279,7 @@ function LandingLoginPage() {
         </svg>
       </div>
 
-      <div className="absolute bottom-32 right-40 w-20 h-20 opacity-35">
+      <div className="absolute bottom-32 right-40 hidden h-20 w-20 opacity-35 xl:block">
         <svg viewBox="0 0 100 100" className="w-full h-full">
           <polygon
             points="50,5 85,25 85,75 50,95 15,75 15,25"
@@ -325,15 +325,15 @@ function LandingLoginPage() {
       </div>
 
       {/* Header */}
-      <header className="relative z-10 flex justify-between items-center p-6">
+      <header className="relative z-10 flex items-center justify-between p-4 sm:p-6">
         <div className="flex items-center space-x-3">
           <img
             src="/smct.png"
             alt="SMCT Group of Companies"
-            className="h-30 w-auto"
+            className="h-10 w-auto sm:h-12 lg:h-14"
           />
         </div>
-        <nav className="hidden md:flex bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 space-x-6">
+        <nav className="hidden items-center rounded-full bg-white/10 px-3 py-2 backdrop-blur-sm sm:flex sm:space-x-4 lg:space-x-6 lg:px-4">
           <button
             onClick={() => setIsAboutModalOpen(true)}
             className="text-white font-semibold hover:underline-offset-4 hover:underline hover:text-blue-100 transition-colors cursor-pointer"
@@ -350,15 +350,15 @@ function LandingLoginPage() {
       </header>
 
       {/* Main Content */}
-      <main className="relative z-10 container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+      <main className="relative z-10 mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:py-10">
+        <div className="grid grid-cols-1 items-center gap-8 lg:grid-cols-2 lg:gap-10 xl:gap-12">
           {/* Left Column - Landing Content */}
-          <div className="flex flex-col justify-center space-y-8 relative group">
+          <div className="group relative flex flex-col justify-center space-y-6 lg:space-y-8">
             {/* Subtle backdrop for better text readability */}
 
             <div className="relative z-10 animate-fade-in-up">
               <h1
-                className="text-4xl md:text-5xl font-bold text-gray-800 animate-fade-in-up"
+                className="animate-fade-in-up text-3xl font-bold text-gray-800 sm:text-4xl lg:text-4xl xl:text-5xl"
                 style={{ animationDelay: "0.1s" }}
               >
                 Streamline Your{" "}
@@ -367,7 +367,7 @@ function LandingLoginPage() {
                 </span>
               </h1>
               <p
-                className="text-lg text-gray-600 animate-fade-in-up"
+                className="animate-fade-in-up text-base text-gray-600 sm:text-lg"
                 style={{ animationDelay: "0.2s" }}
               >
                 Our platform helps organizations conduct meaningful performance
@@ -456,9 +456,9 @@ function LandingLoginPage() {
             </div>
           </div>
 
-          <div className="flex items-center justify-end pr-8 ">
+          <div className="flex w-full items-center justify-center lg:justify-end lg:pr-2 xl:pr-6">
             <PageTransition>
-              <Card className="w-full max-w-xs shadow-lg hover:shadow-xl transition-shadow duration-300 backdrop-blur-sm bg-white border-gray-500/20">
+              <Card className="w-full max-w-sm border-gray-500/20 bg-white shadow-lg backdrop-blur-sm transition-shadow duration-300 hover:shadow-xl sm:max-w-md lg:max-w-[22rem] xl:max-w-md">
                 <CardHeader className="space-y-1">
                   <CardTitle className="text-2xl text-center text-gray-900">
                     Sign in to your account
@@ -595,7 +595,7 @@ function LandingLoginPage() {
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10 bg-blue-600 mt-20 py-8 ">
+      <footer className="relative z-10 mt-12 bg-blue-600 py-8 sm:mt-16 lg:mt-20">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>

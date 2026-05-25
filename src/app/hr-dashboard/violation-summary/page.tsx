@@ -33,6 +33,7 @@ import apiService from "@/lib/apiService";
 import { toastMessages } from "@/lib/toastMessages";
 import { FileType, FileWarning, Loader2, RefreshCw, Search } from "lucide-react";
 import EvaluationsPagination from "@/components/paginationComponent";
+import { SanctionTableHeadLabel } from "@/components/violations/SanctionTableHeadLabel";
 import * as XLSX from "xlsx";
 import {
   Dialog,
@@ -619,8 +620,8 @@ export default function ViolationSummaryPage() {
                   <TableHead className="min-w-[8rem] font-semibold text-slate-600 sm:min-w-[11rem]">
                     Offense
                   </TableHead>
-                  <TableHead className="min-w-[7rem] font-semibold text-slate-600 sm:min-w-[9rem]">
-                    Sanction
+                  <TableHead className="min-w-[7rem] font-semibold sm:min-w-[9rem]">
+                    <SanctionTableHeadLabel />
                   </TableHead>
                 </TableRow>
               </TableHeader>
