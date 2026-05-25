@@ -547,7 +547,8 @@ export default function UserManagementTab() {
             key === "position" ||
             key === "branch" ||
             key === "role" ||
-            key === "department"
+            key === "department" ||
+            key === "employeeId"
           ) {
             return;
           }
@@ -580,6 +581,14 @@ export default function UserManagementTab() {
         updatedUser.department !== null
       ) {
         formData.append("department_id", String(updatedUser.department));
+      }
+
+      if (
+        updatedUser.employeeId !== undefined &&
+        updatedUser.employeeId !== null &&
+        String(updatedUser.employeeId).trim() !== ""
+      ) {
+        formData.append("employee_id", String(updatedUser.employeeId).trim());
       }
 
       await apiService.updateEmployee(formData, updatedUser.id);
@@ -705,10 +714,9 @@ export default function UserManagementTab() {
       formDataToUpload.append("fname", newUser.fname);
       formDataToUpload.append("lname", newUser.lname);
       formDataToUpload.append("username", newUser.username);
-      // Remove dash from employee_id before sending (keep only numbers)
       formDataToUpload.append(
         "employee_id",
-        newUser.employee_id.replace(/-/g, "")
+        String(newUser.employee_id ?? "").trim()
       );
       formDataToUpload.append("email", newUser.email);
       formDataToUpload.append("contact", newUser.contact);

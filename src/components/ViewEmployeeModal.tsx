@@ -173,27 +173,15 @@ export default function ViewEmployeeModal({
     loadDashboard();
   }, [isOpen, employee]);
 
-  // Format employee ID - check multiple possible field names
-  let empId = "";
   const employeeIdValue =
     (employee as any)?.emp_id ||
     (employee as any)?.employeeId ||
     (employee as any)?.employee_id;
 
-  if (employeeIdValue) {
-    const idString = employeeIdValue.toString();
-    if (idString.length > 4) {
-      empId = `${idString.slice(0, 4)}-${idString.slice(4)}`;
-    } else if (idString.length > 0) {
-      // Handle shorter IDs by padding to 10 digits if needed
-      const padded = idString.padStart(10, "0");
-      if (padded.length >= 10) {
-        empId = `${padded.slice(0, 4)}-${padded.slice(4, 10)}`;
-      } else {
-        empId = idString;
-      }
-    }
-  }
+  const empId =
+    employeeIdValue != null && String(employeeIdValue).trim() !== ""
+      ? String(employeeIdValue).trim()
+      : "";
 
   const getEmployeePerformanceMetrics = (employeeData: any[]) => {
     if (!employeeData || employeeData.length === 0) {
