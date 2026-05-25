@@ -215,6 +215,48 @@ function extractLastPageFromViolationResponse(raw: unknown): number {
   return Number.isFinite(lp) && lp >= 1 ? lp : 1;
 }
 
+/** Parse API `years` list, e.g. `[{ "years": 2026 }]`. */
+function parseYearValue(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    const y = Math.trunc(value);
+    if (y >= 1990 && y <= 2100) return y;
+  }
+  if (typeof value === "string" && value.trim() !== "") {
+    const y = parseInt(value.trim(), 10);
+    if (Number.isFinite(y) && y >= 1990 && y <= 2100) return y;
+  }
+  return null;
+}
+
+function extractYearsFromViolationResponse(raw: unknown): number[] {
+  if (!raw || typeof raw !== "object") return [];
+  const root = raw as Record<string, unknown>;
+  const payload =
+    root.data && typeof root.data === "object" && !Array.isArray(root.data)
+      ? (root.data as Record<string, unknown>)
+      : root;
+
+  const sources = [root.years, payload.years, root.available_years, payload.available_years];
+  const found = new Set<number>();
+
+  for (const source of sources) {
+    if (!Array.isArray(source)) continue;
+    for (const item of source) {
+      if (item == null) continue;
+      if (typeof item === "object") {
+        const row = item as Record<string, unknown>;
+        const y = parseYearValue(row.years ?? row.year ?? row.value);
+        if (y !== null) found.add(y);
+        continue;
+      }
+      const y = parseYearValue(item);
+      if (y !== null) found.add(y);
+    }
+  }
+
+  return Array.from(found).sort((a, b) => b - a);
+}
+
 /** Fetches every page for the given calendar month/year (for export). */
 async function fetchAllViolationRowsForPeriod(
   month: string,
@@ -294,6 +336,8 @@ export default function ViolationSummaryPage() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [monthFilter, setMonthFilter] = useState<string>(String(now.getMonth() + 1));
   const [yearFilter, setYearFilter] = useState<string>(String(now.getFullYear()));
+  /** Years from API `years` (e.g. `[{ years: 2026 }]`). */
+  const [apiYears, setApiYears] = useState<number[]>([]);
   const [page, setPage] = useState(1);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [exportModalMonth, setExportModalMonth] = useState(String(now.getMonth() + 1));
@@ -313,8 +357,9 @@ export default function ViolationSummaryPage() {
     return `${name} ${yearFilter}`;
   }, [monthFilter, yearFilter]);
 
-  const yearsFromTable = useMemo(() => {
+  const yearOptions = useMemo(() => {
     const set = new Set<number>();
+    for (const y of apiYears) set.add(y);
     const yf = Number(yearFilter);
     if (Number.isFinite(yf) && yf >= 1990 && yf <= 2100) {
       set.add(yf);
@@ -325,7 +370,7 @@ export default function ViolationSummaryPage() {
     }
     const list = Array.from(set).sort((a, b) => b - a);
     return list.length > 0 ? list : [new Date().getFullYear()];
-  }, [rows, yearFilter]);
+  }, [apiYears, rows, yearFilter]);
 
   const isSearchPending = search.trim() !== debouncedSearch;
   const listBusy = loading || refreshing;
@@ -359,6 +404,15 @@ export default function ViolationSummaryPage() {
           month: monthFilter,
           year: yearFilter,
         });
+        const yearsFromApi = extractYearsFromViolationResponse(raw);
+        if (yearsFromApi.length > 0) {
+          setApiYears(yearsFromApi);
+          const requestedYear = Number(yearFilter);
+          if (!yearsFromApi.includes(requestedYear)) {
+            setYearFilter(String(yearsFromApi[0]));
+            return;
+          }
+        }
         const next = mapMemorandumViolationsResponse(raw);
         setRows(next);
         setPage(1);
@@ -556,7 +610,7 @@ export default function ViolationSummaryPage() {
                       <SelectValue placeholder="Year" />
                     </SelectTrigger>
                     <SelectContent>
-                      {yearsFromTable.map((y) => (
+                      {yearOptions.map((y) => (
                         <SelectItem key={y} value={String(y)} className="cursor-pointer">
                           {y}
                         </SelectItem>
@@ -769,7 +823,7 @@ export default function ViolationSummaryPage() {
                     <SelectValue placeholder="Year" />
                   </SelectTrigger>
                   <SelectContent>
-                    {yearsFromTable.map((y) => (
+                    {yearOptions.map((y) => (
                       <SelectItem key={y} value={String(y)} className="cursor-pointer">
                         {y}
                       </SelectItem>
