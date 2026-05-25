@@ -249,6 +249,62 @@ body {
   opacity: 0;
 }
 
+/* Sidebar Management / Analytics — items stack in one after another */
+@keyframes sidebar-submenu-item-stack {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.sidebar-submenu-stagger[data-state="open"] .sidebar-submenu-item {
+  animation: sidebar-submenu-item-stack 0.22s cubic-bezier(0.22, 1, 0.36, 1)
+    backwards;
+}
+
+.sidebar-submenu-stagger[data-state="open"] .sidebar-submenu-item:nth-child(1) {
+  animation-delay: 0.03s;
+}
+.sidebar-submenu-stagger[data-state="open"] .sidebar-submenu-item:nth-child(2) {
+  animation-delay: 0.07s;
+}
+.sidebar-submenu-stagger[data-state="open"] .sidebar-submenu-item:nth-child(3) {
+  animation-delay: 0.11s;
+}
+.sidebar-submenu-stagger[data-state="open"] .sidebar-submenu-item:nth-child(4) {
+  animation-delay: 0.15s;
+}
+.sidebar-submenu-stagger[data-state="open"] .sidebar-submenu-item:nth-child(5) {
+  animation-delay: 0.19s;
+}
+.sidebar-submenu-stagger[data-state="open"] .sidebar-submenu-item:nth-child(6) {
+  animation-delay: 0.23s;
+}
+.sidebar-submenu-stagger[data-state="open"] .sidebar-submenu-item:nth-child(7) {
+  animation-delay: 0.27s;
+}
+.sidebar-submenu-stagger[data-state="open"] .sidebar-submenu-item:nth-child(8) {
+  animation-delay: 0.31s;
+}
+.sidebar-submenu-stagger[data-state="open"] .sidebar-submenu-item:nth-child(9) {
+  animation-delay: 0.35s;
+}
+.sidebar-submenu-stagger[data-state="open"] .sidebar-submenu-item:nth-child(10) {
+  animation-delay: 0.39s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-submenu-stagger[data-state="open"] .sidebar-submenu-item {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
 /* Fade in/out animation for warning icons */
 @keyframes fadeInOut {
   0%, 100% {

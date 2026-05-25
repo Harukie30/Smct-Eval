@@ -83,8 +83,18 @@ const SIDEBAR_NAV_SCROLL_CLASS = cn(
 const MANAGEMENT_OVERFLOW_SCROLL_CLASS =
   "min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain scrollbar-thin scrollbar-thumb-white/30 scrollbar-track-transparent hover:scrollbar-thumb-white/50";
 
+/** Sidebar submenu — container fade; items use `.sidebar-submenu-stagger` in globals.css. */
+const SIDEBAR_SUBMENU_COLLAPSE_CLASS = cn(
+  "sidebar-submenu-stagger mt-2",
+  "motion-safe:data-[state=open]:animate-in motion-safe:data-[state=closed]:animate-out",
+  "motion-safe:data-[state=closed]:fade-out-0 motion-safe:data-[state=open]:fade-in-0",
+  "motion-safe:duration-200 motion-safe:ease-out"
+);
+
+const SIDEBAR_SUBMENU_ITEM_CLASS = "sidebar-submenu-item";
+
 /** Outer collapsible wrapper (Radix keeps overflow-hidden for open/close). */
-const MANAGEMENT_DROPDOWN_CONTENT_CLASS = "mt-2";
+const MANAGEMENT_DROPDOWN_CONTENT_CLASS = SIDEBAR_SUBMENU_COLLAPSE_CLASS;
 
 /** Inner scroll list — ref + maxHeight apply here so all items stay reachable. */
 const MANAGEMENT_SCROLL_INNER_CLASS = cn(
@@ -1085,7 +1095,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                               <ChevronDown
                                 className={cn(
                                   SIDEBAR_CHEVRON_CLASS,
-                                  "transition-transform",
+                                  "transition-transform duration-200 ease-out",
                                   isManagementOpen && "rotate-180"
                                 )}
                               />
@@ -1110,6 +1120,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                                     onClick={() => onChangeActive(subItem.id)}
                                     className={cn(
                                       SIDEBAR_NAV_ITEM_BASE_CLASS,
+                                      SIDEBAR_SUBMENU_ITEM_CLASS,
                                       MANAGEMENT_NAV_ROW_SUB_CLASS,
                                       sidebarNavActiveClass(activeItemId === subItem.id)
                                     )}
@@ -1202,7 +1213,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                               <ChevronDown
                                 className={cn(
                                   SIDEBAR_CHEVRON_CLASS,
-                                  "transition-transform",
+                                  "transition-transform duration-200 ease-out",
                                   isManagementOpen && "rotate-180"
                                 )}
                               />
@@ -1227,6 +1238,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                                     onClick={() => onChangeActive(subItem.id)}
                                     className={cn(
                                       SIDEBAR_NAV_ITEM_BASE_CLASS,
+                                      SIDEBAR_SUBMENU_ITEM_CLASS,
                                       MANAGEMENT_NAV_ROW_SUB_CLASS,
                                       sidebarNavActiveClass(activeItemId === subItem.id)
                                     )}
@@ -1281,13 +1293,18 @@ export default function DashboardShell(props: DashboardShellProps) {
                               <ChevronDown
                                 className={cn(
                                   SIDEBAR_CHEVRON_CLASS,
-                                  "transition-transform",
+                                  "transition-transform duration-200 ease-out",
                                   isAnalyticsOpen && "rotate-180"
                                 )}
                               />
                             </button>
                           </CollapsibleTrigger>
-                          <CollapsibleContent className="mt-2 space-y-1 pl-3 sm:pl-4">
+                          <CollapsibleContent
+                            className={cn(
+                              SIDEBAR_SUBMENU_COLLAPSE_CLASS,
+                              "space-y-1 pl-3 sm:pl-4"
+                            )}
+                          >
                             {sidebarItems
                               .filter((i) => analyticsItems.includes(i.id))
                               .map((subItem) => (
@@ -1296,6 +1313,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                                   onClick={() => onChangeActive(subItem.id)}
                                   className={cn(
                                     SIDEBAR_NAV_ITEM_BASE_CLASS,
+                                    SIDEBAR_SUBMENU_ITEM_CLASS,
                                     SIDEBAR_NAV_ROW_SUB_CLASS,
                                     sidebarNavActiveClass(activeItemId === subItem.id)
                                   )}
