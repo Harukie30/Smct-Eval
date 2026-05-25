@@ -278,9 +278,6 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.employee_id.trim()) {
-      newErrors.employee_id = "Employee ID is required!";
-    }
     if (!formData.fname.trim()) {
       newErrors.fname = "First name is required";
     }
@@ -312,17 +309,6 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
 
     if (!formData.username.trim()) {
       newErrors.username = "Username cannot be empty if provided";
-    }
-
-    if (!formData.contact) {
-      newErrors.contact = "Contact is required";
-    } else {
-      const contactDigits = formData.contact.replace(/\D/g, "");
-      if (!contactDigits.startsWith("09")) {
-        newErrors.contact = "Contact number must start with '09'";
-      } else if (contactDigits.length !== 11) {
-        newErrors.contact = "Contact number must be exactly 11 digits";
-      }
     }
 
     if (!formData.password || formData.password.length < 8) {
@@ -414,32 +400,12 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
               <Label htmlFor="employee_id">Employee ID</Label>
               <Input
                 id="employee_id"
-                placeholder="****-******"
+                type="text"
+                placeholder="Enter employee ID"
                 value={formData.employee_id}
-                onChange={(e) => {
-                  // Remove all non-numeric characters except dash
-                  let value = e.target.value.replace(/[^\d-]/g, "");
-
-                  // Remove all dashes first
-                  value = value.replace(/-/g, "");
-
-                  // Limit to 10 digits (4 + 6)
-                  value = value.slice(0, 10);
-
-                  // Add dash after first 4 digits
-                  if (value.length > 4) {
-                    value = value.slice(0, 4) + "-" + value.slice(4);
-                  }
-
-                  setFormData({ ...formData, employee_id: value });
-                }}
-                onKeyPress={(e) => {
-                  // Only allow numbers
-                  if (!/[0-9]/.test(e.key)) {
-                    e.preventDefault();
-                  }
-                }}
-                maxLength={11}
+                onChange={(e) =>
+                  handleInputChange("employee_id", e.target.value)
+                }
                 className={errors?.employee_id ? "border-red-500" : "bg-white"}
               />
               {errors?.employee_id && (
@@ -575,36 +541,18 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
 
             {/* Contact */}
             <div className="space-y-2">
-              <Label htmlFor="contact">Contact Number *</Label>
+              <Label htmlFor="contact">Contact Number</Label>
               <Input
                 id="contact"
-                type="tel"
+                type="text"
                 value={formData.contact || ""}
-                onChange={(e) => {
-                  // Remove all non-numeric characters
-                  let value = e.target.value.replace(/\D/g, "");
-
-                  // Limit to 11 digits
-                  value = value.slice(0, 11);
-
-                  handleInputChange("contact", value);
-                }}
-                onKeyPress={(e) => {
-                  // Only allow numbers
-                  if (!/[0-9]/.test(e.key)) {
-                    e.preventDefault();
-                  }
-                }}
-                maxLength={11}
+                onChange={(e) => handleInputChange("contact", e.target.value)}
                 className={errors.contact ? "border-red-500" : "bg-white"}
-                placeholder="09XXXXXXXXX (11 digits)"
+                placeholder="Enter contact number"
               />
               {errors.contact && (
                 <p className="text-sm text-red-500">{errors.contact}</p>
               )}
-              <p className="text-xs text-gray-500">
-                Must start with "09" and be exactly 11 digits
-              </p>
             </div>
 
             {/* Date Hired */}

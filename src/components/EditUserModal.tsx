@@ -297,30 +297,14 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     localStorage.removeItem(attemptsKey);
   };
 
-  // Format employee ID as 10-digit string with dash (e.g., 1234-567890)
   const formatEmployeeId = (employeeId: string | number | undefined): string => {
-    if (employeeId === undefined || employeeId === null || String(employeeId).trim() === "") {
-      return "";
-    }
-    // Keep digits only and pad to 10 to preserve leading zeros
-    const idString = String(employeeId).replace(/\D/g, "").padStart(10, "0").slice(0, 10);
-    // Format as 1234-567890 (4 digits, dash, 6 digits)
-    if (idString.length >= 10) {
-      return `${idString.slice(0, 4)}-${idString.slice(4, 10)}`;
-    }
-    return idString;
+    if (employeeId === undefined || employeeId === null) return "";
+    return String(employeeId);
   };
 
-  // Parse formatted employee ID back to plain digits string (preserves leading zeros)
-  const parseEmployeeId = (formattedId: string): string | undefined => {
-    if (!formattedId || formattedId.trim() === "") return undefined;
-    // Remove non-digits and keep as string so leading zero is preserved
-    const numericString = formattedId.replace(/\D/g, "");
-    // Don't parse if it's empty after cleaning
-    if (numericString === "") {
-      return undefined;
-    }
-    return numericString;
+  const parseEmployeeId = (value: string): string | undefined => {
+    const trimmed = value.trim();
+    return trimmed === "" ? undefined : trimmed;
   };
 
   // Verify admin/HR password using login endpoint (handles password hashing correctly)
@@ -442,23 +426,8 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     }
   };
 
-  // Handle employee ID input change
   const handleEmployeeIdChange = (value: string) => {
-    // Remove all non-numeric characters except dash
-    let cleaned = value.replace(/[^\d-]/g, "");
-
-    // Remove all dashes first
-    cleaned = cleaned.replace(/-/g, "");
-
-    // Limit to 10 digits
-    cleaned = cleaned.slice(0, 10);
-
-    // Add dash after first 4 digits
-    if (cleaned.length > 4) {
-      cleaned = cleaned.slice(0, 4) + "-" + cleaned.slice(4);
-    }
-
-    setEmployeeIdInput(cleaned);
+    setEmployeeIdInput(value);
   };
 
   // Update formData when employee ID is changed (after verification)
@@ -466,7 +435,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     if (isEmployeeIdEditable) {
       if (employeeIdInput && employeeIdInput.trim() !== "") {
         const parsedId = parseEmployeeId(employeeIdInput);
-        // Only update if parsedId has at least one digit
         if (parsedId !== undefined && parsedId.length > 0) {
           setFormData((prev) => ({ ...prev, employeeId: parsedId }));
         } else {
@@ -917,31 +885,8 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       newErrors.username = "Username cannot be empty if provided";
     }
 
-    // Validate contact number if provided
-    if (formData.contact && formData.contact.trim()) {
-      const digitsOnly = formData.contact.replace(/\D/g, "");
-      const digitCount = digitsOnly.length;
-
-      if (digitCount !== 11) {
-        newErrors.contact = "Contact number must be exactly 11 digits";
-      } else if (!digitsOnly.startsWith("09")) {
-        newErrors.contact = "Contact number must start with '09'";
-      } else if (!/^09\d{9}$/.test(digitsOnly)) {
-        newErrors.contact =
-          "Please enter a valid phone number (must start with 09)";
-      }
-    }
-
     if (formData.password && formData.password.length < 8) {
       newErrors.password = "Password must be at least 8 characters long";
-    }
-
-    // Validate Employee ID format if it was edited (should be 10 digits)
-    if (formData.employeeId !== undefined && String(formData.employeeId).trim() !== "") {
-      const employeeIdString = String(formData.employeeId).replace(/\D/g, "");
-      if (employeeIdString.length !== 10) {
-        newErrors.employeeId = "Employee ID must be exactly 10 digits";
-      }
     }
 
     setErrors(newErrors);
@@ -1146,10 +1091,10 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               {canEditEmployeeId && isEmployeeIdEditable ? (
                 <Input
                   id="employeeId"
+                  type="text"
                   value={employeeIdInput}
                   onChange={(e) => handleEmployeeIdChange(e.target.value)}
-                  placeholder="1234-567890"
-                  maxLength={11}
+                  placeholder="Enter employee ID"
                   className="bg-white"
                 />
               ) : (
@@ -1186,7 +1131,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               <p className="text-xs text-gray-500">
                 {canEditEmployeeId
                   ? isEmployeeIdEditable
-                    ? "Editing enabled. Enter 10-digit Employee ID (format: 1234-567890)"
+                    ? "Editing enabled. Enter employee ID as text."
                     : `Click to edit (requires ${
                         isAdmin ? "admin" : "HR"
                       } password verification)`
@@ -1329,124 +1274,15 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               <Label htmlFor="contact">Contact Number</Label>
               <Input
                 id="contact"
-                type="tel"
+                type="text"
                 value={formData.contact || ""}
-                onChange={(e) => {
-                  // Only allow numbers, spaces, hyphens, and parentheses (for formatting)
-                  let value = e.target.value.replace(/[^\d\s\-()]/g, "");
-
-                  // Limit to 11 digits maximum
-                  const digitsOnly = value.replace(/\D/g, "");
-                  if (digitsOnly.length > 11) {
-                    // Truncate to 11 digits
-                    value = value.slice(
-                      0,
-                      value.length - (digitsOnly.length - 11)
-                    );
-                  }
-
-                  // Auto-format: If user starts typing and first digit is not 0, prepend 0
-                  const cleanDigits = value.replace(/\D/g, "");
-                  if (cleanDigits.length === 1 && cleanDigits[0] !== "0") {
-                    value = "0" + value;
-                  }
-                  // If user types first digit as 0, ensure next is 9
-                  if (cleanDigits.length === 1 && cleanDigits[0] === "0") {
-                    // Allow 0, will check for 09 on next input
-                  }
-
-                  handleInputChange("contact", value);
-
-                  // Real-time validation feedback
-                  if (value.trim()) {
-                    const digitCount = cleanDigits.length;
-                    const startsWith09 = cleanDigits.startsWith("09");
-
-                    // Clear previous error if valid
-                    if (digitCount === 11 && startsWith09) {
-                      if (errors.contact) {
-                        setErrors((prev) => ({
-                          ...prev,
-                          contact: "",
-                        }));
-                      }
-                    }
-                  }
-                }}
-                onBlur={(e) => {
-                  // Validate on blur
-                  const value = e.target.value.trim();
-                  if (value) {
-                    const digitsOnly = value.replace(/\D/g, "");
-                    const digitCount = digitsOnly.length;
-
-                    if (digitCount !== 11) {
-                      setErrors((prev) => ({
-                        ...prev,
-                        contact: "Contact number must be exactly 11 digits",
-                      }));
-                    } else if (!digitsOnly.startsWith("09")) {
-                      setErrors((prev) => ({
-                        ...prev,
-                        contact: "Contact number must start with '09'",
-                      }));
-                    } else if (!/^09\d{9}$/.test(digitsOnly)) {
-                      setErrors((prev) => ({
-                        ...prev,
-                        contact:
-                          "Please enter a valid phone number (must start with 09)",
-                      }));
-                    }
-                  }
-                }}
-                onKeyDown={(e) => {
-                  // Allow: backspace, delete, tab, escape, enter, and arrow keys
-                  if (
-                    [8, 9, 27, 13, 46, 37, 38, 39, 40].indexOf(e.keyCode) !==
-                      -1 ||
-                    // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
-                    (e.keyCode === 65 && e.ctrlKey === true) ||
-                    (e.keyCode === 67 && e.ctrlKey === true) ||
-                    (e.keyCode === 86 && e.ctrlKey === true) ||
-                    (e.keyCode === 88 && e.ctrlKey === true) ||
-                    // Allow: home, end, left, right
-                    (e.keyCode >= 35 && e.keyCode <= 39)
-                  ) {
-                    return;
-                  }
-                  // Ensure that it is a number and stop the keypress
-                  if (
-                    (e.shiftKey || e.keyCode < 48 || e.keyCode > 57) &&
-                    (e.keyCode < 96 || e.keyCode > 105) &&
-                    e.key !== " " &&
-                    e.key !== "-" &&
-                    e.key !== "(" &&
-                    e.key !== ")"
-                  ) {
-                    e.preventDefault();
-                  }
-                }}
+                onChange={(e) => handleInputChange("contact", e.target.value)}
                 className={errors.contact ? "border-red-500" : "bg-white"}
-                placeholder="Enter contact number "
-                maxLength={15}
+                placeholder="Enter contact number"
               />
               {errors.contact && (
                 <p className="text-sm text-red-500">{errors.contact}</p>
               )}
-              {formData.contact &&
-                !errors.contact &&
-                formData.contact.replace(/\D/g, "").startsWith("09") &&
-                formData.contact.replace(/\D/g, "").length === 11 && (
-                  <p className="text-xs text-green-600">✓ Valid format</p>
-                )}
-              {formData.contact &&
-                formData.contact.replace(/\D/g, "").length > 0 &&
-                !formData.contact.replace(/\D/g, "").startsWith("09") &&
-                !errors.contact && (
-                  <p className="text-xs text-amber-600">
-                    ⚠️ Number must start with "09"
-                  </p>
-                )}
             </div>
 
             {/* Date Hired */}
