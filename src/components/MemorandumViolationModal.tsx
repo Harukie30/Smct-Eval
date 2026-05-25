@@ -45,6 +45,7 @@ import { toastMessages } from "@/lib/toastMessages";
 import { CONFIG } from "../../config/config";
 import EvaluationsPagination from "@/components/paginationComponent";
 import ViolationRowHighlightLegend from "@/components/ViolationRowHighlightLegend";
+import { SanctionTableHeadLabel } from "@/components/violations/SanctionTableHeadLabel";
 import {
   effectiveViolationActivityTimeMs,
   stableViolationRowFingerprint,
@@ -941,8 +942,8 @@ export default function MemorandumViolationModal({
                       <TableHead className="font-semibold text-amber-900 min-w-[5.5rem] max-w-[7rem]">
                         Offense
                       </TableHead>
-                      <TableHead className="font-semibold text-amber-900 min-w-[5.5rem] max-w-[7rem]">
-                        Sanction
+                      <TableHead className="min-w-[5.5rem] max-w-[7rem] font-semibold">
+                        <SanctionTableHeadLabel theme="amber" />
                       </TableHead>
                       <TableHead className="font-semibold text-amber-900 w-[1%] min-w-[5.25rem] whitespace-nowrap text-right">
                         Action

@@ -83,12 +83,16 @@ const SIDEBAR_NAV_SCROLL_CLASS = cn(
 const MANAGEMENT_OVERFLOW_SCROLL_CLASS =
   "overflow-y-auto overflow-x-hidden overscroll-contain scrollbar-thin scrollbar-thumb-white/30 scrollbar-track-transparent hover:scrollbar-thumb-white/50";
 
-const MANAGEMENT_DROPDOWN_CONTENT_CLASS = cn(
-  "mt-2 space-y-1 pl-3 pr-1 sm:pl-4",
+/** Outer collapsible wrapper (Radix keeps overflow-hidden for open/close). */
+const MANAGEMENT_DROPDOWN_CONTENT_CLASS = "mt-2";
+
+/** Inner scroll list — ref + maxHeight apply here so all items stay reachable. */
+const MANAGEMENT_SCROLL_INNER_CLASS = cn(
+  "space-y-1 pl-3 pr-1 pb-2 sm:pl-4",
   MANAGEMENT_OVERFLOW_SCROLL_CLASS
 );
 
-/** Sidebar width tracks viewport so labels fit without feeling oversized. */
+/** Sidebar width tracks viewport (footer `left-*` must match). */
 const SIDEBAR_WIDTH_CLASS = "w-56 xl:w-64";
 
 const SIDEBAR_HEADING_CLASS =
@@ -121,6 +125,11 @@ const SIDEBAR_BOTTOM_ART_ZONE_PX = 128;
 
 const SIDEBAR_BOTTOM_ART_ABSOLUTE_CLASS =
   "absolute bottom-0 left-0 right-0 z-0 h-28 bg-contain bg-center bg-no-repeat pointer-events-none sm:h-32 xl:h-36";
+
+/** Fixed top header height — main/sidebar layout offsets use this, not the sidebar. */
+const DASHBOARD_HEADER_OFFSET_CLASS = "mt-14";
+const DASHBOARD_VIEWPORT_BELOW_HEADER_CLASS =
+  "h-[calc(100vh-3.5rem)] max-h-[calc(100vh-3.5rem)]";
 
 function sidebarNavActiveClass(isActive: boolean) {
   return isActive
@@ -298,17 +307,27 @@ export default function DashboardShell(props: DashboardShellProps) {
     const contentEl = managementContentRef.current;
     if (!contentEl) return;
 
-    const rect = managementTriggerRef.current.getBoundingClientRect();
-    const artReserve = hideSidebarBottomArtRef.current
-      ? 8
-      : SIDEBAR_BOTTOM_ART_ZONE_PX;
-    let available = window.innerHeight - rect.bottom - artReserve;
+    const triggerRect = managementTriggerRef.current.getBoundingClientRect();
+    let limitBottom = window.innerHeight;
 
     const aside = sidebarAsideRef.current;
     if (aside) {
       const asideRect = aside.getBoundingClientRect();
-      available = Math.min(available, asideRect.bottom - rect.bottom - 8);
+      limitBottom = asideRect.bottom;
+      if (!hideSidebarBottomArtRef.current) {
+        limitBottom = Math.min(
+          limitBottom,
+          asideRect.bottom - SIDEBAR_BOTTOM_ART_ZONE_PX
+        );
+      }
     }
+
+    const nav = managementTriggerRef.current.closest("nav");
+    if (nav) {
+      limitBottom = Math.min(limitBottom, nav.getBoundingClientRect().bottom);
+    }
+
+    let available = limitBottom - triggerRect.bottom - 8;
 
     // Measure full list height (ignore any applied max-height cap).
     const prevMax = contentEl.style.maxHeight;
@@ -318,11 +337,11 @@ export default function DashboardShell(props: DashboardShellProps) {
 
     if (contentH <= 0) return;
 
-    const MIN_SCROLL_PX = 96;
+    const MIN_SCROLL_PX = 120;
     if (contentH <= available) {
       setManagementMenuMaxH(undefined);
     } else {
-      setManagementMenuMaxH(Math.max(MIN_SCROLL_PX, available));
+      setManagementMenuMaxH(Math.max(MIN_SCROLL_PX, Math.floor(available)));
     }
   }, [isManagementOpen]);
 
@@ -339,10 +358,13 @@ export default function DashboardShell(props: DashboardShellProps) {
         requestAnimationFrame(updateManagementMenuMaxH);
       });
     if (contentEl && ro) ro.observe(contentEl);
+    const nav = managementTriggerRef.current?.closest("nav");
+    nav?.addEventListener("scroll", updateManagementMenuMaxH, { passive: true });
     window.addEventListener("resize", updateManagementMenuMaxH);
     const t = window.setTimeout(updateManagementMenuMaxH, 320);
     return () => {
       ro?.disconnect();
+      nav?.removeEventListener("scroll", updateManagementMenuMaxH);
       window.removeEventListener("resize", updateManagementMenuMaxH);
       window.clearTimeout(t);
     };
@@ -354,12 +376,10 @@ export default function DashboardShell(props: DashboardShellProps) {
   }, [hideSidebarBottomArt, isManagementOpen, updateManagementMenuMaxH]);
 
   useEffect(() => {
-    if (!isManagementOpen || !managementTriggerRef.current) return;
-    managementTriggerRef.current.scrollIntoView({
-      block: "nearest",
-      behavior: "smooth",
-    });
-  }, [isManagementOpen]);
+    if (!isManagementOpen) return;
+    const t = window.setTimeout(updateManagementMenuMaxH, 400);
+    return () => window.clearTimeout(t);
+  }, [isManagementOpen, updateManagementMenuMaxH]);
 
   // Auto-open collapsible groups when their items are active
   useEffect(() => {
@@ -585,37 +605,41 @@ export default function DashboardShell(props: DashboardShellProps) {
       {/* Content wrapper with relative positioning */}
       <div className={`relative z-10 flex flex-col min-h-screen transition-all duration-300 ${isGuideModalOpen ? 'blur-sm' : ''}`}>
       {/* Header - Fixed */}
-      <header className="fixed top-0 left-0 right-0 bg-white shadow-sm border-b z-50">
-        <div className="flex justify-between items-center px-6 py-4">
-          <div className="flex items-center space-x-3">
+      <header className="fixed top-0 left-0 right-0 z-50 border-b bg-white shadow-sm">
+        <div className="flex h-14 items-center justify-between gap-3 px-4 sm:px-5">
+          <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
             <img
               src="/smct.png"
               alt="SMCT Group of Companies"
-              className="h-12 w-auto"
+              className="h-9 w-auto shrink-0 sm:h-10"
             />
-            <div className="flex flex-col">
-              <h1 className="text-xl font-bold text-gray-900">{title}</h1>
-              <p className="text-sm text-gray-600">
+            <div className="min-w-0 flex flex-col leading-tight">
+              <h1 className="truncate text-base font-bold text-gray-900 sm:text-lg">
+                {title}
+              </h1>
+              <p className="truncate text-[11px] text-gray-600 sm:text-xs">
                 Performance & Ratings Overview
               </p>
             </div>
           </div>
-          <div className="flex items-center space-x-4">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             {/* Embedded Clock - Combined Display and Toggle */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <div
                   onClick={() => setIsClockVisible(!isClockVisible)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all duration-200 ${
+                  className={`flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1.5 transition-all duration-200 sm:gap-2 sm:px-2.5 ${
                     isClockVisible
-                      ? "bg-blue-600 hover:bg-blue-700 shadow-md"
+                      ? "bg-blue-600 shadow-md hover:bg-blue-700"
                       : "bg-gray-100 hover:bg-gray-200"
                   }`}
                 >
-                  <Clock className={`h-4 w-4 ${isClockVisible ? "text-white" : "text-gray-500"}`} />
+                  <Clock
+                    className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${isClockVisible ? "text-white" : "text-gray-500"}`}
+                  />
                   {isClockVisible && (
-                    <div className="flex flex-col items-start">
-                      <div className="text-sm font-semibold text-white">
+                    <div className="flex flex-col items-start leading-tight">
+                      <div className="text-xs font-semibold text-white sm:text-sm">
                         {currentTime.toLocaleTimeString('en-US', { 
                           hour: '2-digit', 
                           minute: '2-digit', 
@@ -623,7 +647,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                           hour12: true 
                         })}
                       </div>
-                      <div className="text-xs text-blue-100">
+                      <div className="hidden text-[10px] text-blue-100 sm:block sm:text-xs">
                         {currentTime.toLocaleDateString('en-US', { 
                           weekday: 'short', 
                           month: 'short', 
@@ -659,9 +683,9 @@ export default function DashboardShell(props: DashboardShellProps) {
                     setIsNotificationPanelClosing(false);
                   }
                 }}
-                className="relative p-2 hover:bg-blue-300 hover:text-blue-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+                className="relative h-8 w-8 cursor-pointer p-1.5 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-300 hover:text-blue-700 hover:shadow-md active:translate-y-0"
               >
-                <Bell className="h-5 w-5" />
+                <Bell className="h-4 w-4" />
                 {notificationCount > 0 && (
                   <Badge
                     variant="destructive"
@@ -675,7 +699,7 @@ export default function DashboardShell(props: DashboardShellProps) {
               {/* Notification Panel */}
               {(isNotificationPanelOpen || isNotificationPanelClosing) && (
                 <div 
-                  className="absolute right-0 top-12 w-80 bg-white rounded-lg shadow-lg border z-[60]"
+                  className="absolute right-0 top-11 w-80 rounded-lg border bg-white shadow-lg z-[60]"
                   style={{
                     animation: isNotificationPanelClosing 
                       ? 'slideUpFade 0.3s ease-out forwards'
@@ -884,20 +908,22 @@ export default function DashboardShell(props: DashboardShellProps) {
               )}
             </div>
 
-            <ProfileCard
-              profile={user}
-              variant="header"
-              showLogout={true}
-              showSettings={false}
-              onEditProfile={handleEditProfile}
-              onLogout={handleLogout}
-            />
+            <div className="shrink-0 [&_button]:h-7 [&_button]:px-2 [&_button]:text-[11px] [&_img]:h-7 [&_img]:w-7 [&_span]:text-xs">
+              <ProfileCard
+                profile={user}
+                variant="header"
+                showLogout={true}
+                showSettings={false}
+                onEditProfile={handleEditProfile}
+                onLogout={handleLogout}
+              />
+            </div>
           </div>
         </div>
       </header>
 
       {/* Main Layout with Sidebar */}
-      <div className="flex overflow-hidden mt-20">
+      <div className={cn("flex overflow-hidden", DASHBOARD_HEADER_OFFSET_CLASS)}>
         {/* Sidebar */}
         <div
           className={cn(
@@ -908,7 +934,8 @@ export default function DashboardShell(props: DashboardShellProps) {
           <aside
             ref={sidebarAsideRef}
             className={cn(
-              "relative flex h-[calc(100vh-5rem)] max-h-[calc(100vh-5rem)] flex-col overflow-hidden bg-blue-600 text-blue-50 rounded-r-2xl shadow-[4px_0_24px_-8px_rgba(30,64,175,0.45)]",
+              "relative flex flex-col overflow-hidden bg-blue-600 text-blue-50 rounded-r-2xl shadow-[4px_0_24px_-8px_rgba(30,64,175,0.45)]",
+              DASHBOARD_VIEWPORT_BELOW_HEADER_CLASS,
               SIDEBAR_WIDTH_CLASS
             )}
           >
@@ -1060,39 +1087,38 @@ export default function DashboardShell(props: DashboardShellProps) {
                               />
                             </button>
                           </CollapsibleTrigger>
-                          <CollapsibleContent
-                            ref={managementContentRef}
-                            className={cn(
-                              MANAGEMENT_DROPDOWN_CONTENT_CLASS,
-                              "!overflow-y-auto"
-                            )}
-                            style={{
-                              maxHeight:
-                                isManagementOpen && managementMenuMaxH != null
-                                  ? managementMenuMaxH
-                                  : undefined,
-                            }}
-                          >
-                            {sidebarItems
-                              .filter((i) => managementItems.includes(i.id))
-                              .map((subItem) => (
-                                <button
-                                  key={subItem.id}
-                                  onClick={() => onChangeActive(subItem.id)}
-                                  className={cn(
-                                    SIDEBAR_NAV_ITEM_BASE_CLASS,
-                                    SIDEBAR_NAV_ROW_SUB_CLASS,
-                                    sidebarNavActiveClass(activeItemId === subItem.id)
-                                  )}
-                                >
-                                  <span className={SIDEBAR_NAV_ICON_CLASS}>
-                                    {subItem.icon}
-                                  </span>
-                                  <span className={SIDEBAR_NAV_SUB_LABEL_CLASS}>
-                                    {subItem.label}
-                                  </span>
-                                </button>
-                              ))}
+                          <CollapsibleContent className={MANAGEMENT_DROPDOWN_CONTENT_CLASS}>
+                            <div
+                              ref={managementContentRef}
+                              className={MANAGEMENT_SCROLL_INNER_CLASS}
+                              style={{
+                                maxHeight:
+                                  isManagementOpen && managementMenuMaxH != null
+                                    ? managementMenuMaxH
+                                    : undefined,
+                              }}
+                            >
+                              {sidebarItems
+                                .filter((i) => managementItems.includes(i.id))
+                                .map((subItem) => (
+                                  <button
+                                    key={subItem.id}
+                                    onClick={() => onChangeActive(subItem.id)}
+                                    className={cn(
+                                      SIDEBAR_NAV_ITEM_BASE_CLASS,
+                                      SIDEBAR_NAV_ROW_SUB_CLASS,
+                                      sidebarNavActiveClass(activeItemId === subItem.id)
+                                    )}
+                                  >
+                                    <span className={SIDEBAR_NAV_ICON_CLASS}>
+                                      {subItem.icon}
+                                    </span>
+                                    <span className={SIDEBAR_NAV_SUB_LABEL_CLASS}>
+                                      {subItem.label}
+                                    </span>
+                                  </button>
+                                ))}
+                            </div>
                           </CollapsibleContent>
                         </Collapsible>
                       );
@@ -1173,39 +1199,38 @@ export default function DashboardShell(props: DashboardShellProps) {
                               />
                             </button>
                           </CollapsibleTrigger>
-                          <CollapsibleContent
-                            ref={managementContentRef}
-                            className={cn(
-                              MANAGEMENT_DROPDOWN_CONTENT_CLASS,
-                              "!overflow-y-auto"
-                            )}
-                            style={{
-                              maxHeight:
-                                isManagementOpen && managementMenuMaxH != null
-                                  ? managementMenuMaxH
-                                  : undefined,
-                            }}
-                          >
-                            {sidebarItems
-                              .filter((i) => managementItems.includes(i.id))
-                              .map((subItem) => (
-                                <button
-                                  key={subItem.id}
-                                  onClick={() => onChangeActive(subItem.id)}
-                                  className={cn(
-                                    SIDEBAR_NAV_ITEM_BASE_CLASS,
-                                    SIDEBAR_NAV_ROW_SUB_CLASS,
-                                    sidebarNavActiveClass(activeItemId === subItem.id)
-                                  )}
-                                >
-                                  <span className={SIDEBAR_NAV_ICON_CLASS}>
-                                    {subItem.icon}
-                                  </span>
-                                  <span className={SIDEBAR_NAV_SUB_LABEL_CLASS}>
-                                    {subItem.label}
-                                  </span>
-                                </button>
-                              ))}
+                          <CollapsibleContent className={MANAGEMENT_DROPDOWN_CONTENT_CLASS}>
+                            <div
+                              ref={managementContentRef}
+                              className={MANAGEMENT_SCROLL_INNER_CLASS}
+                              style={{
+                                maxHeight:
+                                  isManagementOpen && managementMenuMaxH != null
+                                    ? managementMenuMaxH
+                                    : undefined,
+                              }}
+                            >
+                              {sidebarItems
+                                .filter((i) => managementItems.includes(i.id))
+                                .map((subItem) => (
+                                  <button
+                                    key={subItem.id}
+                                    onClick={() => onChangeActive(subItem.id)}
+                                    className={cn(
+                                      SIDEBAR_NAV_ITEM_BASE_CLASS,
+                                      SIDEBAR_NAV_ROW_SUB_CLASS,
+                                      sidebarNavActiveClass(activeItemId === subItem.id)
+                                    )}
+                                  >
+                                    <span className={SIDEBAR_NAV_ICON_CLASS}>
+                                      {subItem.icon}
+                                    </span>
+                                    <span className={SIDEBAR_NAV_SUB_LABEL_CLASS}>
+                                      {subItem.label}
+                                    </span>
+                                  </button>
+                                ))}
+                            </div>
                           </CollapsibleContent>
                         </Collapsible>
                       );
@@ -1340,7 +1365,12 @@ export default function DashboardShell(props: DashboardShellProps) {
             </Button>
           </div>
         )}
-        <main className="flex-1 pt-5 px-5 pb-20 overflow-y-auto max-h-[calc(100vh-5rem)]">
+        <main
+          className={cn(
+            "flex-1 overflow-y-auto px-5 pb-20 pt-5",
+            DASHBOARD_VIEWPORT_BELOW_HEADER_CLASS
+          )}
+        >
           {topSummary && activeItemId === "overview" && (
             <div className="mb-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {topSummary}

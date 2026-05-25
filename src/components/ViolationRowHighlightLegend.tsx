@@ -21,7 +21,7 @@ export default function ViolationRowHighlightLegend({
           aria-hidden
         />
         <span className="text-slate-700">
-          Yellow — new / updated (under 2 min)
+          Yellow — new / updated 
         </span>
       </span>
       <span className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2 py-1 shadow-sm">
@@ -30,7 +30,7 @@ export default function ViolationRowHighlightLegend({
           aria-hidden
         />
         <span className="text-slate-700">
-          Blue — recent (2 min to 1 hr)
+          Blue — recent 
         </span>
       </span>
     </p>
