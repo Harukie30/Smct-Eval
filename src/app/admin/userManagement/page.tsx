@@ -2170,6 +2170,13 @@ export default function UserManagementTab() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="border-t border-gray-200 pt-4 sm:justify-center">
+            <Button
+              type="button"
+              onClick={() => setShowAverageExportSuccess(false)}
+              className="cursor-pointer rounded-lg bg-green-600 px-8 py-2 font-medium text-white transition-colors hover:bg-green-700"
+            >
+              OK
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -2180,23 +2187,31 @@ export default function UserManagementTab() {
           if (!o) setShowAverageExportError(false);
         }}
       >
-        <DialogContent className="max-w-sm p-8 text-center">
-          <div className="flex flex-col items-center">
-            <div className="mb-4">
+        <DialogContent className="max-w-sm w-[90vw] px-6 py-6 text-center">
+          <DialogHeader className="border-0 pb-0 text-center sm:text-center">
+            <div className="mb-4 flex justify-center">
               <img
                 src="/no-data2.gif"
-                alt="Error"
-                className="w-32 h-32 object-contain"
+                alt=""
+                className="h-32 w-32 object-contain"
               />
             </div>
-            <h2 className="text-xl font-bold text-red-600 mb-2">
               Something Went Wrong
-            </h2>
-            <p className="text-gray-600 text-sm mb-6 max-w-xs">
+            </DialogTitle>
+            <DialogDescription className="text-gray-600">
               We encountered an error while exporting your data. Please try again
               later.
-            </p>
-          </div>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="border-t border-gray-200 pt-4 sm:justify-center">
+            <Button
+              type="button"
+              onClick={() => setShowAverageExportError(false)}
+              className="cursor-pointer rounded-lg bg-blue-600 px-8 py-2 font-medium text-white transition-colors hover:bg-blue-700"
+            >
+              OK
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

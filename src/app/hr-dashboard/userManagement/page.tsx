@@ -3603,7 +3603,13 @@ export default function UserManagementTab() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="border-t border-gray-200 pt-4 sm:justify-center">
-            
+            <Button
+              type="button"
+              onClick={() => setShowAverageExportSuccess(false)}
+              className="cursor-pointer rounded-lg bg-green-600 px-8 py-2 font-medium text-white transition-colors hover:bg-green-700"
+            >
+              OK
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -3652,6 +3658,13 @@ export default function UserManagementTab() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="border-t border-gray-200 pt-4 sm:justify-center">
+            <Button
+              type="button"
+              onClick={() => setShowBranchQuarterExportSuccess(false)}
+              className="cursor-pointer rounded-lg bg-green-600 px-8 py-2 font-medium text-white transition-colors hover:bg-green-700"
+            >
+              OK
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -3663,23 +3676,32 @@ export default function UserManagementTab() {
           if (!open) setShowExportError(false);
         }}
       >
-        <DialogContent className="max-w-sm p-8 text-center">
-          <div className="flex flex-col items-center">
-            <div className="mb-4">
+        <DialogContent className="max-w-sm w-[90vw] px-6 py-6 text-center">
+          <DialogHeader className="border-0 pb-0 text-center sm:text-center">
+            <div className="mb-4 flex justify-center">
               <img
                 src="/no-data2.gif"
-                alt="Error"
-                className="w-32 h-32 object-contain"
+                alt=""
+                className="h-32 w-32 object-contain"
               />
             </div>
-            <h2 className="text-xl font-bold text-red-600 mb-2">
+            <DialogTitle className="text-xl font-bold text-red-600">
               Something Went Wrong
-            </h2>
-            <p className="text-gray-600 text-sm mb-6 max-w-xs">
-              We encountered an error while exporting your data. Please try again later.
-            </p>
-            
-          </div>
+            </DialogTitle>
+            <DialogDescription className="text-gray-600">
+              We encountered an error while exporting your data. Please try again
+              later.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="border-t border-gray-200 pt-4 sm:justify-center">
+            <Button
+              type="button"
+              onClick={() => setShowExportError(false)}
+              className="cursor-pointer rounded-lg bg-blue-600 px-8 py-2 font-medium text-white transition-colors hover:bg-blue-700"
+            >
+              OK
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -3695,16 +3717,19 @@ export default function UserManagementTab() {
         positions={positionsData}
         roles={roles}
         onBulkUploadStart={() => {
+          setIsAddUserModalOpen(false);
           setIsBulkUploadSuccessModalOpen(true);
           setIsBulkUploadProcessing(true);
         }}
-        onBulkUploadSuccess={() => {
+        onBulkUploadSuccess={async () => {
           setIsBulkUploadProcessing(false);
           setIsBulkUploadSuccessModalOpen(true);
+          await refreshUserData(false);
         }}
         onBulkUploadError={() => {
           setIsBulkUploadProcessing(false);
           setIsBulkUploadSuccessModalOpen(false);
+          setIsAddUserModalOpen(true);
         }}
       />
 
@@ -3725,15 +3750,17 @@ export default function UserManagementTab() {
           }
         >
           {isBulkUploadProcessing ? (
-            <div className="flex flex-col items-center">
-              <div className="relative mb-4 flex h-24 w-24 items-center justify-center rounded-full border-4 border-blue-200 bg-blue-50 shadow-md">
+            <DialogHeader className="border-0 pb-0 text-center sm:text-center">
+              <div className="relative mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-full border-4 border-blue-200 bg-blue-50 shadow-md">
                 <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
               </div>
-              <h2 className="mb-2 text-xl font-bold text-blue-700">Uploading Users...</h2>
-              <p className="mb-2 max-w-xs text-sm text-gray-600">
+              <DialogTitle className="text-xl font-bold text-blue-700">
+                Uploading Users...
+              </DialogTitle>
+              <DialogDescription className="max-w-xs text-gray-600">
                 Please wait while your bulk upload is being processed.
-              </p>
-            </div>
+              </DialogDescription>
+            </DialogHeader>
           ) : (
             <>
               <DialogHeader className="border-0 pb-0 text-center sm:text-center">
@@ -3775,15 +3802,8 @@ export default function UserManagementTab() {
               </DialogHeader>
               <DialogFooter className="border-t border-gray-200 pt-4 sm:justify-center">
                 <Button
-                  onClick={async () => {
-                    setIsBulkUploadSuccessModalOpen(false);
-                    setIsAddUserModalOpen(false);
-                    setIsDeleteModalOpen(false);
-                    setIsEditModalOpen(false);
-                    setIsViewEmployeeModalOpen(false);
-                    setEmployeeToView(null);
-                    await refreshUserData(true);
-                  }}
+                  type="button"
+                  onClick={() => setIsBulkUploadSuccessModalOpen(false)}
                   className="cursor-pointer rounded-lg bg-green-600 px-8 py-2 font-medium text-white transition-colors hover:bg-green-700"
                 >
                   OK

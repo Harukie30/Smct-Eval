@@ -174,6 +174,9 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
     if (!bulkFile) return;
 
     onBulkUploadStart?.();
+    if (onBulkUploadStart) {
+      setIsBulkUploadOpen(false);
+    }
     setIsBulkUploading(true);
     setBulkUploadProgress(5);
 
