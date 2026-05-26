@@ -29,6 +29,8 @@ interface SignaturePadProps {
   hasError?: boolean;
   onRequestReset?: () => void;
   hideRequestReset?: boolean; // Hide the "Request Reset" button
+  /** Lock parent scroll / pin pad while user is drawing (mobile-friendly). */
+  onDrawingActiveChange?: (isDrawing: boolean) => void;
 }
 
 export interface SignaturePadRef {
@@ -43,6 +45,7 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(({
   hasError = false,
   onRequestReset,
   hideRequestReset = false,
+  onDrawingActiveChange,
 }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -185,16 +188,40 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Set canvas size to match display size exactly
     canvas.width = canvas.offsetWidth;
     canvas.height = canvas.offsetHeight;
 
-    // Set drawing styles
-    ctx.strokeStyle = "#1f2937"; // Dark gray
+    ctx.strokeStyle = "#1f2937";
     ctx.lineWidth = 2;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
   }, []);
+
+  useEffect(() => {
+    onDrawingActiveChange?.(isDrawing);
+  }, [isDrawing, onDrawingActiveChange]);
+
+  useEffect(() => {
+    if (!isDrawing || typeof document === "undefined") return;
+
+    const scrollHost =
+      (canvasRef.current?.closest(
+        "[data-signature-scroll-host]"
+      ) as HTMLElement | null) ??
+      (canvasRef.current?.closest(".overflow-y-auto") as HTMLElement | null);
+
+    const prevOverflow = scrollHost?.style.overflow ?? "";
+
+    if (scrollHost) {
+      scrollHost.style.overflow = "hidden";
+    }
+
+    return () => {
+      if (scrollHost) {
+        scrollHost.style.overflow = prevOverflow;
+      }
+    };
+  }, [isDrawing]);
 
   // Handle instruction confirmation
   const handleConfirmInstructions = () => {
@@ -205,10 +232,8 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(({
   const startDrawing = (
     e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
   ) => {
-    // If instructions are showing, don't allow drawing
     if (showInstructions) return;
 
-    // Prevent default to avoid scrolling on touch devices
     e.preventDefault();
 
     const canvas = canvasRef.current;
@@ -217,7 +242,6 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Start drawing
     const { x, y } = getCoordinates(e, canvas);
     ctx.beginPath();
     ctx.moveTo(x, y);
@@ -227,10 +251,8 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(({
   const draw = (
     e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
   ) => {
-    // Disable drawing if instructions are showing
     if (!isDrawing || showInstructions) return;
 
-    // Prevent default to avoid scrolling on touch devices
     e.preventDefault();
 
     const canvas = canvasRef.current;
@@ -248,12 +270,11 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(({
     e?: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
   ) => {
     if (!isDrawing) return;
-    
-    // Prevent default to avoid scrolling on touch devices
+
     if (e) {
       e.preventDefault();
     }
-    
+
     setIsDrawing(false);
     
     // Mark that there's drawing on canvas (but don't capture yet - wait for Save)
@@ -294,17 +315,14 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(({
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
 
-      // Reset canvas dimensions to match current display size
       canvas.width = canvas.offsetWidth;
       canvas.height = canvas.offsetHeight;
 
-      // Re-apply drawing styles after resizing
       ctx.strokeStyle = "#1f2937";
       ctx.lineWidth = 2;
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
 
-      // Clear the canvas
       ctx.clearRect(0, 0, canvas.width, canvas.height);
     }, 0);
   };
@@ -312,7 +330,7 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(({
   return (
     <div className={`space-y-3 ${className}`}>
       <div
-        className={`border-2 border-dashed rounded-lg p-4 bg-gray-50 relative ${
+        className={`relative touch-none overscroll-contain rounded-lg border-2 border-dashed bg-gray-50 p-4 ${
           hasError ? "border-red-300 bg-red-50" : "border-gray-300"
         }`}
       >
@@ -366,7 +384,7 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(({
              className={`w-full h-40 cursor-crosshair bg-white rounded border ${
                hasError ? "border-red-300" : "border-gray-200"
              } ${showInstructions ? "cursor-not-allowed opacity-50" : "cursor-crosshair"}`}
-             style={{ display: "block" }}
+             style={{ display: "block", touchAction: "none" }}
              onMouseDown={showInstructions ? undefined : startDrawing}
              onMouseMove={showInstructions ? undefined : draw}
              onMouseUp={showInstructions ? undefined : stopDrawing}

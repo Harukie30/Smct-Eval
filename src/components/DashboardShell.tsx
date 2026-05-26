@@ -14,6 +14,7 @@ import {
   HelpCircle,
   ChevronUp,
   Clock,
+  Menu,
 } from "lucide-react";
 import {
   Collapsible,
@@ -102,28 +103,32 @@ const MANAGEMENT_SCROLL_INNER_CLASS = cn(
   MANAGEMENT_OVERFLOW_SCROLL_CLASS
 );
 
-/** Sidebar width tracks viewport (footer `left-*` must match). */
-const SIDEBAR_WIDTH_CLASS = "w-56 xl:w-64";
+/** Viewports below `lg` use overlay nav (footer stays full width). */
+const MOBILE_NAV_MEDIA_QUERY = "(max-width: 1023px)";
+
+/** Sidebar width — must match footer `left-*` on desktop when open. */
+const SIDEBAR_WIDTH_CLASS = "w-[min(88vw,14rem)] sm:w-52 lg:w-56 xl:w-64";
 
 const SIDEBAR_HEADING_CLASS =
-  "mb-3 shrink-0 text-sm font-semibold tracking-wide text-white sm:mb-4 sm:text-base";
+  "mb-2 shrink-0 text-xs font-semibold tracking-wide text-white sm:mb-3 sm:text-sm md:mb-4 md:text-base";
 
-const SIDEBAR_NAV_ICON_CLASS = "shrink-0 text-sm leading-none sm:text-base";
+const SIDEBAR_NAV_ICON_CLASS =
+  "shrink-0 text-xs leading-none sm:text-sm md:text-base";
 
 const SIDEBAR_NAV_LABEL_CLASS =
-  "min-w-0 truncate font-medium text-xs leading-snug sm:text-sm";
+  "min-w-0 truncate font-medium text-[11px] leading-snug sm:text-xs md:text-sm";
 
 const SIDEBAR_NAV_SUB_LABEL_CLASS =
-  "min-w-0 truncate font-medium text-[11px] leading-snug sm:text-xs";
+  "min-w-0 truncate font-medium text-[10px] leading-snug sm:text-[11px] md:text-xs";
 
 const SIDEBAR_NAV_ITEM_BASE_CLASS =
   "w-full rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 cursor-pointer";
 
 const SIDEBAR_NAV_ROW_CLASS =
-  "flex items-center space-x-2.5 px-3 py-2 sm:space-x-3 sm:px-4 sm:py-2.5";
+  "flex items-center space-x-2 px-2.5 py-1.5 sm:space-x-2.5 sm:px-3 sm:py-2 md:space-x-3 md:px-4 md:py-2.5";
 
 const SIDEBAR_NAV_ROW_SUB_CLASS =
-  "flex items-center space-x-2.5 px-3 py-1.5 sm:space-x-3 sm:px-4 sm:py-2";
+  "flex items-center space-x-2 px-2.5 py-1.5 sm:space-x-2.5 sm:px-3 sm:py-1.5 md:space-x-3 md:px-4 md:py-2";
 
 /** Management submenu rows — extra padding; labels may wrap (e.g. Violation Summary). */
 const MANAGEMENT_NAV_ROW_SUB_CLASS = cn(
@@ -132,12 +137,12 @@ const MANAGEMENT_NAV_ROW_SUB_CLASS = cn(
 );
 
 const MANAGEMENT_NAV_SUB_LABEL_CLASS =
-  "min-w-0 flex-1 font-medium text-xs leading-snug sm:text-sm whitespace-normal break-words";
+  "min-w-0 flex-1 font-medium text-[11px] leading-snug sm:text-xs md:text-sm whitespace-normal break-words";
 
 const SIDEBAR_NAV_TRIGGER_ROW_CLASS =
-  "flex w-full items-center justify-between px-3 py-2 sm:px-4 sm:py-2.5";
+  "flex w-full items-center justify-between px-2.5 py-1.5 sm:px-3 sm:py-2 md:px-4 md:py-2.5";
 
-const SIDEBAR_CHEVRON_CLASS = "h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4";
+const SIDEBAR_CHEVRON_CLASS = "h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4";
 
 /** Bottom area reserved for faded role art (must match absolute art height classes). */
 const SIDEBAR_BOTTOM_ART_ZONE_PX = 128;
@@ -145,10 +150,10 @@ const SIDEBAR_BOTTOM_ART_ZONE_PX = 128;
 const SIDEBAR_BOTTOM_ART_ABSOLUTE_CLASS =
   "absolute bottom-0 left-0 right-0 z-0 h-28 bg-contain bg-center bg-no-repeat pointer-events-none sm:h-32 xl:h-36";
 
-/** Fixed top header height — main/sidebar layout offsets use this, not the sidebar. */
-const DASHBOARD_HEADER_OFFSET_CLASS = "mt-14";
+/** Fixed top header — main/sidebar layout offsets use this, not the sidebar. */
+const DASHBOARD_HEADER_OFFSET_CLASS = "mt-12 sm:mt-14";
 const DASHBOARD_VIEWPORT_BELOW_HEADER_CLASS =
-  "h-[calc(100vh-3.5rem)] max-h-[calc(100vh-3.5rem)]";
+  "h-[calc(100dvh-3rem)] max-h-[calc(100dvh-3rem)] sm:h-[calc(100dvh-3.5rem)] sm:max-h-[calc(100dvh-3.5rem)]";
 
 function sidebarNavActiveClass(isActive: boolean) {
   return isActive
@@ -171,6 +176,8 @@ export default function DashboardShell(props: DashboardShellProps) {
   } = props;
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isMobileNav, setIsMobileNav] = useState(false);
+  const sidebarViewportInitRef = useRef(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
   const [isNotificationPanelClosing, setIsNotificationPanelClosing] = useState(false);
@@ -230,6 +237,39 @@ export default function DashboardShell(props: DashboardShellProps) {
 
     return () => clearInterval(timer);
   }, []);
+
+  /** Tablet/phone: overlay drawer. Desktop: inline collapsible sidebar. */
+  useEffect(() => {
+    const mq = window.matchMedia(MOBILE_NAV_MEDIA_QUERY);
+    const syncViewport = () => {
+      const mobile = mq.matches;
+      setIsMobileNav(mobile);
+      if (!sidebarViewportInitRef.current) {
+        setIsSidebarOpen(!mobile);
+        sidebarViewportInitRef.current = true;
+      }
+    };
+    syncViewport();
+    mq.addEventListener("change", syncViewport);
+    return () => mq.removeEventListener("change", syncViewport);
+  }, []);
+
+  useEffect(() => {
+    if (isMobileNav) {
+      setIsSidebarOpen(false);
+    }
+  }, [activeItemId, isMobileNav]);
+
+  useEffect(() => {
+    if (!isMobileNav || !isSidebarOpen || typeof document === "undefined") {
+      return;
+    }
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [isMobileNav, isSidebarOpen]);
 
   useEffect(() => {
     const setupEcho = async () => {
@@ -621,11 +661,11 @@ export default function DashboardShell(props: DashboardShellProps) {
     <div 
       className="flex flex-col min-h-screen relative"
       style={{
-        backgroundImage: 'url(/smct.png)',
-        backgroundSize: '64%',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        backgroundAttachment: 'fixed',
+        backgroundImage: "url(/smct.png)",
+        backgroundSize: "min(90vw, 64%)",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+        backgroundAttachment: "fixed",
       }}
     >
       {/* Faded overlay for better content readability */}
@@ -640,18 +680,35 @@ export default function DashboardShell(props: DashboardShellProps) {
       <div className={`relative z-10 flex flex-col min-h-screen transition-all duration-300 ${isGuideModalOpen ? 'blur-sm' : ''}`}>
       {/* Header - Fixed */}
       <header className="fixed top-0 left-0 right-0 z-50 border-b bg-white shadow-sm">
-        <div className="flex h-14 items-center justify-between gap-3 px-4 sm:px-5">
-          <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
+        <div className="flex h-12 items-center justify-between gap-2 px-3 sm:h-14 sm:gap-3 sm:px-5">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-2.5 md:gap-3">
+            {isMobileNav && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 shrink-0 cursor-pointer text-gray-700 hover:bg-blue-50 lg:hidden"
+                aria-label={isSidebarOpen ? "Close navigation" : "Open navigation"}
+                aria-expanded={isSidebarOpen}
+                onClick={() => setIsSidebarOpen((open) => !open)}
+              >
+                {isSidebarOpen ? (
+                  <X className="h-5 w-5" />
+                ) : (
+                  <Menu className="h-5 w-5" />
+                )}
+              </Button>
+            )}
             <img
               src="/smct.png"
               alt="SMCT Group of Companies"
-              className="h-9 w-auto shrink-0 sm:h-10"
+              className="h-8 w-auto shrink-0 sm:h-9 md:h-10"
             />
             <div className="min-w-0 flex flex-col leading-tight">
-              <h1 className="truncate text-base font-bold text-gray-900 sm:text-lg">
+              <h1 className="truncate text-sm font-bold text-gray-900 sm:text-base md:text-lg">
                 {title}
               </h1>
-              <p className="truncate text-[11px] text-gray-600 sm:text-xs">
+              <p className="hidden truncate text-[11px] text-gray-600 sm:block sm:text-xs">
                 Performance & Ratings Overview
               </p>
             </div>
@@ -733,7 +790,7 @@ export default function DashboardShell(props: DashboardShellProps) {
               {/* Notification Panel */}
               {(isNotificationPanelOpen || isNotificationPanelClosing) && (
                 <div 
-                  className="absolute right-0 top-11 w-80 rounded-lg border bg-white shadow-lg z-[60]"
+                  className="absolute right-0 top-11 z-[60] w-[min(calc(100vw-1.5rem),20rem)] rounded-lg border bg-white shadow-lg sm:w-80"
                   style={{
                     animation: isNotificationPanelClosing 
                       ? 'slideUpFade 0.3s ease-out forwards'
@@ -958,11 +1015,31 @@ export default function DashboardShell(props: DashboardShellProps) {
 
       {/* Main Layout with Sidebar */}
       <div className={cn("flex overflow-hidden", DASHBOARD_HEADER_OFFSET_CLASS)}>
-        {/* Sidebar */}
+        {isMobileNav && isSidebarOpen && (
+          <button
+            type="button"
+            className="fixed inset-0 top-12 z-40 bg-black/45 lg:hidden sm:top-14"
+            aria-label="Close navigation"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+        )}
+
+        {/* Sidebar — overlay on tablet/phone, inline on desktop */}
         <div
           className={cn(
-            "relative overflow-hidden bg-blue-600 transition-all duration-400 rounded-r-2xl",
-            isSidebarOpen ? SIDEBAR_WIDTH_CLASS : "w-0"
+            "overflow-hidden bg-blue-600 transition-all duration-400 rounded-r-2xl",
+            isMobileNav
+              ? cn(
+                  "fixed left-0 top-12 z-50 sm:top-14",
+                  DASHBOARD_VIEWPORT_BELOW_HEADER_CLASS,
+                  isSidebarOpen
+                    ? cn(SIDEBAR_WIDTH_CLASS, "shadow-2xl")
+                    : "pointer-events-none w-0"
+                )
+              : cn(
+                  "relative shrink-0",
+                  isSidebarOpen ? SIDEBAR_WIDTH_CLASS : "w-0"
+                )
           )}
         >
           <aside
@@ -984,11 +1061,12 @@ export default function DashboardShell(props: DashboardShellProps) {
                 variant="outline"
                 size="lg"
                 onClick={() => setIsSidebarOpen(false)}
-                className="mb-4 w-1/3 shrink-0 bg-white/10 text-white hover:bg-white/20 border-white/30 cursor-pointer"
+                className="mb-3 w-auto shrink-0 bg-white/10 px-2 text-white hover:bg-white/20 border-white/30 cursor-pointer sm:mb-4 lg:w-1/3"
+                aria-label="Close sidebar"
               >
                 <div className="flex items-center">
-                  <ChevronLeft className="w-10 h-10 mr-[-6px]" />
-                  <ChevronLeft className="w-10 h-10" />
+                  <ChevronLeft className="h-7 w-7 sm:h-8 sm:w-8 md:h-10 md:w-10 mr-[-4px] sm:mr-[-6px]" />
+                  <ChevronLeft className="h-7 w-7 sm:h-8 sm:w-8 md:h-10 md:w-10" />
                 </div>
               </Button>
 
@@ -1402,24 +1480,25 @@ export default function DashboardShell(props: DashboardShellProps) {
           </aside>
         </div>
 
-        {!isSidebarOpen && (
-          <div className="p-4">
+        {!isSidebarOpen && !isMobileNav && (
+          <div className="hidden shrink-0 p-3 lg:block lg:p-4">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setIsSidebarOpen(true)}
-              className="bg-blue-700 text-white hover:bg-blue-300  hover:text-blue-700 border-blue-700 cursor-pointer"
+              className="cursor-pointer border-blue-700 bg-blue-700 text-white hover:bg-blue-300 hover:text-blue-700"
+              aria-label="Open sidebar"
             >
               <div className="flex items-center">
-                <ChevronRight className="w-10 h-10 mr-[-6px]" />
-                <ChevronRight className="w-10 h-10" />
+                <ChevronRight className="mr-[-6px] h-8 w-8 md:h-10 md:w-10" />
+                <ChevronRight className="h-8 w-8 md:h-10 md:w-10" />
               </div>
             </Button>
           </div>
         )}
         <main
           className={cn(
-            "flex-1 overflow-y-auto px-5 pb-20 pt-5",
+            "min-w-0 flex-1 overflow-y-auto px-3 pb-20 pt-3 sm:px-5 sm:pb-20 sm:pt-5",
             DASHBOARD_VIEWPORT_BELOW_HEADER_CLASS
           )}
         >
@@ -1435,19 +1514,19 @@ export default function DashboardShell(props: DashboardShellProps) {
       {/* Footer - Sticky */}
       <footer
         className={cn(
-          "fixed bottom-0 z-40 bg-white border-t border-gray-200 shadow-sm transition-all duration-400 right-0",
-          isSidebarOpen ? "left-56 xl:left-64" : "left-0"
+          "fixed bottom-0 right-0 z-40 border-t border-gray-200 bg-white shadow-sm transition-all duration-400",
+          isSidebarOpen && !isMobileNav ? "left-52 sm:left-56 xl:left-64" : "left-0"
         )}
       >
-        <div className="px-6 py-4">
-          <div className="flex flex-col md:flex-row justify-between items-center space-y-2 md:space-y-0">
-            <div className="flex items-center space-x-2">
+        <div className="px-3 py-3 sm:px-6 sm:py-4">
+          <div className="flex flex-col items-center justify-between space-y-2 md:flex-row md:space-y-0">
+            <div className="flex max-w-full items-center space-x-2">
               <img
                 src="/smct.png"
                 alt="SMCT Group of Companies"
-                className="h-8 w-auto"
+                className="h-7 w-auto sm:h-8"
               />
-              <p className="text-sm text-gray-600">
+              <p className="truncate text-xs text-gray-600 sm:text-sm">
                 © {new Date().getFullYear()} SMCT Group of Companies. All rights reserved.
               </p>
             </div>

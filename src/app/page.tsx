@@ -34,6 +34,7 @@ import { HowItWorksModal } from "@/components/HowItWorksModal";
 import { LoginRegistrationGuideModal } from "@/components/LoginRegistrationGuideModal";
 import { api } from "@/lib/api";
 import { withPublicPage } from "@/hoc";
+import { CONFIG } from "../../config/config";
 
 function LandingLoginPage() {
   const [username, setUsername] = useState("");
@@ -631,6 +632,16 @@ function LandingLoginPage() {
                     className="text-white hover:text-yellow-300 cursor-pointer"
                   >
                     Help Center
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href={"https://portal-2.smctgroup.ph/"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-white hover:text-yellow-300 cursor-pointer"
+                  >
+                    SMCT App Portal
                   </a>
                 </li>
               </ul>

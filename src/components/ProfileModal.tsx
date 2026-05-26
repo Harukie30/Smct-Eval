@@ -18,6 +18,7 @@ import apiService from "@/lib/apiService";
 import { dataURLtoFile } from "../utils/data-url-to-file";
 
 import { useAuth } from "@/contexts/UserContext";
+import { cn } from "@/lib/utils";
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -54,6 +55,7 @@ export default function ProfileModal({
   const { success } = useToast();
   const { refreshUser } = useAuth();
   const [open, setOpen] = useState(false);
+  const [isSignatureDrawing, setIsSignatureDrawing] = useState(false);
   const signaturePadRef = useRef<SignaturePadRef>(null);
   const initializedProfileIdRef = useRef<string | number | null>(null); // Track which profile ID we've initialized
   const initialValuesRef = useRef<{ username?: string; email?: string } | null>(null); // Track initial values for comparison
@@ -304,6 +306,7 @@ export default function ProfileModal({
     // Don't refresh user on cancel - it's unnecessary and can cause re-renders
     // The profile prop will already have the latest data
     setErrors({});
+    setIsSignatureDrawing(false);
     // Reset initialization flag so form reloads with fresh data next time
     initializedProfileIdRef.current = null;
     onClose();
@@ -338,39 +341,43 @@ export default function ProfileModal({
   };
   return (
     <Dialog open={isOpen} onOpenChangeAction={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto px-6 py-6 animate-popup flex flex-col">
-        {/* Cancel Button - Stay at top when scrolling */}
-        <div className="sticky top-0 z-50 flex justify-end gap-2 mb-4 -mr-6 pr-6 py-4  px-6">
+      <DialogContent className="animate-popup flex max-h-[90vh] max-w-2xl flex-col overflow-hidden p-0">
+        {/* Header — fixed, does not overlap scroll content */}
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-3 sm:px-6">
+          <DialogHeader className="min-w-0 flex-1 space-y-0 p-0 text-left">
+            <DialogTitle className="flex items-center gap-2 rounded-lg bg-blue-200 px-3 py-2 text-lg sm:text-xl">
+              <User className="h-5 w-5 shrink-0" />
+              <span className="truncate">Edit Profile</span>
+            </DialogTitle>
+          </DialogHeader>
           <Button
             type="button"
             variant="outline"
             onClick={handleCancel}
             disabled={isLoading}
-            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 hover:text-white text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+            className="flex shrink-0 items-center gap-2 bg-red-600 text-white hover:bg-red-700 hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
           >
-            <X className="w-5 h-5 text-white" />
-            Cancel
+            <X className="h-5 w-5 text-white" />
+            <span className="hidden sm:inline">Cancel</span>
           </Button>
         </div>
 
-        <DialogHeader className="px-1 ">
-          <DialogTitle className="flex items-center gap-2 text-xl bg-blue-200 px-3 py-2 rounded-lg">
-            <User className="w-5 h-5" />
-            Edit Profile
-          </DialogTitle>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit} className="space-y-6 px-0">
+        <div
+          data-signature-scroll-host
+          className={cn(
+            "min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 sm:py-5",
+            isSignatureDrawing && "overflow-hidden"
+          )}
+        >
+        <form onSubmit={handleSubmit} className="space-y-6 pb-2">
           {/* Avatar Section */}
-          <div className="flex flex-col mt-7 items-center space-y-4">
-            <div className="relative">
-              <div className="h-24 w-24 rounded-full bg-blue-600 flex items-center justify-center overflow-hidden">
-                <img
-                  src="/user.png"
-                  alt={profile?.fname[0] || "Profile"}
-                  className="h-25 w-25 rounded-full object-cover"
-                />
-              </div>
+          <div className="flex flex-col items-center space-y-3 pt-1">
+            <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-full bg-blue-600">
+              <img
+                src="/user.png"
+                alt={profile?.fname?.[0] || "Profile"}
+                className="h-full w-full object-cover"
+              />
             </div>
           </div>
 
@@ -587,12 +594,14 @@ export default function ProfileModal({
           </div>
 
           {/* Digital Signature */}
+          <div className="space-y-2 border-t border-gray-100 pt-4">
           <Label htmlFor="signature" className="text-sm font-medium">
-            Digital Signature{" "}
+            Digital Signature
           </Label>
           <div className="space-y-2">
             <SignaturePad
               ref={signaturePadRef}
+              onDrawingActiveChange={setIsSignatureDrawing}
               value={profile?.signature || formData?.signature || null}
               onChangeAction={(signature) => {
                 // Only update formData when signature is cleared (null)
@@ -620,10 +629,8 @@ export default function ProfileModal({
           </div>
           <p className="text-sm text-gray-500">
             Update your digital signature for official documents and approvals.
-            
-           
           </p>
-          
+          </div>
 
           {/* General Error */}
           {errors.general && (
@@ -633,10 +640,10 @@ export default function ProfileModal({
           )}
 
         </form>
+        </div>
 
-        {/* Sticky Cancel and Save Buttons - Stay at bottom when scrolling */}
-        <div className="sticky bottom-0 z-50 flex justify-end gap-2 mt-4 pt-4 pb-2 px-6">
-          
+        {/* Footer — fixed below scroll area (no overlap with signature) */}
+        <div className="flex shrink-0 justify-end gap-2 border-t border-gray-200 bg-white px-4 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.06)] sm:px-6 sm:py-4">
           <Button
             type="button"
             disabled={isLoading}
@@ -650,7 +657,7 @@ export default function ProfileModal({
               </>
             ) : (
               <>
-                <Save className="w-4 h-4" />
+                <Save className="h-4 w-4" />
                 <span>Save Changes</span>
               </>
             )}
