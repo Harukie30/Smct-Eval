@@ -88,7 +88,7 @@ const SIDEBAR_SUBMENU_COLLAPSE_CLASS = cn(
   "sidebar-submenu-stagger mt-2",
   "motion-safe:data-[state=open]:animate-in motion-safe:data-[state=closed]:animate-out",
   "motion-safe:data-[state=closed]:fade-out-0 motion-safe:data-[state=open]:fade-in-0",
-  "motion-safe:duration-200 motion-safe:ease-out"
+  "motion-safe:duration-500 motion-safe:ease-out"
 );
 
 const SIDEBAR_SUBMENU_ITEM_CLASS = "sidebar-submenu-item";
@@ -470,10 +470,7 @@ export default function DashboardShell(props: DashboardShellProps) {
       const asideRect = aside.getBoundingClientRect();
       const endRect = navEnd.getBoundingClientRect();
       const decorationZoneTop = asideRect.bottom - SIDEBAR_BOTTOM_ART_ZONE_PX;
-      const nextHide =
-        isManagementOpen ||
-        isAnalyticsOpen ||
-        endRect.bottom > decorationZoneTop;
+      const nextHide = endRect.bottom > decorationZoneTop;
       setHideSidebarBottomArt((prev) => (prev === nextHide ? prev : nextHide));
     };
 
@@ -498,6 +495,29 @@ export default function DashboardShell(props: DashboardShellProps) {
     sidebarItemsKey,
     dashboardType,
   ]);
+
+  /** After submenu collapse animation, re-check whether bottom art should show again. */
+  useEffect(() => {
+    if (isManagementOpen || isAnalyticsOpen) return;
+
+    const recheckBottomArt = () => {
+      const aside = sidebarAsideRef.current;
+      const navEnd = sidebarNavEndRef.current;
+      if (!aside || !navEnd || !isSidebarOpen) {
+        setHideSidebarBottomArt(false);
+        return;
+      }
+      const asideRect = aside.getBoundingClientRect();
+      const endRect = navEnd.getBoundingClientRect();
+      const decorationZoneTop = asideRect.bottom - SIDEBAR_BOTTOM_ART_ZONE_PX;
+      const nextHide = endRect.bottom > decorationZoneTop;
+      setHideSidebarBottomArt((prev) => (prev === nextHide ? prev : nextHide));
+    };
+
+    requestAnimationFrame(recheckBottomArt);
+    const t = window.setTimeout(recheckBottomArt, 520);
+    return () => window.clearTimeout(t);
+  }, [isManagementOpen, isAnalyticsOpen, isSidebarOpen]);
 
   const handleEditProfile = () => {
     setIsProfileModalOpen(true);
