@@ -1,5 +1,6 @@
 import { CONFIG } from "../../config/config";
 import axios from "axios";
+import { emitConnectionLost, isNetworkFailure } from "./connectionEvents";
 
 const api = axios.create({
   baseURL: CONFIG.API_URL,
@@ -26,6 +27,10 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !error.config?.url?.includes("/profile")) {
       // Log 401 for other endpoints (not profile/auth checks)
       console.warn("Unauthorized request - authentication may be expired");
+    }
+
+    if (isNetworkFailure(error)) {
+      emitConnectionLost();
     }
 
     return Promise.reject(error);

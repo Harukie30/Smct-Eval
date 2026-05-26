@@ -613,19 +613,23 @@ export default function UserManagementTab() {
     await requestPromise;
   };
 
+  const refreshReferenceData = async () => {
+    const [positions, branches, departments] = await Promise.all([
+      apiService.getPositions(),
+      apiService.getBranches(),
+      apiService.getDepartments(),
+    ]);
+    setPositionData(positions);
+    setBranchesData(branches);
+    setDepartmentData(departments);
+  };
+
   //render when page reload not loading not everySearch or Filters
   useEffect(() => {
     const mountData = async () => {
       setRefresh(true);
       try {
-        const [positions, branches, departments] = await Promise.all([
-          apiService.getPositions(),
-          apiService.getBranches(),
-          apiService.getDepartments(),
-        ]);
-        setPositionData(positions);
-        setBranchesData(branches);
-        setDepartmentData(departments);
+        await refreshReferenceData();
         const roles = await apiService.getAllRoles();
         setRoles(roles);
       } catch (error) {
@@ -3724,7 +3728,11 @@ export default function UserManagementTab() {
         onBulkUploadSuccess={async () => {
           setIsBulkUploadProcessing(false);
           setIsBulkUploadSuccessModalOpen(true);
-          await refreshUserData(false);
+          try {
+            await Promise.all([refreshUserData(false), refreshReferenceData()]);
+          } catch (error) {
+            console.error("Error refreshing data after bulk upload:", error);
+          }
         }}
         onBulkUploadError={() => {
           setIsBulkUploadProcessing(false);
@@ -3797,7 +3805,8 @@ export default function UserManagementTab() {
                   Upload Successful
                 </DialogTitle>
                 <DialogDescription className="text-gray-700">
-                  Bulk user upload completed successfully. The user list has been refreshed.
+                  Bulk user upload completed successfully. Users, branches, positions, and
+                  departments have been refreshed.
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter className="border-t border-gray-200 pt-4 sm:justify-center">

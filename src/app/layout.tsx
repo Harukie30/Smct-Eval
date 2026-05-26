@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { UserProvider } from "@/contexts/UserContext";
+import { ConnectionProvider } from "@/contexts/ConnectionContext";
 import { Toaster } from "@/components/ui/sonner";
 import { ImageProtection } from "@/components/ImageProtection";
 
@@ -32,8 +33,10 @@ export default function RootLayout({
       >
         <ImageProtection />
         <UserProvider>
-          {children}
-          <Toaster />
+          <ConnectionProvider>
+            {children}
+            <Toaster />
+          </ConnectionProvider>
         </UserProvider>
       </body>
     </html>
