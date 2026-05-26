@@ -57,6 +57,7 @@ export default function ProfileModal({
   const [open, setOpen] = useState(false);
   const [isSignatureDrawing, setIsSignatureDrawing] = useState(false);
   const signaturePadRef = useRef<SignaturePadRef>(null);
+  const accountSettingsRef = useRef<HTMLDivElement>(null);
   const initializedProfileIdRef = useRef<string | number | null>(null); // Track which profile ID we've initialized
   const initialValuesRef = useRef<{ username?: string; email?: string } | null>(null); // Track initial values for comparison
   
@@ -458,20 +459,35 @@ export default function ProfileModal({
             </div>
           </div>
 
-          <div>
-            <p
-              className="text-sm text-blue-700 mt-10 cursor-pointer"
-              onClick={() => setOpen(!open)}
+          <div className="mt-10" ref={accountSettingsRef}>
+            <button
+              type="button"
+              className="text-left text-sm text-blue-700 underline-offset-2 hover:underline"
+              onClick={() => {
+                const next = !open;
+                setOpen(next);
+                if (next) {
+                  requestAnimationFrame(() => {
+                    accountSettingsRef.current?.scrollIntoView({
+                      behavior: "smooth",
+                      block: "nearest",
+                    });
+                  });
+                }
+              }}
+              aria-expanded={open}
             >
-              Edit Account Settings ...
-            </p>
+              Edit Account Settings {open ? "▲" : "▼"}
+            </button>
 
             <div
-              className={`${
-                open ? "max-h-[30vh]" : "max-h-0"
-              } overflow-hidden transition-all duration-400 mt-2`}
+              className={cn(
+                "mt-2 grid transition-[grid-template-rows] duration-300 ease-in-out",
+                open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+              )}
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="min-h-0 overflow-hidden">
+              <div className="grid grid-cols-1 gap-4 pb-1 md:grid-cols-2">
                 {/* Username */}
                 <div className="space-y-1.5">
                   <Label htmlFor="username" className="text-sm font-medium">
@@ -547,8 +563,6 @@ export default function ProfileModal({
                 </div>
 
                 {/* New Password */}
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                 <div className="space-y-1.5">
                   <Label className="text-sm font-medium">New Password</Label>
                   <Input
@@ -589,6 +603,7 @@ export default function ProfileModal({
                     </p>
                   )}
                 </div>
+              </div>
               </div>
             </div>
           </div>

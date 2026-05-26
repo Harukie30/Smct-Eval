@@ -122,7 +122,45 @@ function getReviewListRating(review: Review | null | undefined): number | null {
 }
 
 const ratingPillClass =
-  "inline-flex items-center justify-center rounded-md border border-transparent px-2 py-0.5 text-xs font-medium whitespace-nowrap";
+  "inline-flex items-center justify-center rounded-md border border-transparent px-1.5 py-0.5 text-[0.65rem] font-medium whitespace-nowrap sm:px-2 sm:text-xs";
+
+/** Responsive density for the wide evaluation records grid. */
+const EVAL_RECORDS_TABLE_CLASS =
+  "min-w-[44rem] sm:min-w-[52rem] md:min-w-[60rem] lg:min-w-[68rem] xl:min-w-0 xl:w-full [&_th]:h-auto [&_th]:min-h-8 [&_th]:whitespace-nowrap [&_th]:px-2 [&_th]:py-2 [&_th]:align-middle [&_th]:text-[0.6rem] [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600 sm:[&_th]:min-h-9 sm:[&_th]:px-2.5 sm:[&_th]:py-2.5 sm:[&_th]:text-[0.65rem] lg:[&_th]:px-3 lg:[&_th]:text-xs xl:[&_th]:px-4 [&_td]:min-w-0 [&_td]:px-2 [&_td]:py-2 [&_td]:align-top [&_td]:text-[0.7rem] [&_td]:leading-snug sm:[&_td]:px-2.5 sm:[&_td]:py-2.5 sm:[&_td]:text-xs lg:[&_td]:px-3 lg:[&_td]:text-sm lg:[&_td]:leading-snug";
+
+const EVAL_TABLE_ACTIONS_CELL =
+  "sticky right-0 z-[2] bg-inherit shadow-[-4px_0_8px_-4px_rgba(15,23,42,0.12)] sm:shadow-[-6px_0_10px_-4px_rgba(15,23,42,0.14)]";
+
+function formatReviewListDate(createdAt: string): { short: string; full: string } {
+  const d = new Date(createdAt);
+  return {
+    short: d.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "2-digit",
+    }),
+    full: d.toLocaleString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+  };
+}
+
+function formatReviewStatusLabel(status: string): { short: string; full: string } {
+  const s = String(status ?? "");
+  if (s === "completed") return { short: "✓ Done", full: `✓ ${s}` };
+  if (s === "pending") return { short: "⏳ Pend.", full: `⏳ ${s}` };
+  return { short: s, full: s };
+}
+
+/** Delete only while verification is still pending (not after all parties approved). */
+function isReviewDeletable(review: Review): boolean {
+  const status = String(review.status ?? "").toLowerCase();
+  return status === "pending";
+}
 
 export default function OverviewTab() {
   const [evaluations, setEvaluations] = useState<Review[]>([]);
@@ -607,6 +645,9 @@ export default function OverviewTab() {
   };
 
   const handleDeleteClick = async (submission: any) => {
+    if (!submission || !isReviewDeletable(submission as Review)) {
+      return;
+    }
     try {
       await clientDataService.deleteSubmission(submission.id);
       await handleRefresh();
@@ -625,6 +666,9 @@ export default function OverviewTab() {
   };
 
   const openDeleteModal = (review: Review) => {
+    if (!isReviewDeletable(review)) {
+      return;
+    }
     setReviewToDelete(review);
     setIsDeleteModalOpen(true);
   };
@@ -636,13 +680,13 @@ export default function OverviewTab() {
       <div className="relative  overflow-y-auto">
         <Card className="">
           <CardHeader>
-            <CardTitle className="flex flex-wrap items-center gap-2">
+            <CardTitle className="flex flex-wrap items-center gap-2 text-base sm:text-lg">
               All Evaluation Records
-              <Badge variant="outline" className="text-xs font-normal">
+              <Badge variant="outline" className="text-[0.65rem] font-normal sm:text-xs">
                 {overviewTotal} Total Records
               </Badge>
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs sm:text-sm">
               Complete evaluation history with advanced filtering
             </CardDescription>
           </CardHeader>
@@ -973,9 +1017,9 @@ export default function OverviewTab() {
       </div>
       <div className="space-y-6 mt-2">
         {/* Main Container Div (replacing Card) */}
-        <div className="bg-white border rounded-lg p-6">
+        <div className="rounded-lg border bg-white p-4 sm:p-6">
           {/* Table Header Section */}
-          <div className="flex items-center justify-between mb-4">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 sm:mb-4">
             <div className="flex items-center gap-2">
               {(() => {
                 const now = new Date();
@@ -996,9 +1040,9 @@ export default function OverviewTab() {
           </div>
 
           {/* Indicator Legend */}
-          <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 mb-4">
-            <div className="flex flex-wrap gap-4 text-xs">
-              <span className="text-sm font-medium text-gray-700 mr-2">
+          <div className="mb-3 rounded-lg border border-gray-200 bg-gray-50 p-2.5 sm:mb-4 sm:p-3">
+            <div className="flex flex-wrap gap-2 text-[0.65rem] sm:gap-3 sm:text-xs md:gap-4">
+              <span className="mr-1 w-full text-xs font-medium text-gray-700 sm:mr-2 sm:w-auto sm:text-sm">
                 Indicators:
               </span>
               <div className="flex items-center gap-1">
@@ -1025,7 +1069,7 @@ export default function OverviewTab() {
                   Completed
                 </Badge>
               </div>
-              <span className="text-sm font-medium text-gray-700 mr-2 w-full sm:w-auto mt-2 sm:mt-0">
+              <span className="mr-1 mt-1 w-full text-xs font-medium text-gray-700 sm:mr-2 sm:mt-0 sm:w-auto sm:text-sm">
                 Rating:
               </span>
               {RATING_DISPLAY_BANDS.map((band) => (
@@ -1040,10 +1084,14 @@ export default function OverviewTab() {
             </div>
           </div>
 
+          <p className="mb-2 text-[0.65rem] text-muted-foreground lg:hidden">
+            Swipe horizontally to view all columns.
+          </p>
+
           {/* Table Section */}
-          <div className="border rounded-lg overflow-hidden">
+          <div className="overflow-hidden rounded-lg border">
             <div
-              className="relative max-h-[600px] overflow-y-auto overflow-x-auto"
+              className="relative max-h-[min(70vh,32rem)] overflow-x-auto overflow-y-auto sm:max-h-[min(75vh,36rem)] lg:max-h-[600px] [-webkit-overflow-scrolling:touch]"
               style={{
                 scrollbarWidth: "thin",
                 scrollbarColor: "#cbd5e1 #f1f5f9",
@@ -1070,61 +1118,91 @@ export default function OverviewTab() {
                   </div>
                 </div>
               )}
-              <Table className="min-w-full">
-                <TableHeader className="sticky top-0 z-10 border-b border-gray-200 bg-white [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600">
-                  <TableRow>
-                    <TableHead className="px-6 py-3">Employee</TableHead>
-                    <TableHead className="px-6 py-3">Evaluator</TableHead>
-                    <TableHead className="px-6 py-3">Branch</TableHead>
-                    <TableHead className="px-6 py-3">Quarter</TableHead>
-                    <TableHead className="px-6 py-3">Date</TableHead>
-                    <TableHead className="px-6 py-3">Rating</TableHead>
-                    <TableHead className="px-6 py-3">Status</TableHead>
-                    <TableHead className="px-6 py-3">Employee Sign</TableHead>
-                    <TableHead className="px-6 py-3">Evaluator Sign</TableHead>
-                    <TableHead className="px-6 py-3">HR Sign</TableHead>
-                    <TableHead className="px-6 py-3">Actions</TableHead>
+              <Table
+                className={EVAL_RECORDS_TABLE_CLASS}
+                wrapperClassName="overflow-visible"
+              >
+                <TableHeader className="sticky top-0 z-10 border-b border-gray-200 bg-white/95 shadow-[inset_0_-1px_0_0_rgb(226_232_240)] backdrop-blur-sm">
+                  <TableRow className="border-0 hover:bg-transparent">
+                    <TableHead className="min-w-[6.5rem] sm:min-w-[7.5rem] lg:min-w-[8.5rem]">
+                      Employee
+                    </TableHead>
+                    <TableHead className="min-w-[6.5rem] sm:min-w-[7.5rem] lg:min-w-[8.5rem]">
+                      Evaluator
+                    </TableHead>
+                    <TableHead className="hidden min-w-[4rem] md:table-cell">
+                      Branch
+                    </TableHead>
+                    <TableHead className="min-w-[3.5rem]">Quarter</TableHead>
+                    <TableHead className="min-w-[5rem] sm:min-w-[6.5rem] lg:min-w-[8rem]">
+                      Date
+                    </TableHead>
+                    <TableHead className="min-w-[3.25rem]">Rating</TableHead>
+                    <TableHead className="min-w-[4.5rem] sm:min-w-[5rem]">
+                      Status
+                    </TableHead>
+                    <TableHead className="hidden min-w-[4.5rem] lg:table-cell xl:min-w-[5.5rem]">
+                      <span className="xl:hidden">Emp. Sign</span>
+                      <span className="hidden xl:inline">Employee Sign</span>
+                    </TableHead>
+                    <TableHead className="hidden min-w-[4.5rem] xl:table-cell">
+                      Evaluator Sign
+                    </TableHead>
+                    <TableHead className="hidden min-w-[4rem] xl:table-cell">
+                      HR Sign
+                    </TableHead>
+                    <TableHead
+                      className={cn(
+                        "min-w-[6.5rem] sm:min-w-[7.5rem]",
+                        EVAL_TABLE_ACTIONS_CELL
+                      )}
+                    >
+                      Actions
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody className="divide-y divide-gray-200">
                   {refreshing || isPageLoading ? (
                     Array.from({ length: itemsPerPage }).map((_, index) => (
                       <TableRow key={`skeleton-${index}`}>
-                        <TableCell className="px-6 py-3">
-                          <Skeleton className="h-6 w-24" />
+                        <TableCell>
+                          <Skeleton className="h-5 w-20 sm:h-6 sm:w-24" />
                         </TableCell>
-                        <TableCell className="px-6 py-3">
-                          <Skeleton className="h-6 w-24" />
+                        <TableCell>
+                          <Skeleton className="h-5 w-20 sm:h-6 sm:w-24" />
                         </TableCell>
-                        <TableCell className="px-6 py-3">
-                          <Skeleton className="h-6 w-24" />
+                        <TableCell className="hidden md:table-cell">
+                          <Skeleton className="h-5 w-14 sm:h-6 sm:w-20" />
                         </TableCell>
-                        <TableCell className="px-6 py-3">
-                          <Skeleton className="h-6 w-24" />
+                        <TableCell>
+                          <Skeleton className="h-5 w-12 sm:h-6 sm:w-16" />
                         </TableCell>
-                        <TableCell className="px-6 py-3">
-                          <Skeleton className="h-6 w-24" />
+                        <TableCell>
+                          <Skeleton className="h-5 w-24 sm:h-6 sm:w-28" />
                         </TableCell>
-                        <TableCell className="px-6 py-3">
-                          <Skeleton className="h-6 w-24" />
+                        <TableCell>
+                          <Skeleton className="h-5 w-12 sm:h-6 sm:w-16" />
                         </TableCell>
-                        <TableCell className="px-6 py-3">
-                          <Skeleton className="h-6 w-24" />
+                        <TableCell>
+                          <Skeleton className="h-5 w-16 sm:h-6 sm:w-20" />
                         </TableCell>
-                        <TableCell className="px-6 py-3">
-                          <Skeleton className="h-6 w-24" />
+                        <TableCell className="hidden lg:table-cell">
+                          <Skeleton className="h-5 w-14 sm:h-6 sm:w-20" />
                         </TableCell>
-                        <TableCell className="px-6 py-3">
-                          <Skeleton className="h-6 w-24" />
+                        <TableCell className="hidden xl:table-cell">
+                          <Skeleton className="h-5 w-14 sm:h-6 sm:w-20" />
                         </TableCell>
-                        <TableCell className="px-6 py-3">
-                          <Skeleton className="h-6 w-24" />
+                        <TableCell className="hidden xl:table-cell">
+                          <Skeleton className="h-5 w-14 sm:h-6 sm:w-20" />
+                        </TableCell>
+                        <TableCell className={EVAL_TABLE_ACTIONS_CELL}>
+                          <Skeleton className="h-7 w-24 sm:h-8 sm:w-28" />
                         </TableCell>
                       </TableRow>
                     ))
                   ) : evaluations?.length === 0 || !evaluations ? (
                     <TableRow>
-                      <TableCell colSpan={10} className="text-center py-12">
+                      <TableCell colSpan={11} className="py-10 text-center sm:py-12">
                         <div className="flex flex-col items-center justify-center gap-4">
                           <img
                             src="/not-found.gif"
@@ -1141,19 +1219,19 @@ export default function OverviewTab() {
                           <div className="text-gray-500">
                             {hasActiveDebouncedFilters ? (
                               <>
-                                <p className="text-base font-medium mb-1">
+                                <p className="mb-1 text-sm font-medium sm:text-base">
                                   No results found
                                 </p>
-                                <p className="text-sm text-gray-400">
+                                <p className="text-xs text-gray-400 sm:text-sm">
                                   Try adjusting your search or filters
                                 </p>
                               </>
                             ) : (
                               <>
-                                <p className="text-base font-medium mb-1">
+                                <p className="mb-1 text-sm font-medium sm:text-base">
                                   No evaluation records to display
                                 </p>
-                                <p className="text-sm text-gray-400">
+                                <p className="text-xs text-gray-400 sm:text-sm">
                                   Records will appear here when evaluations are
                                   submitted
                                 </p>
@@ -1190,32 +1268,33 @@ export default function OverviewTab() {
                         rowClassName =
                           "bg-orange-50 hover:bg-orange-100 border-l-4 border-l-orange-500 transition-colors";
                       }
+                      const reviewDate = formatReviewListDate(review.created_at);
+                      const statusLabels = formatReviewStatusLabel(review.status);
+
                       return (
                         <TableRow key={review.id} className={rowClassName}>
-                          <TableCell className="px-6 py-3">
-                            <div>
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="font-medium text-gray-900">
-                                  {[review.employee?.fname, review.employee?.lname]
-                                    .filter(Boolean)
-                                    .join(" ")
-                                    .trim() || "—"}
-                                </span>
-                              </div>
-                            </div>
+                          <TableCell>
+                            <span className="block max-w-[9rem] truncate font-medium text-gray-900 sm:max-w-[11rem] lg:max-w-none">
+                              {[review.employee?.fname, review.employee?.lname]
+                                .filter(Boolean)
+                                .join(" ")
+                                .trim() || "—"}
+                            </span>
                           </TableCell>
-                          <TableCell className="px-6 py-3">
-                            <div className="font-medium text-gray-900">
+                          <TableCell>
+                            <span className="block max-w-[9rem] truncate font-medium text-gray-900 sm:max-w-[11rem] lg:max-w-none">
                               {[review.evaluator?.fname, review.evaluator?.lname]
                                 .filter(Boolean)
                                 .join(" ")
                                 .trim() || "—"}
-                            </div>
+                            </span>
                           </TableCell>
-                          <TableCell className="px-6 py-3 text-sm text-gray-600">
-                            {getEmployeeBranchCode(review.employee)}
+                          <TableCell className="hidden text-gray-600 md:table-cell">
+                            <span className="block max-w-[5rem] truncate sm:max-w-none">
+                              {getEmployeeBranchCode(review.employee)}
+                            </span>
                           </TableCell>
-                          <TableCell className="px-6 py-3">
+                          <TableCell>
                             {(() => {
                               // Check if "Others" is selected
                               const isOthersSelected = 
@@ -1243,25 +1322,22 @@ export default function OverviewTab() {
                               }
                               
                               return (
-                                <Badge className={getQuarterColor(displayValue)}>
+                                <Badge
+                                  className={cn(
+                                    "max-w-[5.5rem] truncate text-[0.65rem] sm:max-w-none sm:text-xs",
+                                    getQuarterColor(displayValue)
+                                  )}
+                                >
                                   {displayValue}
                                 </Badge>
                               );
                             })()}
                           </TableCell>
-                          <TableCell className="px-6 py-3 text-sm text-gray-600">
-                            {new Date(review.created_at).toLocaleString(
-                              undefined,
-                              {
-                                year: "numeric",
-                                month: "short",
-                                day: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              }
-                            )}
+                          <TableCell className="whitespace-nowrap text-gray-600">
+                            <span className="sm:hidden">{reviewDate.short}</span>
+                            <span className="hidden sm:inline">{reviewDate.full}</span>
                           </TableCell>
-                          <TableCell className="px-6 py-3 text-sm">
+                          <TableCell>
                             {(() => {
                               const ratingValue = getReviewListRating(review);
                               return (
@@ -1276,75 +1352,85 @@ export default function OverviewTab() {
                               );
                             })()}
                           </TableCell>
-                          <TableCell className="px-6 py-3">
+                          <TableCell>
                             <Badge
-                              className={
+                              className={cn(
+                                "text-[0.65rem] sm:text-xs",
                                 review.status === "completed"
                                   ? "bg-green-100 text-green-800"
                                   : review.status === "pending"
                                   ? "bg-yellow-100 text-yellow-800"
                                   : "bg-yellow-100 text-yellow-800"
-                              }
+                              )}
                             >
-                              {review.status === "completed"
-                                ? `✓ ${review.status}`
-                                : review.status === "pending"
-                                ? `⏳ ${review.status}`
-                                : review.status}
+                              <span className="sm:hidden">{statusLabels.short}</span>
+                              <span className="hidden sm:inline">
+                                {statusLabels.full}
+                              </span>
                             </Badge>
                           </TableCell>
-                          <TableCell className="px-6 py-3 text-sm text-gray-600">
+                          <TableCell className="hidden text-gray-600 lg:table-cell">
                             {review.status === "completed" ? (
-                              <Badge className="bg-green-100 text-green-800 text-xs">
+                              <Badge className="bg-green-100 text-[0.65rem] text-green-800 sm:text-xs">
                                 ✓ Signed
                               </Badge>
                             ) : review.status === "pending" ? (
-                              <Badge className="bg-gray-100 text-gray-600 text-xs">
+                              <Badge className="bg-gray-100 text-[0.65rem] text-gray-600 sm:text-xs">
                                 ⏳ Pending
                               </Badge>
                             ) : (
-                              <span className="text-xs text-gray-400">—</span>
+                              <span className="text-[0.65rem] text-gray-400 sm:text-xs">
+                                —
+                              </span>
                             )}
                           </TableCell>
-                          <TableCell className="px-6 py-3 text-sm text-gray-600">
+                          <TableCell className="hidden text-gray-600 xl:table-cell">
                             {review.evaluator?.roles?.[0]?.name ===
                             "evaluator" ? (
-                              <Badge className="bg-green-100 text-green-800 text-xs">
+                              <Badge className="bg-green-100 text-[0.65rem] text-green-800 sm:text-xs">
                                 ✓ Signed
                               </Badge>
                             ) : (
-                              <span className="text-xs text-gray-400">—</span>
+                              <span className="text-[0.65rem] text-gray-400 sm:text-xs">
+                                —
+                              </span>
                             )}
                           </TableCell>
-                          <TableCell className="px-6 py-3 text-sm text-gray-600">
+                          <TableCell className="hidden text-gray-600 xl:table-cell">
                             {review.evaluator?.roles?.[0]?.name === "hr" ? (
-                              <Badge className="bg-green-100 text-green-800 text-xs">
+                              <Badge className="bg-green-100 text-[0.65rem] text-green-800 sm:text-xs">
                                 ✓ Signed
                               </Badge>
                             ) : (
-                              <span className="text-xs text-gray-400">—</span>
+                              <span className="text-[0.65rem] text-gray-400 sm:text-xs">
+                                —
+                              </span>
                             )}
                           </TableCell>
 
-                          <TableCell className="px-6 py-3">
-                            <div className="flex gap-2">
+                          <TableCell className={EVAL_TABLE_ACTIONS_CELL}>
+                            <div className="flex flex-wrap gap-1 sm:gap-1.5">
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleViewEvaluation(review)}
-                                className="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+                                className="h-7 cursor-pointer bg-blue-600 px-1.5 py-0.5 text-[0.65rem] text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:text-white hover:shadow-md active:translate-y-0 sm:h-8 sm:px-2 sm:text-xs"
                               >
-                                ☰ View
+                                <span className="sm:hidden">View</span>
+                                <span className="hidden sm:inline">☰ View</span>
                               </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => openDeleteModal(review)}
-                                className="text-xs px-2 py-1 bg-red-100 hover:bg-red-500 text-gray-700 hover:text-white border-red-200 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
-                                title="Delete this evaluation record"
-                              >
-                                ❌ Delete
-                              </Button>
+                              {isReviewDeletable(review) ? (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => openDeleteModal(review)}
+                                  className="h-7 cursor-pointer border-red-200 bg-red-100 px-1.5 py-0.5 text-[0.65rem] text-gray-700 transition-all duration-200 hover:-translate-y-0.5 hover:bg-red-500 hover:text-white hover:shadow-md active:translate-y-0 sm:h-8 sm:px-2 sm:text-xs"
+                                  title="Delete this evaluation record"
+                                >
+                                  <span className="sm:hidden">Del</span>
+                                  <span className="hidden sm:inline">❌ Delete</span>
+                                </Button>
+                              ) : null}
                             </div>
                           </TableCell>
                         </TableRow>
