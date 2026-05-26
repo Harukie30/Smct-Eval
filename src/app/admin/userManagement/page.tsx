@@ -2196,6 +2196,7 @@ export default function UserManagementTab() {
                 className="h-32 w-32 object-contain"
               />
             </div>
+            <DialogTitle className="text-xl font-bold text-red-600">
               Something Went Wrong
             </DialogTitle>
             <DialogDescription className="text-gray-600">
