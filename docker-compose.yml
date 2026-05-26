@@ -1,0 +1,9 @@
+version: '3.8'
+
+services:
+  performance-evaluation:
+    build: .
+    container_name: performance-evaluation
+    restart: unless-stopped
+    ports:
+      - "7060:7060"
