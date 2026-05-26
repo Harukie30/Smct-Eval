@@ -182,8 +182,10 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
       await new Promise((resolve) => setTimeout(resolve, 300));
 
       const arrayBuffer = await bulkFile.arrayBuffer();
-      const workbook = XLSX.read(arrayBuffer, { type: "array",
-        cellDates: true, });
+      const workbook = XLSX.read(arrayBuffer, {
+        type: "array",
+        cellDates: true,
+      });
       const firstSheetName = workbook.SheetNames[0];
       if (!firstSheetName) {
         throw new Error("The selected file does not contain any sheets.");
@@ -212,11 +214,21 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
       };
 
       const parsedUsers = rawRows
-        .map((row) => {
+        .map((row, index) => {
           const normalizedRow: Record<string, any> = {};
           Object.keys(row).forEach((k) => {
             normalizedRow[normalizeKey(k)] = row[k];
           });
+
+          const dateHiredItem = new Date(
+            getValue(normalizedRow, [
+              "date_hired",
+              "datehired",
+              "hired_date",
+            ]),
+          );
+
+          const dateHired = String(dateHiredItem) !== "Invalid Date" ? dateHiredItem : "";
 
           return {
             employee_id: getValue(normalizedRow, ["employee_id", "employeeid", "id"]),
@@ -230,14 +242,8 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
             username: getValue(normalizedRow, ["username", "user_name"]),
             password: getValue(normalizedRow, ["password"]),
             contact: getValue(normalizedRow, ["contact", "contact_number", "mobile", "phone"]),
-            date_hired: new Date(
-              getValue(normalizedRow, [
-              "date_hired",
-              "datehired",
-              "hired_date",
-              ]),
-              ).toISOString(),
-              };
+            date_hired: dateHired,
+          };
         })
         .filter((row) =>
           Object.values(row).some((value) => String(value || "").trim() !== "")
@@ -269,6 +275,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
         "An unexpected server error occurred during upload. Please try again later.";
       setBulkErrorMessage(message);
       setIsBulkErrorDialogOpen(true);
+      console.error(err)
     } finally {
       setIsBulkUploading(false);
       setBulkUploadProgress(100);
@@ -382,320 +389,320 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
         >
           {/* Faded overlay for better content readability */}
           <div className="absolute inset-0 bg-gradient-to-br from-blue-100/95 to-indigo-100/95 pointer-events-none"></div>
-          
+
           {/* Content wrapper with relative positioning */}
           <div className="relative z-10 max-h-[90vh] overflow-y-auto p-6">
             <DialogHeader className="pb-6">
-            <DialogTitle className="text-xl font-semibold">
-              Add New Employee
-            </DialogTitle>
-            <DialogDescription className="text-gray-600">
-              Create a new employee account. All fields marked with * are
-              required.
-            </DialogDescription>
-          </DialogHeader>
+              <DialogTitle className="text-xl font-semibold">
+                Add New Employee
+              </DialogTitle>
+              <DialogDescription className="text-gray-600">
+                Create a new employee account. All fields marked with * are
+                required.
+              </DialogDescription>
+            </DialogHeader>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-2">
-            <div className="space-y-2 ">
-              <Label htmlFor="employee_id">Employee ID</Label>
-              <Input
-                id="employee_id"
-                type="text"
-                placeholder="Enter employee ID"
-                value={formData.employee_id}
-                onChange={(e) =>
-                  handleInputChange("employee_id", e.target.value)
-                }
-                className={errors?.employee_id ? "border-red-500" : "bg-white"}
-              />
-              {errors?.employee_id && (
-                <p className="text-sm text-red-500">{errors?.employee_id}</p>
-              )}
-            </div>
-            {/* fName */}
-            <div className="space-y-2">
-              <Label htmlFor="fname">First Name *</Label>
-              <Input
-                id="fname"
-                value={formData.fname}
-                onChange={(e) => handleInputChange("fname", e.target.value)}
-                className={errors.fname ? "border-red-500 " : "bg-white"}
-                placeholder="Enter first name"
-              />
-              {errors.fname && (
-                <p className="text-sm text-red-500">{errors.fname}</p>
-              )}
-            </div>
-
-            {/* lName */}
-            <div className="space-y-2">
-              <Label htmlFor="lname">Last Name *</Label>
-              <Input
-                id="lname"
-                value={formData.lname}
-                onChange={(e) => handleInputChange("lname", e.target.value)}
-                className={errors.lname ? "border-red-500 " : "bg-white"}
-                placeholder="Enter last name"
-              />
-              {errors.lname && (
-                <p className="text-sm text-red-500">{errors.lname}</p>
-              )}
-            </div>
-
-            {/* Email */}
-            <div className="space-y-2">
-              <Label htmlFor="email">Email Address *</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleInputChange("email", e.target.value)}
-                className={errors.email ? "border-red-500" : "bg-white"}
-                placeholder="Enter email address"
-              />
-              {errors.email && (
-                <p className="text-sm text-red-500">{errors.email}</p>
-              )}
-            </div>
-
-            {/* Username */}
-            <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
-              <Input
-                id="username"
-                value={formData.username || ""}
-                onChange={(e) => handleInputChange("username", e.target.value)}
-                className={errors.username ? "border-red-500" : "bg-white"}
-                placeholder="Enter username"
-              />
-              {errors.username && (
-                <p className="text-sm text-red-500">{errors.username}</p>
-              )}
-            </div>
-
-            {/* Password */}
-            <div className="space-y-2">
-              <Label htmlFor="password">Password *</Label>
-              <div className="relative">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-2">
+              <div className="space-y-2 ">
+                <Label htmlFor="employee_id">Employee ID</Label>
                 <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={formData.password || ""}
+                  id="employee_id"
+                  type="text"
+                  placeholder="Enter employee ID"
+                  value={formData.employee_id}
                   onChange={(e) =>
-                    handleInputChange("password", e.target.value)
+                    handleInputChange("employee_id", e.target.value)
                   }
-                  className={
-                    errors.password ? "border-red-500 pr-10" : "pr-10 bg-white"
-                  }
-                  placeholder="Enter password"
+                  className={errors?.employee_id ? "border-red-500" : "bg-white"}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
-                >
-                  {showPassword ? (
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"
-                      />
-                    </svg>
-                  ) : (
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                      />
-                    </svg>
-                  )}
-                </button>
+                {errors?.employee_id && (
+                  <p className="text-sm text-red-500">{errors?.employee_id}</p>
+                )}
               </div>
-              {errors.password && (
-                <p className="text-sm text-red-500">{errors.password}</p>
-              )}
-              <p className="text-xs text-gray-500">
-                Password must be at least 8 characters
-              </p>
-            </div>
+              {/* fName */}
+              <div className="space-y-2">
+                <Label htmlFor="fname">First Name *</Label>
+                <Input
+                  id="fname"
+                  value={formData.fname}
+                  onChange={(e) => handleInputChange("fname", e.target.value)}
+                  className={errors.fname ? "border-red-500 " : "bg-white"}
+                  placeholder="Enter first name"
+                />
+                {errors.fname && (
+                  <p className="text-sm text-red-500">{errors.fname}</p>
+                )}
+              </div>
 
-            {/* Contact */}
-            <div className="space-y-2">
-              <Label htmlFor="contact">Contact Number</Label>
-              <Input
-                id="contact"
-                type="text"
-                value={formData.contact || ""}
-                onChange={(e) => handleInputChange("contact", e.target.value)}
-                className={errors.contact ? "border-red-500" : "bg-white"}
-                placeholder="Enter contact number"
-              />
-              {errors.contact && (
-                <p className="text-sm text-red-500">{errors.contact}</p>
-              )}
-            </div>
+              {/* lName */}
+              <div className="space-y-2">
+                <Label htmlFor="lname">Last Name *</Label>
+                <Input
+                  id="lname"
+                  value={formData.lname}
+                  onChange={(e) => handleInputChange("lname", e.target.value)}
+                  className={errors.lname ? "border-red-500 " : "bg-white"}
+                  placeholder="Enter last name"
+                />
+                {errors.lname && (
+                  <p className="text-sm text-red-500">{errors.lname}</p>
+                )}
+              </div>
 
-            {/* Date Hired */}
-            <div className="space-y-2 w-1/2">
-              <Label htmlFor="date_hired">Date Hired</Label>
-              <Input
-                id="date_hired"
-                type="date"
-                value={formData.date_hired || ""}
-                onChange={(e) =>
-                  handleInputChange("date_hired", e.target.value)
-                }
-                className={
-                  errors.date_hired
-                    ? "border-red-500 cursor-pointer"
-                    : "bg-white cursor-pointer"
-                }
-              />
-              {errors.date_hired && (
-                <p className="text-sm text-red-500">{errors.date_hired}</p>
-              )}
-            </div>
+              {/* Email */}
+              <div className="space-y-2">
+                <Label htmlFor="email">Email Address *</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => handleInputChange("email", e.target.value)}
+                  className={errors.email ? "border-red-500" : "bg-white"}
+                  placeholder="Enter email address"
+                />
+                {errors.email && (
+                  <p className="text-sm text-red-500">{errors.email}</p>
+                )}
+              </div>
 
-            {/* Position */}
-            <div className="space-y-2 w-1/2">
-              <Label htmlFor="position_id">Position *</Label>
-              <Combobox
-                options={positions}
-                value={formData.position_id}
-                onValueChangeAction={(value) =>
-                  handleInputChange("position_id", value as string)
-                }
-                placeholder="Select position"
-                searchPlaceholder="Search positions..."
-                emptyText="No positions found."
-                className={errors.position_id ? "border-red-500" : "bg-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"}
-              />
-              {errors.position_id && (
-                <p className="text-sm text-red-500">{errors.position_id}</p>
-              )}
-            </div>
+              {/* Username */}
+              <div className="space-y-2">
+                <Label htmlFor="username">Username</Label>
+                <Input
+                  id="username"
+                  value={formData.username || ""}
+                  onChange={(e) => handleInputChange("username", e.target.value)}
+                  className={errors.username ? "border-red-500" : "bg-white"}
+                  placeholder="Enter username"
+                />
+                {errors.username && (
+                  <p className="text-sm text-red-500">{errors.username}</p>
+                )}
+              </div>
 
-            {/* Branch */}
-            <div className="space-y-2 w-1/2">
-              <Label htmlFor="branch_id">Branch *</Label>
-              <Combobox
-                options={branches}
-                value={formData.branch_id || ""}
-                onValueChangeAction={(value) =>
-                  handleInputChange("branch_id", value as string)
-                }
-                placeholder="Select branch"
-                searchPlaceholder="Search branches..."
-                emptyText="No branches found."
-                className={errors.branch_id ? "border-red-500 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0" : "cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"}
-              />
-              {errors.branch_id && (
-                <p className="text-sm text-red-500">{errors.branch_id}</p>
-              )}
-            </div>
+              {/* Password */}
+              <div className="space-y-2">
+                <Label htmlFor="password">Password *</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={formData.password || ""}
+                    onChange={(e) =>
+                      handleInputChange("password", e.target.value)
+                    }
+                    className={
+                      errors.password ? "border-red-500 pr-10" : "pr-10 bg-white"
+                    }
+                    placeholder="Enter password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                  >
+                    {showPassword ? (
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"
+                        />
+                      </svg>
+                    ) : (
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                        />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                        />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+                {errors.password && (
+                  <p className="text-sm text-red-500">{errors.password}</p>
+                )}
+                <p className="text-xs text-gray-500">
+                  Password must be at least 8 characters
+                </p>
+              </div>
 
-            {/* Department - Show only if branch is HO, Head Office, or none */}
-            {formData.branch_id === 126 && (
+              {/* Contact */}
+              <div className="space-y-2">
+                <Label htmlFor="contact">Contact Number</Label>
+                <Input
+                  id="contact"
+                  type="text"
+                  value={formData.contact || ""}
+                  onChange={(e) => handleInputChange("contact", e.target.value)}
+                  className={errors.contact ? "border-red-500" : "bg-white"}
+                  placeholder="Enter contact number"
+                />
+                {errors.contact && (
+                  <p className="text-sm text-red-500">{errors.contact}</p>
+                )}
+              </div>
+
+              {/* Date Hired */}
               <div className="space-y-2 w-1/2">
-                <Label htmlFor="department">Department *</Label>
-                <Combobox
-                  options={departments}
-                  value={String(formData.department_id)}
-                  onValueChangeAction={(value) =>
-                    handleInputChange("department_id", value as string)
+                <Label htmlFor="date_hired">Date Hired</Label>
+                <Input
+                  id="date_hired"
+                  type="date"
+                  value={formData.date_hired || ""}
+                  onChange={(e) =>
+                    handleInputChange("date_hired", e.target.value)
                   }
-                  placeholder="Select department"
-                  searchPlaceholder="Search departments..."
-                  emptyText="No departments found."
                   className={
-                    errors.department_id ? "border-red-500" : "bg-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"
+                    errors.date_hired
+                      ? "border-red-500 cursor-pointer"
+                      : "bg-white cursor-pointer"
                   }
                 />
-                {errors.department_id && (
-                  <p className="text-sm text-red-500">{errors.department_id}</p>
+                {errors.date_hired && (
+                  <p className="text-sm text-red-500">{errors.date_hired}</p>
                 )}
               </div>
-            )}
 
-            {/* Role */}
-            <div className="space-y-2 w-1/2">
-              <Label htmlFor="role_id">Role *</Label>
-              <Select
-                onValueChange={(value) => handleInputChange("role_id", value)}
-              >
-                <SelectTrigger className="w-48 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0">
-                  <SelectValue placeholder="Select role" />
-                </SelectTrigger>
-                <SelectContent>
-                  {roles.map((role: any) => (
-                    <SelectItem key={role.id} value={role.id}>
-                      {role.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.role_id && (
-                <p className="text-sm text-red-500">{errors.role_id}</p>
-              )}
-            </div>
-          </div>
-
-          <DialogFooter className="flex justify-end gap-3 pt-6 mt-6 border-t border-gray-200">
-            {/* Primary actions */}
-            <div className="flex flex-wrap justify-end gap-3 w-full md:w-auto">
-              <Button
-                variant="outline"
-                onClick={handleCancel}
-                className="px-6 bg-red-600 hover:bg-red-700 text-white hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
-                disabled={isSaving}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleBulkUploadClick}
-                className="px-4 bg-blue-600 text-white hover:bg-blue-700 hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
-                disabled={isSaving}
-              >
-                Upload User
-              </Button>
-              <Button
-                onClick={handleSave}
-                className={`bg-green-600 hover:bg-green-700 text-white px-6 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 ${isSaving ? "opacity-70 cursor-not-allowed hover:translate-y-0 hover:shadow-none" : ""}`}
-                disabled={isSaving}
-              >
-                {isSaving ? (
-                  <div className="flex items-center space-x-2">
-                    <LoadingAnimation size="sm" variant="spinner" color="green" />
-                    <span>Adding...</span>
-                  </div>
-                ) : (
-                  "Add Employee"
+              {/* Position */}
+              <div className="space-y-2 w-1/2">
+                <Label htmlFor="position_id">Position *</Label>
+                <Combobox
+                  options={positions}
+                  value={formData.position_id}
+                  onValueChangeAction={(value) =>
+                    handleInputChange("position_id", value as string)
+                  }
+                  placeholder="Select position"
+                  searchPlaceholder="Search positions..."
+                  emptyText="No positions found."
+                  className={errors.position_id ? "border-red-500" : "bg-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"}
+                />
+                {errors.position_id && (
+                  <p className="text-sm text-red-500">{errors.position_id}</p>
                 )}
-              </Button>
+              </div>
+
+              {/* Branch */}
+              <div className="space-y-2 w-1/2">
+                <Label htmlFor="branch_id">Branch *</Label>
+                <Combobox
+                  options={branches}
+                  value={formData.branch_id || ""}
+                  onValueChangeAction={(value) =>
+                    handleInputChange("branch_id", value as string)
+                  }
+                  placeholder="Select branch"
+                  searchPlaceholder="Search branches..."
+                  emptyText="No branches found."
+                  className={errors.branch_id ? "border-red-500 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0" : "cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"}
+                />
+                {errors.branch_id && (
+                  <p className="text-sm text-red-500">{errors.branch_id}</p>
+                )}
+              </div>
+
+              {/* Department - Show only if branch is HO, Head Office, or none */}
+              {formData.branch_id === 126 && (
+                <div className="space-y-2 w-1/2">
+                  <Label htmlFor="department">Department *</Label>
+                  <Combobox
+                    options={departments}
+                    value={String(formData.department_id)}
+                    onValueChangeAction={(value) =>
+                      handleInputChange("department_id", value as string)
+                    }
+                    placeholder="Select department"
+                    searchPlaceholder="Search departments..."
+                    emptyText="No departments found."
+                    className={
+                      errors.department_id ? "border-red-500" : "bg-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"
+                    }
+                  />
+                  {errors.department_id && (
+                    <p className="text-sm text-red-500">{errors.department_id}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Role */}
+              <div className="space-y-2 w-1/2">
+                <Label htmlFor="role_id">Role *</Label>
+                <Select
+                  onValueChange={(value) => handleInputChange("role_id", value)}
+                >
+                  <SelectTrigger className="w-48 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0">
+                    <SelectValue placeholder="Select role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {roles.map((role: any) => (
+                      <SelectItem key={role.id} value={role.id}>
+                        {role.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.role_id && (
+                  <p className="text-sm text-red-500">{errors.role_id}</p>
+                )}
+              </div>
             </div>
-          </DialogFooter>
+
+            <DialogFooter className="flex justify-end gap-3 pt-6 mt-6 border-t border-gray-200">
+              {/* Primary actions */}
+              <div className="flex flex-wrap justify-end gap-3 w-full md:w-auto">
+                <Button
+                  variant="outline"
+                  onClick={handleCancel}
+                  className="px-6 bg-red-600 hover:bg-red-700 text-white hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+                  disabled={isSaving}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleBulkUploadClick}
+                  className="px-4 bg-blue-600 text-white hover:bg-blue-700 hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+                  disabled={isSaving}
+                >
+                  Upload User
+                </Button>
+                <Button
+                  onClick={handleSave}
+                  className={`bg-green-600 hover:bg-green-700 text-white px-6 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 ${isSaving ? "opacity-70 cursor-not-allowed hover:translate-y-0 hover:shadow-none" : ""}`}
+                  disabled={isSaving}
+                >
+                  {isSaving ? (
+                    <div className="flex items-center space-x-2">
+                      <LoadingAnimation size="sm" variant="spinner" color="green" />
+                      <span>Adding...</span>
+                    </div>
+                  ) : (
+                    "Add Employee"
+                  )}
+                </Button>
+              </div>
+            </DialogFooter>
           </div>
         </DialogContent>
       </Dialog>
