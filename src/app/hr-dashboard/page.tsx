@@ -597,8 +597,8 @@ export default function OverviewTab() {
                                   </Badge>
                                 )}
                                 {!isNew && isRecent && (
-                                  <Badge className="px-1 py-0 text-[0.6rem] font-semibold text-blue-800 sm:text-xs">
-                                    🕐 RECENT
+                                  <Badge className="px-1 py-0 text-[0.6rem] font-semibold bg-blue-200 text-blue-800 sm:text-xs">
+                                    ⏳ RECENT
                                   </Badge>
                                 )}
                               </div>
