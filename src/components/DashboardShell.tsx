@@ -125,7 +125,7 @@ const SIDEBAR_NAV_ITEM_BASE_CLASS =
   "w-full rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 cursor-pointer";
 
 const SIDEBAR_NAV_ROW_CLASS =
-  "flex items-center space-x-2 px-2.5 py-1.5 sm:space-x-2.5 sm:px-3 sm:py-2 md:space-x-3 md:px-4 md:py-2.5";
+  "flex min-h-10 items-center space-x-2 px-2.5 py-2 sm:min-h-0 sm:space-x-2.5 sm:px-3 sm:py-2 md:space-x-3 md:px-4 md:py-2.5";
 
 const SIDEBAR_NAV_ROW_SUB_CLASS =
   "flex items-center space-x-2 px-2.5 py-1.5 sm:space-x-2.5 sm:px-3 sm:py-1.5 md:space-x-3 md:px-4 md:py-2";
@@ -150,10 +150,28 @@ const SIDEBAR_BOTTOM_ART_ZONE_PX = 128;
 const SIDEBAR_BOTTOM_ART_ABSOLUTE_CLASS =
   "absolute bottom-0 left-0 right-0 z-0 h-28 bg-contain bg-center bg-no-repeat pointer-events-none sm:h-32 xl:h-36";
 
-/** Fixed top header — main/sidebar layout offsets use this, not the sidebar. */
-const DASHBOARD_HEADER_OFFSET_CLASS = "mt-12 sm:mt-14";
+/** Fixed top header — includes safe-area for notched phones. */
+const DASHBOARD_HEADER_HEIGHT_CLASS = "h-12 sm:h-14";
+const DASHBOARD_HEADER_OFFSET_CLASS =
+  "mt-[calc(3rem+env(safe-area-inset-top,0px))] sm:mt-[calc(3.5rem+env(safe-area-inset-top,0px))]";
 const DASHBOARD_VIEWPORT_BELOW_HEADER_CLASS =
-  "h-[calc(100dvh-3rem)] max-h-[calc(100dvh-3rem)] sm:h-[calc(100dvh-3.5rem)] sm:max-h-[calc(100dvh-3.5rem)]";
+  "h-[calc(100dvh-3rem-env(safe-area-inset-top,0px))] max-h-[calc(100dvh-3rem-env(safe-area-inset-top,0px))] sm:h-[calc(100dvh-3.5rem-env(safe-area-inset-top,0px))] sm:max-h-[calc(100dvh-3.5rem-env(safe-area-inset-top,0px))]";
+
+const DASHBOARD_HEADER_CLASS =
+  "fixed top-0 left-0 right-0 z-50 border-b bg-white/95 shadow-sm backdrop-blur-sm pt-[env(safe-area-inset-top,0px)]";
+
+const HEADER_ICON_BUTTON_CLASS =
+  "h-9 w-9 shrink-0 cursor-pointer p-0 transition-all duration-200 hover:bg-blue-50 hover:text-blue-700 active:translate-y-0 sm:h-10 sm:w-10";
+
+/** Main scroll area — extra bottom space for fixed footer + help FABs on phones. */
+const DASHBOARD_MAIN_CLASS =
+  "min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-2 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] pt-2 sm:px-5 sm:pb-20 sm:pt-5";
+
+/** Floating help buttons — sit above footer; smaller on narrow screens. */
+const HELP_FAB_BASE_CLASS =
+  "fixed z-50 rounded-full bg-blue-100 p-0 shadow-lg transition-all duration-300 ease-in-out hover:bg-blue-400 hover:shadow-xl motion-safe:hover:-translate-y-0.5 motion-safe:hover:rotate-6 motion-safe:active:translate-y-0";
+const HELP_FAB_SIZE_CLASS = "h-11 w-11 sm:h-14 sm:w-14";
+const HELP_FAB_IMG_CLASS = "h-8 w-8 object-contain sm:h-10 sm:w-10";
 
 function sidebarNavActiveClass(isActive: boolean) {
   return isActive
@@ -270,6 +288,28 @@ export default function DashboardShell(props: DashboardShellProps) {
       document.body.style.overflow = prevOverflow;
     };
   }, [isMobileNav, isSidebarOpen]);
+
+  /** Close notification panel when tapping outside (especially on mobile). */
+  useEffect(() => {
+    if (!isNotificationPanelOpen || isNotificationPanelClosing) return;
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node;
+      if (notificationRef.current?.contains(target)) return;
+      setIsNotificationPanelClosing(true);
+      window.setTimeout(() => {
+        setIsNotificationPanelOpen(false);
+        setIsNotificationPanelClosing(false);
+      }, 300);
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("touchstart", handlePointerDown, { passive: true });
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("touchstart", handlePointerDown);
+    };
+  }, [isNotificationPanelOpen, isNotificationPanelClosing]);
 
   useEffect(() => {
     const setupEcho = async () => {
@@ -662,10 +702,10 @@ export default function DashboardShell(props: DashboardShellProps) {
       className="flex flex-col min-h-screen relative"
       style={{
         backgroundImage: "url(/smct.png)",
-        backgroundSize: "min(90vw, 64%)",
+        backgroundSize: isMobileNav ? "min(88vw, 20rem)" : "min(90vw, 64%)",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
-        backgroundAttachment: "fixed",
+        backgroundAttachment: isMobileNav ? "scroll" : "fixed",
       }}
     >
       {/* Faded overlay for better content readability */}
@@ -678,16 +718,22 @@ export default function DashboardShell(props: DashboardShellProps) {
       
       {/* Content wrapper with relative positioning */}
       <div className={`relative z-10 flex flex-col min-h-screen transition-all duration-300 ${isGuideModalOpen ? 'blur-sm' : ''}`}>
-      {/* Header - Fixed */}
-      <header className="fixed top-0 left-0 right-0 z-50 border-b bg-white shadow-sm">
-        <div className="flex h-12 items-center justify-between gap-2 px-3 sm:h-14 sm:gap-3 sm:px-5">
-          <div className="flex min-w-0 items-center gap-2 sm:gap-2.5 md:gap-3">
+      {/* Header - Fixed top bar (separate from sidebar nav) */}
+      <header className={DASHBOARD_HEADER_CLASS}>
+        <div
+          className={cn(
+            "flex items-center justify-between gap-1 px-2 sm:gap-2 sm:px-4 md:px-5",
+            DASHBOARD_HEADER_HEIGHT_CLASS
+          )}
+        >
+          {/* Brand + page title */}
+          <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2.5 md:gap-3">
             {isMobileNav && (
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-9 w-9 shrink-0 cursor-pointer text-gray-700 hover:bg-blue-50 lg:hidden"
+                className={cn(HEADER_ICON_BUTTON_CLASS, "text-gray-700 lg:hidden")}
                 aria-label={isSidebarOpen ? "Close navigation" : "Open navigation"}
                 aria-expanded={isSidebarOpen}
                 onClick={() => setIsSidebarOpen((open) => !open)}
@@ -702,69 +748,61 @@ export default function DashboardShell(props: DashboardShellProps) {
             <img
               src="/smct.png"
               alt="SMCT Group of Companies"
-              className="h-8 w-auto shrink-0 sm:h-9 md:h-10"
+              className="h-7 w-auto shrink-0 sm:h-9 md:h-10"
             />
             <div className="min-w-0 flex flex-col leading-tight">
-              <h1 className="truncate text-sm font-bold text-gray-900 sm:text-base md:text-lg">
+              <h1 className="truncate text-xs font-bold text-gray-900 sm:text-base md:text-lg">
                 {title}
               </h1>
-              <p className="hidden truncate text-[11px] text-gray-600 sm:block sm:text-xs">
+              <p className="hidden truncate text-[11px] text-gray-600 md:block md:text-xs">
                 Performance & Ratings Overview
               </p>
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-            {/* Embedded Clock - Combined Display and Toggle */}
+
+          {/* Header actions: clock, notifications, profile */}
+          <div className="flex shrink-0 items-center gap-0.5 sm:gap-1.5 md:gap-2">
             <Tooltip>
               <TooltipTrigger asChild>
-                <div
+                <button
+                  type="button"
                   onClick={() => setIsClockVisible(!isClockVisible)}
-                  className={`flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1.5 transition-all duration-200 sm:gap-2 sm:px-2.5 ${
+                  aria-label={isClockVisible ? "Hide clock" : "Show clock"}
+                  className={cn(
+                    "flex cursor-pointer items-center justify-center rounded-lg transition-all duration-200",
                     isClockVisible
-                      ? "bg-blue-600 shadow-md hover:bg-blue-700"
-                      : "bg-gray-100 hover:bg-gray-200"
-                  }`}
-                >
-                  <Clock
-                    className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${isClockVisible ? "text-white" : "text-gray-500"}`}
-                  />
-                  {isClockVisible && (
-                    <div className="flex flex-col items-start leading-tight">
-                      <div className="text-xs font-semibold text-white sm:text-sm">
-                        {currentTime.toLocaleTimeString('en-US', { 
-                          hour: '2-digit', 
-                          minute: '2-digit', 
-                          second: '2-digit',
-                          hour12: true 
-                        })}
-                      </div>
-                      <div className="hidden text-[10px] text-blue-100 sm:block sm:text-xs">
-                        {currentTime.toLocaleDateString('en-US', { 
-                          weekday: 'short', 
-                          month: 'short', 
-                          day: 'numeric',
-                          year: 'numeric'
-                        })}
-                      </div>
-                    </div>
+                      ? "bg-blue-600 px-2 py-1.5 text-white shadow-md hover:bg-blue-700 sm:px-2.5"
+                      : cn(HEADER_ICON_BUTTON_CLASS, "bg-gray-100 text-gray-500 hover:bg-gray-200")
                   )}
-                </div>
+                >
+                  <Clock className="h-4 w-4 shrink-0 sm:h-[1.125rem] sm:w-[1.125rem]" />
+                  {isClockVisible && (
+                    <span className="ml-1.5 whitespace-nowrap text-[10px] font-semibold tabular-nums sm:ml-2 sm:text-xs md:text-sm">
+                      {currentTime.toLocaleTimeString("en-US", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        ...(isMobileNav ? {} : { second: "2-digit" }),
+                        hour12: true,
+                      })}
+                    </span>
+                  )}
+                </button>
               </TooltipTrigger>
-              <TooltipContent>
-                <p>{isClockVisible ? "Hide Clock" : "Show Clock"}</p>
+              <TooltipContent side="bottom">
+                <p>{isClockVisible ? "Hide clock" : "Show clock"}</p>
               </TooltipContent>
             </Tooltip>
 
-            {/* Notification Bell */}
             <div className="relative" ref={notificationRef}>
               <Button
+                type="button"
                 variant="ghost"
-                size="sm"
+                size="icon"
+                aria-label="Notifications"
+                aria-expanded={isNotificationPanelOpen}
                 onClick={() => {
                   if (isNotificationPanelOpen) {
-                    // Start closing animation
                     setIsNotificationPanelClosing(true);
-                    // Close after animation completes
                     setTimeout(() => {
                       setIsNotificationPanelOpen(false);
                       setIsNotificationPanelClosing(false);
@@ -774,23 +812,30 @@ export default function DashboardShell(props: DashboardShellProps) {
                     setIsNotificationPanelClosing(false);
                   }
                 }}
-                className="relative h-8 w-8 cursor-pointer p-1.5 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-300 hover:text-blue-700 hover:shadow-md active:translate-y-0"
+                className={cn(
+                  HEADER_ICON_BUTTON_CLASS,
+                  "relative hover:-translate-y-0.5 hover:shadow-md"
+                )}
               >
-                <Bell className="h-4 w-4" />
+                <Bell className="h-4 w-4 sm:h-[1.125rem] sm:w-[1.125rem]" />
                 {notificationCount > 0 && (
                   <Badge
                     variant="destructive"
-                    className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center text-xs"
+                    className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center px-0.5 text-[10px] sm:h-5 sm:min-w-5 sm:text-xs"
                   >
                     {notificationCount > 10 ? "10+" : notificationCount}
                   </Badge>
                 )}
               </Button>
 
-              {/* Notification Panel */}
               {(isNotificationPanelOpen || isNotificationPanelClosing) && (
-                <div 
-                  className="absolute right-0 top-11 z-[60] w-[min(calc(100vw-1.5rem),20rem)] rounded-lg border bg-white shadow-lg sm:w-80"
+                <div
+                  className={cn(
+                    "z-[60] overflow-hidden rounded-lg border bg-white shadow-xl",
+                    isMobileNav
+                      ? "fixed left-2 right-2 top-[calc(3rem+env(safe-area-inset-top,0px)+0.35rem)] max-h-[min(72dvh,calc(100dvh-5rem))] sm:left-auto sm:right-4 sm:top-[calc(3.5rem+env(safe-area-inset-top,0px)+0.35rem)] sm:w-80"
+                      : "absolute right-0 top-full mt-1.5 w-80"
+                  )}
                   style={{
                     animation: isNotificationPanelClosing 
                       ? 'slideUpFade 0.3s ease-out forwards'
@@ -863,7 +908,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                     </div>
                   </div>
 
-                  <div className="h-[270px] overflow-y-auto">
+                  <div className="max-h-[min(55dvh,20rem)] overflow-y-auto sm:max-h-[270px]">
                     {!user?.notifications || user?.notifications.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-12 px-4">
                         <div className="mb-4">
@@ -999,16 +1044,15 @@ export default function DashboardShell(props: DashboardShellProps) {
               )}
             </div>
 
-            <div className="shrink-0 [&_button]:h-7 [&_button]:px-2 [&_button]:text-[11px] [&_img]:h-7 [&_img]:w-7 [&_span]:text-xs">
-              <ProfileCard
-                profile={user}
-                variant="header"
-                showLogout={true}
-                showSettings={false}
-                onEditProfile={handleEditProfile}
-                onLogout={handleLogout}
-              />
-            </div>
+            <ProfileCard
+              profile={user}
+              variant="header"
+              compact={isMobileNav}
+              showLogout={true}
+              showSettings={false}
+              onEditProfile={handleEditProfile}
+              onLogout={handleLogout}
+            />
           </div>
         </div>
       </header>
@@ -1018,7 +1062,7 @@ export default function DashboardShell(props: DashboardShellProps) {
         {isMobileNav && isSidebarOpen && (
           <button
             type="button"
-            className="fixed inset-0 top-12 z-40 bg-black/45 lg:hidden sm:top-14"
+            className="fixed inset-0 z-40 bg-black/45 lg:hidden top-[calc(3rem+env(safe-area-inset-top,0px))] sm:top-[calc(3.5rem+env(safe-area-inset-top,0px))]"
             aria-label="Close navigation"
             onClick={() => setIsSidebarOpen(false)}
           />
@@ -1030,7 +1074,7 @@ export default function DashboardShell(props: DashboardShellProps) {
             "overflow-hidden bg-blue-600 transition-all duration-400 rounded-r-2xl",
             isMobileNav
               ? cn(
-                  "fixed left-0 top-12 z-50 sm:top-14",
+                  "fixed left-0 z-50 top-[calc(3rem+env(safe-area-inset-top,0px))] sm:top-[calc(3.5rem+env(safe-area-inset-top,0px))]",
                   DASHBOARD_VIEWPORT_BELOW_HEADER_CLASS,
                   isSidebarOpen
                     ? cn(SIDEBAR_WIDTH_CLASS, "shadow-2xl")
@@ -1061,7 +1105,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                 variant="outline"
                 size="lg"
                 onClick={() => setIsSidebarOpen(false)}
-                className="mb-3 w-auto shrink-0 bg-white/10 px-2 text-white hover:bg-white/20 border-white/30 cursor-pointer sm:mb-4 lg:w-1/3"
+                className="mb-3 hidden w-auto shrink-0 bg-white/10 px-2 text-white hover:bg-white/20 border-white/30 cursor-pointer sm:mb-4 lg:inline-flex lg:w-1/3"
                 aria-label="Close sidebar"
               >
                 <div className="flex items-center">
@@ -1497,13 +1541,10 @@ export default function DashboardShell(props: DashboardShellProps) {
           </div>
         )}
         <main
-          className={cn(
-            "min-w-0 flex-1 overflow-y-auto px-3 pb-20 pt-3 sm:px-5 sm:pb-20 sm:pt-5",
-            DASHBOARD_VIEWPORT_BELOW_HEADER_CLASS
-          )}
+          className={cn(DASHBOARD_MAIN_CLASS, DASHBOARD_VIEWPORT_BELOW_HEADER_CLASS)}
         >
           {topSummary && activeItemId === "overview" && (
-            <div className="mb-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="mb-4 grid grid-cols-1 gap-3 sm:mb-6 sm:gap-4 md:grid-cols-2 lg:grid-cols-4">
               {topSummary}
             </div>
           )}
@@ -1514,25 +1555,25 @@ export default function DashboardShell(props: DashboardShellProps) {
       {/* Footer - Sticky */}
       <footer
         className={cn(
-          "fixed bottom-0 right-0 z-40 border-t border-gray-200 bg-white shadow-sm transition-all duration-400",
+          "fixed bottom-0 right-0 z-40 border-t border-gray-200 bg-white shadow-sm transition-all duration-400 pb-[env(safe-area-inset-bottom,0px)]",
           isSidebarOpen && !isMobileNav ? "left-52 sm:left-56 xl:left-64" : "left-0"
         )}
       >
-        <div className="px-3 py-3 sm:px-6 sm:py-4">
-          <div className="flex flex-col items-center justify-between space-y-2 md:flex-row md:space-y-0">
-            <div className="flex max-w-full items-center space-x-2">
+        <div className="px-2 py-2 sm:px-6 sm:py-4">
+          <div className="flex flex-col items-center justify-between gap-2 sm:gap-0 md:flex-row">
+            <div className="flex max-w-full items-center gap-1.5 sm:gap-2">
               <img
                 src="/smct.png"
                 alt="SMCT Group of Companies"
-                className="h-7 w-auto sm:h-8"
+                className="h-6 w-auto shrink-0 sm:h-8"
               />
-              <p className="truncate text-xs text-gray-600 sm:text-sm">
-                © {new Date().getFullYear()} SMCT Group of Companies. All rights reserved.
+              <p className="truncate text-[10px] text-gray-600 sm:text-sm">
+                © {new Date().getFullYear()} SMCT Group. All rights reserved.
               </p>
             </div>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-4 text-sm text-gray-500">
-                <span>Performance & Ratings System</span>
+            <div className="flex items-center gap-2 sm:gap-4">
+              <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 text-[10px] text-gray-500 sm:text-sm">
+                <span className="whitespace-nowrap">Performance & Ratings</span>
                 <span className="hidden md:inline">•</span>
                 <span className="hidden md:inline">Version {APP_VERSION}</span>
               </div>
@@ -1701,23 +1742,22 @@ export default function DashboardShell(props: DashboardShellProps) {
           size="lg"
           onClick={isHelpButtonsVisible ? handleManualGuideModalOpen : undefined}
           disabled={!isHelpButtonsVisible}
-          className={`fixed bottom-24 right-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:rotate-6 active:translate-y-0 p-0 ${
+          className={cn(
+            HELP_FAB_BASE_CLASS,
+            HELP_FAB_SIZE_CLASS,
+            "bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] right-3 sm:bottom-24 sm:right-6",
             isHelpButtonsVisible
-              ? "opacity-100 translate-y-0 scale-100 pointer-events-auto delay-0 cursor-pointer"
-              : "opacity-0 translate-y-4 scale-0 pointer-events-none delay-0 cursor-default"
-          }`}
+              ? "pointer-events-auto scale-100 opacity-100"
+              : "pointer-events-none scale-0 opacity-0"
+          )}
           title="Dashboard Guide"
           tabIndex={isHelpButtonsVisible ? 0 : -1}
           aria-hidden={!isHelpButtonsVisible}
-          style={{ 
-            pointerEvents: isHelpButtonsVisible ? "auto" : "none",
-            cursor: isHelpButtonsVisible ? "pointer" : "default"
-          }}
         >
           <img
             src="/faq.png"
             alt="Help"
-            className="h-10 w-10 object-contain transition-transform duration-200 hover:scale-105"
+            className={cn(HELP_FAB_IMG_CLASS, "transition-transform duration-200 hover:scale-105")}
           />
         </Button>
       )}
@@ -1728,23 +1768,22 @@ export default function DashboardShell(props: DashboardShellProps) {
         size="lg"
         onClick={isHelpButtonsVisible ? () => setIsContactDevsModalOpen(true) : undefined}
         disabled={!isHelpButtonsVisible}
-        className={`fixed bottom-40 right-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:rotate-6 active:translate-y-0 p-0 ${
+        className={cn(
+          HELP_FAB_BASE_CLASS,
+          HELP_FAB_SIZE_CLASS,
+          "bottom-[calc(7.25rem+env(safe-area-inset-bottom,0px))] right-3 delay-100 sm:bottom-40 sm:right-6",
           isHelpButtonsVisible
-            ? "opacity-100 translate-y-0 scale-100 pointer-events-auto delay-100 cursor-pointer"
-            : "opacity-0 translate-y-4 scale-0 pointer-events-none delay-0 cursor-default"
-        }`}
+            ? "pointer-events-auto scale-100 opacity-100"
+            : "pointer-events-none scale-0 opacity-0"
+        )}
         title="Contact Developers"
         tabIndex={isHelpButtonsVisible ? 0 : -1}
         aria-hidden={!isHelpButtonsVisible}
-        style={{ 
-          pointerEvents: isHelpButtonsVisible ? "auto" : "none",
-          cursor: isHelpButtonsVisible ? "pointer" : "default"
-        }}
       >
         <img
           src="/code.png"
           alt="Contact Developers"
-          className="h-10 w-10 object-contain transition-transform duration-200 hover:scale-105"
+          className={cn(HELP_FAB_IMG_CLASS, "transition-transform duration-200 hover:scale-105")}
         />
       </Button>
 

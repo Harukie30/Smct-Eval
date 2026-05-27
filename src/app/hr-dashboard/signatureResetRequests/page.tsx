@@ -39,6 +39,75 @@ import { useToast } from "@/hooks/useToast";
 import EvaluationsPagination from "@/components/paginationComponent";
 import { useBranchesForEvaluation } from "@/hooks/useBranchesForEvaluation";
 import { getEmployeeBranchCodeDisplay } from "@/components/evaluation/employeeBranchLabel";
+import { cn } from "@/lib/utils";
+
+const SIGNATURE_RESET_TABLE_CLASS =
+  "min-w-[36rem] sm:min-w-[44rem] md:min-w-[52rem] lg:min-w-0 lg:w-full [&_th]:h-auto [&_th]:min-h-8 [&_th]:whitespace-nowrap [&_th]:px-2 [&_th]:py-2 [&_th]:align-middle [&_th]:text-[0.6rem] [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600 sm:[&_th]:px-2.5 sm:[&_th]:py-2.5 sm:[&_th]:text-[0.65rem] lg:[&_th]:px-3 lg:[&_th]:text-xs [&_td]:min-w-0 [&_td]:px-2 [&_td]:py-2 [&_td]:align-top [&_td]:text-[0.7rem] [&_td]:leading-snug sm:[&_td]:px-2.5 sm:[&_td]:py-2.5 sm:[&_td]:text-xs lg:[&_td]:px-3 lg:[&_td]:text-sm";
+
+const SIGNATURE_ACTIONS_HEAD_CLASS = cn(
+  "w-[3.5rem] min-w-[3.5rem] p-1 text-center sm:min-w-[4.5rem] lg:sticky lg:right-0 lg:z-[4] lg:min-w-[14rem] lg:bg-white lg:text-right lg:shadow-[-6px_0_12px_-4px_rgba(15,23,42,0.12)]"
+);
+
+function signatureActionsCellClass() {
+  return cn(
+    "w-[3.5rem] min-w-[3.5rem] max-w-[3.5rem] p-1 sm:min-w-[4.5rem] sm:max-w-none sm:p-2",
+    "lg:sticky lg:right-0 lg:z-[3] lg:min-w-[14rem] lg:w-auto lg:bg-white lg:shadow-[-6px_0_12px_-4px_rgba(15,23,42,0.12)]"
+  );
+}
+
+function formatRequestDate(dateString: string): { short: string; full: string } {
+  if (!dateString) return { short: "N/A", full: "N/A" };
+  const d = new Date(dateString);
+  return {
+    short: d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "2-digit",
+    }),
+    full: d.toLocaleString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+  };
+}
+
+function SignatureResetRowActions({
+  onApprove,
+  onReject,
+}: {
+  onApprove: () => void;
+  onReject: () => void;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-1 sm:flex-row sm:justify-end lg:justify-end lg:gap-2">
+      <Button
+        type="button"
+        variant="outline"
+        size="icon"
+        onClick={onApprove}
+        aria-label="Accept signature reset request"
+        className="h-8 w-8 shrink-0 border-green-300 bg-green-600 text-white hover:bg-green-700 hover:text-white lg:h-9 lg:w-auto lg:px-3 lg:transition-all lg:duration-200 lg:hover:-translate-y-0.5 lg:hover:shadow-md lg:active:translate-y-0"
+      >
+        <Check className="h-4 w-4 lg:mr-1" />
+        <span className="hidden lg:inline">Accept Request</span>
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        size="icon"
+        onClick={onReject}
+        aria-label="Reject signature reset request"
+        className="h-8 w-8 shrink-0 border-red-300 bg-red-600 text-white hover:bg-red-700 hover:text-white lg:h-9 lg:w-auto lg:px-3 lg:transition-all lg:duration-200 lg:hover:-translate-y-0.5 lg:hover:shadow-md lg:active:translate-y-0"
+      >
+        <X className="h-4 w-4 lg:mr-1" />
+        <span className="hidden lg:inline">Reject Request</span>
+      </Button>
+    </div>
+  );
+}
 
 interface SignatureResetRequest {
   id: number;
@@ -425,13 +494,15 @@ export default function SignatureResetRequestsTab() {
   };
 
   return (
-    <div className="relative overflow-y-auto pr-2 min-h-[400px]">
+    <div className="relative min-h-[400px] overflow-y-auto pr-0 sm:pr-2">
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Signature Reset Requests</CardTitle>
-              <CardDescription>
+        <CardHeader className="p-4 sm:p-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <CardTitle className="text-base sm:text-lg">
+                Signature Reset Requests
+              </CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
                 Manage signature reset requests from users
               </CardDescription>
             </div>
@@ -468,7 +539,7 @@ export default function SignatureResetRequestsTab() {
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="relative">
+        <CardContent className="relative p-4 sm:p-6">
           {(refresh || isPageLoading) && (
             <SmctLoadingOverlay
               label={
@@ -480,16 +551,17 @@ export default function SignatureResetRequestsTab() {
           )}
           {/* Filters */}
           <div
-            className={`flex gap-4 mb-6 ${refresh || isPageLoading ? "pointer-events-none opacity-40" : ""}`}
+            className={cn(
+              "mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:gap-4",
+              (refresh || isPageLoading) && "pointer-events-none opacity-40"
+            )}
           >
-            <div className="flex-1">
-              <Input
-                placeholder="Search by name, email, or username..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-1/3"
-              />
-            </div>
+            <Input
+              placeholder="Search by name, email, or username..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full min-w-0 sm:flex-1"
+            />
             <Combobox
               options={statusOptions}
               value={statusFilter}
@@ -497,23 +569,59 @@ export default function SignatureResetRequestsTab() {
               placeholder="All Requests"
               searchPlaceholder="Search status..."
               emptyText="No status found."
-              className="w-[180px] cursor-pointer"
+              className="w-full cursor-pointer sm:w-[180px] sm:shrink-0"
             />
           </div>
 
+          <p className="mb-2 text-[0.65rem] text-muted-foreground lg:hidden">
+            Swipe horizontally to view all columns.
+          </p>
+
           {/* Table */}
           <div
-            className={`rounded-md border ${refresh || isPageLoading ? "min-h-[280px] border-blue-100 bg-gray-50/40" : ""}`}
+            className={cn(
+              "overflow-hidden rounded-md border",
+              (refresh || isPageLoading) &&
+                "min-h-[280px] border-blue-100 bg-gray-50/40"
+            )}
           >
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-1/6">User</TableHead>
-                  <TableHead className="w-1/6">Email</TableHead>
-                  <TableHead className="w-1/6">Position</TableHead>
-                  <TableHead className="w-1/6">Department</TableHead>
-                  <TableHead className="w-1/6">Branch</TableHead>
-                  <TableHead className="w-1/6 text-right">Actions</TableHead>
+            <div
+              className="relative max-h-[min(70vh,32rem)] overflow-x-auto overflow-y-auto sm:max-h-[min(75vh,36rem)] lg:max-h-[600px] [-webkit-overflow-scrolling:touch]"
+              style={{
+                scrollbarWidth: "thin",
+                scrollbarColor: "#cbd5e1 #f1f5f9",
+              }}
+            >
+            <Table
+              className={SIGNATURE_RESET_TABLE_CLASS}
+              wrapperClassName="overflow-visible"
+            >
+              <TableHeader className="sticky top-0 z-10 border-b border-gray-200 bg-white/95 backdrop-blur-sm">
+                <TableRow className="border-0 hover:bg-transparent">
+                  <TableHead className="min-w-[7rem] sm:min-w-[8.5rem]">
+                    User
+                  </TableHead>
+                  <TableHead className="hidden min-w-[8rem] md:table-cell">
+                    Email
+                  </TableHead>
+                  <TableHead className="hidden min-w-[6rem] lg:table-cell">
+                    Position
+                  </TableHead>
+                  <TableHead className="hidden min-w-[6rem] lg:table-cell">
+                    Department
+                  </TableHead>
+                  <TableHead className="hidden min-w-[4rem] sm:table-cell">
+                    Branch
+                  </TableHead>
+                  <TableHead className="hidden min-w-[5rem] sm:table-cell">
+                    Requested
+                  </TableHead>
+                  <TableHead className={SIGNATURE_ACTIONS_HEAD_CLASS}>
+                    <span className="lg:hidden" aria-hidden>
+                      ⋮
+                    </span>
+                    <span className="hidden lg:inline">Actions</span>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -526,29 +634,32 @@ export default function SignatureResetRequestsTab() {
                           <Skeleton className="h-3 w-24" />
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden md:table-cell">
                         <Skeleton className="h-4 w-40" />
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden lg:table-cell">
                         <Skeleton className="h-4 w-28" />
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden lg:table-cell">
                         <Skeleton className="h-4 w-28" />
                       </TableCell>
-                      <TableCell>
-                        <Skeleton className="h-4 w-32" />
+                      <TableCell className="hidden sm:table-cell">
+                        <Skeleton className="h-4 w-16" />
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <SkeletonButton size="sm" className="w-24" />
-                          <SkeletonButton size="sm" className="w-24" />
+                      <TableCell className="hidden sm:table-cell">
+                        <Skeleton className="h-4 w-20" />
+                      </TableCell>
+                      <TableCell className={signatureActionsCellClass()}>
+                        <div className="flex flex-col items-center gap-1 sm:flex-row sm:justify-end">
+                          <SkeletonButton size="sm" className="h-8 w-8 rounded-md lg:w-24" />
+                          <SkeletonButton size="sm" className="h-8 w-8 rounded-md lg:w-24" />
                         </div>
                       </TableCell>
                     </TableRow>
                   ))
                 ) : requests.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12">
+                    <TableCell colSpan={7} className="py-10 text-center sm:py-12">
                       <div className="flex flex-col items-center justify-center gap-4">
                         <img
                           src="/not-found.gif"
@@ -615,61 +726,71 @@ export default function SignatureResetRequestsTab() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  requests.map((request: any) => (
+                  requests.map((request: any) => {
+                    const requestedAt = formatRequestDate(request.requested_at);
+                    return (
                     <TableRow key={request.id}>
                       <TableCell>
-                        <div>
-                          <div className="font-medium">
+                        <div className="min-w-0">
+                          <div className="truncate font-medium text-gray-900">
                             {request.fname} {request.lname}
                           </div>
-                          <div className="text-sm text-gray-500">
+                          <div className="truncate text-[0.65rem] text-gray-500 sm:text-xs">
                             @{request.username}
+                          </div>
+                          <div className="mt-1 truncate text-[0.65rem] text-gray-600 md:hidden">
+                            {request.email}
+                          </div>
+                          <div className="mt-0.5 text-[0.65rem] text-gray-500 sm:hidden">
+                            {request.branches?.length > 0
+                              ? request.branches
+                                  .map((b: any) => getBranchCode(b))
+                                  .join(", ")
+                              : "—"}
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>{request.email}</TableCell>
-                      <TableCell>
-                        {request.positions?.label || request.position || "N/A"}
+                      <TableCell className="hidden max-w-[10rem] truncate md:table-cell">
+                        {request.email}
                       </TableCell>
-                      <TableCell>
-                        {request.departments?.department_name ||
-                          request.department ||
-                          "N/A"}
+                      <TableCell className="hidden lg:table-cell">
+                        <span className="block max-w-[8rem] truncate">
+                          {request.positions?.label || request.position || "N/A"}
+                        </span>
                       </TableCell>
-                      <TableCell>
-                        {request.branches?.length > 0
-                          ? request.branches
-                              .map((b: any) => getBranchCode(b))
-                              .join(", ")
-                          : "N/A"}
+                      <TableCell className="hidden lg:table-cell">
+                        <span className="block max-w-[8rem] truncate">
+                          {request.departments?.department_name ||
+                            request.department ||
+                            "N/A"}
+                        </span>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openApproveModal(request)}
-                            className="text-green-600 border-green-300 hover:bg-green-50 cursor-pointer bg-green-600 hover:bg-green-700 text-white hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 font-medium"
-                          >
-                            <Check className="h-4 w-4 mr-1" />
-                            Accept Request
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openRejectModal(request)}
-                            className="text-red-600 border-red-300 hover:bg-red-50 cursor-pointer bg-red-600 hover:bg-red-700 text-white hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 font-medium"
-                          >
-                            <X className="h-4 w-4 mr-1" />
-                            Reject Request
-                          </Button>
-                        </div>
+                      <TableCell className="hidden sm:table-cell">
+                        <span className="block max-w-[5rem] truncate sm:max-w-none">
+                          {request.branches?.length > 0
+                            ? request.branches
+                                .map((b: any) => getBranchCode(b))
+                                .join(", ")
+                            : "N/A"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="hidden whitespace-nowrap text-gray-600 sm:table-cell">
+                        <span className="md:hidden">{requestedAt.short}</span>
+                        <span className="hidden md:inline">{requestedAt.full}</span>
+                      </TableCell>
+                      <TableCell className={signatureActionsCellClass()}>
+                        <SignatureResetRowActions
+                          onApprove={() => openApproveModal(request)}
+                          onReject={() => openRejectModal(request)}
+                        />
                       </TableCell>
                     </TableRow>
-                  ))
+                  );
+                  })
                 )}
               </TableBody>
             </Table>
+            </div>
           </div>
 
           {/* Pagination */}

@@ -26,6 +26,8 @@ export type UserProfile = {
 interface ProfileCardProps {
   profile: UserProfile | null;
   variant?: "sidebar" | "header" | "compact";
+  /** Compact header: avatar + icon actions only (phones / narrow header). */
+  compact?: boolean;
   showLogout?: boolean;
   showSettings?: boolean;
   onLogout?: () => void;
@@ -37,6 +39,7 @@ interface ProfileCardProps {
 export default function ProfileCard({
   profile,
   variant = "sidebar",
+  compact = false,
   showLogout = true,
   showSettings = false,
   onLogout,
@@ -64,31 +67,36 @@ export default function ProfileCard({
 
   if (variant === "header") {
     return (
-      <div className={`flex items-center space-x-3 ${className}`}>
-        <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center overflow-hidden">
+      <div
+        className={`flex shrink-0 items-center gap-0.5 sm:gap-2 ${className}`}
+      >
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-blue-600 sm:h-9 sm:w-9">
           <img
             src="/user.png"
             alt={profile?.fname || "Profile"}
-            className="h-8 w-8 rounded-full object-cover"
+            className="h-full w-full rounded-full object-cover"
           />
         </div>
-        <div className="flex flex-col">
-          <span className="text-sm font-medium text-gray-900">
-            {profile?.fname + " " + profile?.lname}
-          </span>
-          {profile?.roles && (
-            <span className="text-xs text-gray-500">
-              {profile.roles[0]?.name}
+        {!compact && (
+          <div className="hidden min-w-0 max-w-[8rem] flex-col sm:flex sm:max-w-[10rem] md:max-w-[12rem]">
+            <span className="truncate text-sm font-medium text-gray-900">
+              {profile?.fname} {profile?.lname}
             </span>
-          )}
-        </div>
+            {profile?.roles && (
+              <span className="truncate text-xs capitalize text-gray-500">
+                {profile.roles[0]?.name}
+              </span>
+            )}
+          </div>
+        )}
         {onEditProfile && (
           <Button
             variant="ghost"
-            size="sm"
+            size="icon"
             onClick={onEditProfile}
-            className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"
+            className="h-9 w-9 shrink-0 p-0 text-gray-500 hover:text-gray-700 cursor-pointer transition-all duration-200 hover:bg-blue-50 active:translate-y-0"
             title="Edit Profile"
+            aria-label="Edit profile"
           >
             <Settings className="h-4 w-4" />
           </Button>
@@ -96,9 +104,10 @@ export default function ProfileCard({
         {showSettings && (
           <Button
             variant="ghost"
-            size="sm"
+            size="icon"
             onClick={handleSettings}
-            className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"
+            className="h-9 w-9 shrink-0 p-0 text-gray-500 hover:text-gray-700 cursor-pointer"
+            aria-label="Settings"
           >
             <Settings className="h-4 w-4" />
           </Button>
@@ -106,12 +115,18 @@ export default function ProfileCard({
         {showLogout && (
           <Button
             variant="ghost"
-            size="sm"
+            size={compact ? "icon" : "sm"}
             onClick={handleLogout}
-            className="h-8 px-3 text-white hover:bg-red-700 hover:text-white bg-red-600 text-xs cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+            className={
+              compact
+                ? "h-9 w-9 shrink-0 bg-red-600 p-0 text-white hover:bg-red-700 cursor-pointer"
+                : "h-8 shrink-0 bg-red-600 px-2 text-xs text-white hover:bg-red-700 cursor-pointer sm:px-3"
+            }
+            title="Logout"
+            aria-label="Logout"
           >
-            <LogOut className="h-3 w-3 mr-1" />
-            Logout
+            <LogOut className={compact ? "h-4 w-4" : "mr-1 h-3 w-3"} />
+            {!compact && <span className="hidden md:inline">Logout</span>}
           </Button>
         )}
       </div>

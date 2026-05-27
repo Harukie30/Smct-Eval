@@ -61,6 +61,12 @@ function getDepartmentHeadcounts(dept: Department) {
   return { employees, evaluators, total: employees + evaluators };
 }
 
+const DEPT_STAT_TILE_CLASS =
+  "flex min-h-[7.5rem] flex-col items-center justify-between rounded-xl border p-3 text-center transition-all duration-200 sm:min-h-[8rem] sm:p-4";
+
+const DEPT_STAT_ACTION_BTN_CLASS =
+  "mt-2 flex h-10 w-full min-h-[2.75rem] cursor-pointer touch-manipulation items-center justify-center gap-1.5 rounded-lg px-3 text-xs font-semibold shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:scale-[0.98] sm:text-sm";
+
 export default function DepartmentsTab() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
@@ -530,7 +536,7 @@ export default function DepartmentsTab() {
               listBusy && "min-h-[420px]"
             )}
           >
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
               {loading ? (
                 Array.from({ length: itemsPerPage }).map((_, index) => (
                   <Card key={`skeleton-dept-${index}`} className="animate-pulse">
@@ -564,11 +570,11 @@ export default function DepartmentsTab() {
                     return (
                       <Card
                         key={dept.id}
-                        className={
-                          isDeleting
-                            ? "animate-slide-out-right bg-red-50 border-red-200"
-                            : ""
-                        }
+                        className={cn(
+                          "overflow-hidden transition-shadow duration-200 hover:shadow-md",
+                          isDeleting &&
+                            "animate-slide-out-right border-red-200 bg-red-50"
+                        )}
                       >
                         {isDeleting ? (
                           <>
@@ -597,71 +603,95 @@ export default function DepartmentsTab() {
                           </>
                         ) : (
                           <>
-                            <CardHeader>
-                              <CardTitle className="flex justify-between items-center">
-                                {dept.department_name}
-                                <div className="flex items-center gap-2">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => {
-                                      if (headcounts.total > 0) {
-                                        setDepartmentWithEmployees(dept);
-                                        setIsAlertDialogOpen(true);
-                                      } else {
-                                        setDepartmentToDelete(dept);
-                                        setIsDeleteModalOpen(true);
-                                      }
-                                    }}
-                                    disabled={deletingDepartmentId !== null}
-                                    className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
+                            <CardHeader className="pb-3">
+                              <CardTitle className="flex items-start justify-between gap-2 text-base sm:text-lg">
+                                <span className="min-w-0 flex-1 truncate pr-1">
+                                  {dept.department_name}
+                                </span>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => {
+                                    if (headcounts.total > 0) {
+                                      setDepartmentWithEmployees(dept);
+                                      setIsAlertDialogOpen(true);
+                                    } else {
+                                      setDepartmentToDelete(dept);
+                                      setIsDeleteModalOpen(true);
+                                    }
+                                  }}
+                                  disabled={deletingDepartmentId !== null}
+                                  aria-label={`Delete ${dept.department_name}`}
+                                  className="h-9 w-9 shrink-0 touch-manipulation p-0 text-red-600 hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
                               </CardTitle>
-                              <CardDescription>
-                                Department Manager
+                              <CardDescription className="text-xs sm:text-sm">
+                                View employees or evaluators below
                               </CardDescription>
                             </CardHeader>
-                            <CardContent className="space-y-4">
-                              <div className="grid grid-cols-2 gap-4">
-                                <div className="text-center p-3 bg-blue-50 rounded-lg">
-                                  <div className="text-lg font-bold text-blue-600">
-                                    {headcounts.employees}
-                                  </div>
-                                  <div className="text-xs text-gray-600">
-                                    
+                            <CardContent className="space-y-3 pt-0 sm:space-y-4">
+                              <div className="grid grid-cols-1 gap-3 min-[400px]:grid-cols-2 sm:gap-4">
+                                <div
+                                  className={cn(
+                                    DEPT_STAT_TILE_CLASS,
+                                    "border-blue-100/80 bg-blue-50 hover:border-blue-200 hover:shadow-sm"
+                                  )}
+                                >
+                                  <div>
+                                    <div className="text-2xl font-bold tabular-nums text-blue-600 sm:text-3xl">
+                                      {headcounts.employees}
+                                    </div>
+                                    <div className="mt-0.5 text-xs font-medium text-gray-600 sm:text-sm">
+                                      Employees
+                                    </div>
                                   </div>
                                   <Button
+                                    type="button"
                                     variant="outline"
                                     size="sm"
                                     onClick={() =>
                                       void openDepartmentEmployeesModal(dept)
                                     }
-                                    className="mt-3 w-1/2 cursor-pointer bg-blue-600 text-white hover:bg-blue-700 hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+                                    className={cn(
+                                      DEPT_STAT_ACTION_BTN_CLASS,
+                                      "border-blue-700 bg-blue-600 text-white hover:bg-blue-700 hover:text-white"
+                                    )}
                                   >
-                                    <Users className="h-4 w-4 mr-1" />
-                                    Employees
+                                    <Users className="h-4 w-4 shrink-0" />
+                                    View employees
                                   </Button>
                                 </div>
-                                <div className="text-center p-3 bg-green-50 rounded-lg">
-                                  <div className="text-lg font-bold text-green-600">
-                                    {headcounts.evaluators}
-                                  </div>
-                                  <div className="text-xs text-gray-600">
-                                    
+                                <div
+                                  className={cn(
+                                    DEPT_STAT_TILE_CLASS,
+                                    "border-green-100/80 bg-green-50 hover:border-green-200 hover:shadow-sm"
+                                  )}
+                                >
+                                  <div>
+                                    <div className="text-2xl font-bold tabular-nums text-green-600 sm:text-3xl">
+                                      {headcounts.evaluators}
+                                    </div>
+                                    <div className="mt-0.5 text-xs font-medium text-gray-600 sm:text-sm">
+                                      Evaluators
+                                    </div>
                                   </div>
                                   <Button
+                                    type="button"
                                     variant="outline"
                                     size="sm"
                                     onClick={() =>
                                       void openDepartmentManagersModal(dept)
                                     }
-                                    className="mt-3 w-1/2 cursor-pointer bg-green-600 text-white hover:bg-green-700 hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+                                    className={cn(
+                                      DEPT_STAT_ACTION_BTN_CLASS,
+                                      "border-green-700 bg-green-600 text-white hover:bg-green-700 hover:text-white"
+                                    )}
                                   >
-                                    <Users className="h-4 w-4 mr-1" />
-                                    Evaluators
+                                    <Users className="h-4 w-4 shrink-0" />
+                                    View evaluators
                                   </Button>
                                 </div>
                               </div>

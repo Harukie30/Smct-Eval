@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import clientDataService, { apiService } from "@/lib/apiService";
 import EvaluationsPagination from "@/components/paginationComponent";
 import { useState, useEffect, useRef, useMemo } from "react";
-import { ChevronDown, Loader2, Search } from "lucide-react";
+import { ChevronDown, Eye, Loader2, Search, Trash2 } from "lucide-react";
 
 import {
   Card,
@@ -126,10 +126,70 @@ const ratingPillClass =
 
 /** Responsive density for the wide evaluation records grid. */
 const EVAL_RECORDS_TABLE_CLASS =
-  "min-w-[44rem] sm:min-w-[52rem] md:min-w-[60rem] lg:min-w-[68rem] xl:min-w-0 xl:w-full [&_th]:h-auto [&_th]:min-h-8 [&_th]:whitespace-nowrap [&_th]:px-2 [&_th]:py-2 [&_th]:align-middle [&_th]:text-[0.6rem] [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600 sm:[&_th]:min-h-9 sm:[&_th]:px-2.5 sm:[&_th]:py-2.5 sm:[&_th]:text-[0.65rem] lg:[&_th]:px-3 lg:[&_th]:text-xs xl:[&_th]:px-4 [&_td]:min-w-0 [&_td]:px-2 [&_td]:py-2 [&_td]:align-top [&_td]:text-[0.7rem] [&_td]:leading-snug sm:[&_td]:px-2.5 sm:[&_td]:py-2.5 sm:[&_td]:text-xs lg:[&_td]:px-3 lg:[&_td]:text-sm lg:[&_td]:leading-snug";
+  "min-w-[38rem] sm:min-w-[48rem] md:min-w-[56rem] lg:min-w-[68rem] xl:min-w-0 xl:w-full [&_th]:h-auto [&_th]:min-h-8 [&_th]:whitespace-nowrap [&_th]:px-2 [&_th]:py-2 [&_th]:align-middle [&_th]:text-[0.6rem] [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600 sm:[&_th]:min-h-9 sm:[&_th]:px-2.5 sm:[&_th]:py-2.5 sm:[&_th]:text-[0.65rem] lg:[&_th]:px-3 lg:[&_th]:text-xs xl:[&_th]:px-4 [&_td]:min-w-0 [&_td]:px-2 [&_td]:py-2 [&_td]:align-top [&_td]:text-[0.7rem] [&_td]:leading-snug sm:[&_td]:px-2.5 sm:[&_td]:py-2.5 sm:[&_td]:text-xs lg:[&_td]:px-3 lg:[&_td]:text-sm lg:[&_td]:leading-snug";
 
-const EVAL_TABLE_ACTIONS_CELL =
-  "sticky right-0 z-[2] bg-inherit shadow-[-4px_0_8px_-4px_rgba(15,23,42,0.12)] sm:shadow-[-6px_0_10px_-4px_rgba(15,23,42,0.14)]";
+/** Sticky actions column only on large screens; mobile uses compact icon buttons. */
+function evalTableActionsCellClass(rowClassName: string) {
+  return cn(
+    "w-[3.25rem] min-w-[3.25rem] max-w-[3.25rem] p-1 sm:w-auto sm:min-w-[4.5rem] sm:max-w-none sm:p-2",
+    "lg:sticky lg:right-0 lg:z-[3] lg:min-w-[7rem] lg:w-auto lg:shadow-[-6px_0_12px_-4px_rgba(15,23,42,0.12)]",
+    rowClassName.includes("bg-green-50") && "lg:bg-green-50",
+    rowClassName.includes("bg-yellow-50") && "lg:bg-yellow-50",
+    rowClassName.includes("bg-blue-50") && "lg:bg-blue-50",
+    rowClassName.includes("bg-orange-50") && "lg:bg-orange-50",
+    !rowClassName.includes("bg-green-50") &&
+      !rowClassName.includes("bg-yellow-50") &&
+      !rowClassName.includes("bg-blue-50") &&
+      !rowClassName.includes("bg-orange-50") &&
+      "lg:bg-white"
+  );
+}
+
+const EVAL_TABLE_ACTIONS_HEAD_CLASS = cn(
+  "w-[3.25rem] min-w-[3.25rem] p-1 text-center sm:min-w-[4.5rem] sm:p-2 lg:sticky lg:right-0 lg:z-[4] lg:min-w-[7rem] lg:bg-white lg:text-left lg:shadow-[-6px_0_12px_-4px_rgba(15,23,42,0.12)]"
+);
+
+function EvalRecordRowActions({
+  review,
+  onView,
+  onDelete,
+}: {
+  review: Review;
+  onView: () => void;
+  onDelete: () => void;
+}) {
+  const canDelete = isReviewDeletable(review);
+
+  return (
+    <div className="flex flex-col items-center justify-center gap-1 sm:flex-row sm:justify-end lg:flex-wrap lg:justify-start lg:gap-1.5">
+      <Button
+        type="button"
+        variant="outline"
+        size="icon"
+        onClick={onView}
+        aria-label="View evaluation"
+        className="h-8 w-8 shrink-0 cursor-pointer border-blue-700 bg-blue-600 text-white hover:bg-blue-700 hover:text-white lg:h-8 lg:w-auto lg:px-2 lg:transition-all lg:duration-200 lg:hover:-translate-y-0.5 lg:hover:shadow-md lg:active:translate-y-0"
+      >
+        <Eye className="h-4 w-4 lg:hidden" />
+        <span className="hidden lg:inline">☰ View</span>
+      </Button>
+      {canDelete ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          onClick={onDelete}
+          aria-label="Delete evaluation"
+          title="Delete this evaluation record"
+          className="h-8 w-8 shrink-0 cursor-pointer border-red-200 bg-red-100 text-red-700 hover:bg-red-500 hover:text-white lg:h-8 lg:w-auto lg:px-2 lg:transition-all lg:duration-200 lg:hover:-translate-y-0.5 lg:hover:shadow-md lg:active:translate-y-0"
+        >
+          <Trash2 className="h-4 w-4 lg:hidden" />
+          <span className="hidden lg:inline">❌ Delete</span>
+        </Button>
+      ) : null}
+    </div>
+  );
+}
 
 function formatReviewListDate(createdAt: string): { short: string; full: string } {
   const d = new Date(createdAt);
@@ -1151,13 +1211,11 @@ export default function OverviewTab() {
                     <TableHead className="hidden min-w-[4rem] xl:table-cell">
                       HR Sign
                     </TableHead>
-                    <TableHead
-                      className={cn(
-                        "min-w-[6.5rem] sm:min-w-[7.5rem]",
-                        EVAL_TABLE_ACTIONS_CELL
-                      )}
-                    >
-                      Actions
+                    <TableHead className={EVAL_TABLE_ACTIONS_HEAD_CLASS}>
+                      <span className="lg:hidden" aria-hidden>
+                        ⋮
+                      </span>
+                      <span className="hidden lg:inline">Actions</span>
                     </TableHead>
                   </TableRow>
                 </TableHeader>
@@ -1195,8 +1253,8 @@ export default function OverviewTab() {
                         <TableCell className="hidden xl:table-cell">
                           <Skeleton className="h-5 w-14 sm:h-6 sm:w-20" />
                         </TableCell>
-                        <TableCell className={EVAL_TABLE_ACTIONS_CELL}>
-                          <Skeleton className="h-7 w-24 sm:h-8 sm:w-28" />
+                        <TableCell className={evalTableActionsCellClass("")}>
+                          <Skeleton className="mx-auto h-8 w-8 rounded-md sm:mx-0 sm:h-8 sm:w-24" />
                         </TableCell>
                       </TableRow>
                     ))
@@ -1408,30 +1466,12 @@ export default function OverviewTab() {
                             )}
                           </TableCell>
 
-                          <TableCell className={EVAL_TABLE_ACTIONS_CELL}>
-                            <div className="flex flex-wrap gap-1 sm:gap-1.5">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleViewEvaluation(review)}
-                                className="h-7 cursor-pointer bg-blue-600 px-1.5 py-0.5 text-[0.65rem] text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:text-white hover:shadow-md active:translate-y-0 sm:h-8 sm:px-2 sm:text-xs"
-                              >
-                                <span className="sm:hidden">View</span>
-                                <span className="hidden sm:inline">☰ View</span>
-                              </Button>
-                              {isReviewDeletable(review) ? (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => openDeleteModal(review)}
-                                  className="h-7 cursor-pointer border-red-200 bg-red-100 px-1.5 py-0.5 text-[0.65rem] text-gray-700 transition-all duration-200 hover:-translate-y-0.5 hover:bg-red-500 hover:text-white hover:shadow-md active:translate-y-0 sm:h-8 sm:px-2 sm:text-xs"
-                                  title="Delete this evaluation record"
-                                >
-                                  <span className="sm:hidden">Del</span>
-                                  <span className="hidden sm:inline">❌ Delete</span>
-                                </Button>
-                              ) : null}
-                            </div>
+                          <TableCell className={evalTableActionsCellClass(rowClassName)}>
+                            <EvalRecordRowActions
+                              review={review}
+                              onView={() => handleViewEvaluation(review)}
+                              onDelete={() => openDeleteModal(review)}
+                            />
                           </TableCell>
                         </TableRow>
                       );
