@@ -24,6 +24,151 @@ import apiService from "@/lib/apiService";
 import { EvaluationPayload } from "@/components/evaluation/types";
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
 import EvaluationsPagination from "@/components/paginationComponent";
+import { cn } from "@/lib/utils";
+import { Eye } from "lucide-react";
+
+const HR_OVERVIEW_TABLE_CLASS =
+  "min-w-[34rem] sm:min-w-[42rem] md:min-w-[52rem] lg:min-w-0 lg:w-full [&_th]:h-auto [&_th]:min-h-8 [&_th]:whitespace-nowrap [&_th]:px-2 [&_th]:py-2 [&_th]:align-middle [&_th]:text-[0.6rem] [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600 sm:[&_th]:px-2.5 sm:[&_th]:py-2.5 sm:[&_th]:text-[0.65rem] lg:[&_th]:px-3 lg:[&_th]:text-xs [&_td]:min-w-0 [&_td]:px-2 [&_td]:py-2 [&_td]:align-top [&_td]:text-[0.7rem] [&_td]:leading-snug sm:[&_td]:px-2.5 sm:[&_td]:py-2.5 sm:[&_td]:text-xs lg:[&_td]:px-3 lg:[&_td]:text-sm";
+
+const HR_OVERVIEW_ACTIONS_HEAD = cn(
+  "w-[3.25rem] min-w-[3.25rem] p-1 text-center lg:sticky lg:right-0 lg:z-[4] lg:min-w-[6.5rem] lg:bg-white lg:text-left lg:shadow-[-6px_0_12px_-4px_rgba(15,23,42,0.12)]"
+);
+
+function hrOverviewActionsCellClass(rowClassName: string) {
+  return cn(
+    "w-[3.25rem] min-w-[3.25rem] max-w-[3.25rem] p-1 sm:max-w-none sm:p-2",
+    "lg:sticky lg:right-0 lg:z-[3] lg:min-w-[6.5rem] lg:w-auto lg:shadow-[-6px_0_12px_-4px_rgba(15,23,42,0.12)]",
+    rowClassName.includes("bg-green-50") && "lg:bg-green-50",
+    rowClassName.includes("bg-yellow-50") && "lg:bg-yellow-50",
+    rowClassName.includes("bg-blue-50") && "lg:bg-blue-50",
+    !rowClassName.includes("bg-green-50") &&
+      !rowClassName.includes("bg-yellow-50") &&
+      !rowClassName.includes("bg-blue-50") &&
+      "lg:bg-white"
+  );
+}
+
+function formatSubmissionDate(createdAt: string): { short: string; full: string } {
+  const d = new Date(createdAt);
+  return {
+    short: d.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "2-digit",
+    }),
+    full: d.toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    }),
+  };
+}
+
+function formatApprovalStatus(status: string): { short: string; full: string } {
+  if (status === "completed") return { short: "✓ Done", full: "✓ Fully Approved" };
+  if (status === "pending") return { short: "⏳ Pend.", full: "⏳ Pending" };
+  return { short: status, full: status };
+}
+
+function getSubmissionQuarterDisplay(submission: any): string {
+  const isOthersSelected =
+    (submission.reviewTypeOthersImprovement != null &&
+      submission.reviewTypeOthersImprovement !== 0) ||
+    (submission.reviewTypeOthersCustom &&
+      submission.reviewTypeOthersCustom.trim() !== "");
+
+  const hasRegular =
+    submission.reviewTypeRegular != null &&
+    submission.reviewTypeRegular !== "" &&
+    submission.reviewTypeRegular !== "null" &&
+    String(submission.reviewTypeRegular).trim() !== "" &&
+    submission.reviewTypeRegular !== 0;
+
+  const hasProbationary =
+    submission.reviewTypeProbationary != null &&
+    submission.reviewTypeProbationary !== "" &&
+    submission.reviewTypeProbationary !== "null" &&
+    String(submission.reviewTypeProbationary).trim() !== "";
+
+  if (hasRegular) return String(submission.reviewTypeRegular).trim();
+  if (hasProbationary) return "M" + String(submission.reviewTypeProbationary).trim();
+  if (isOthersSelected) {
+    if (
+      submission.reviewTypeOthersCustom &&
+      submission.reviewTypeOthersCustom.trim() !== ""
+    ) {
+      return submission.reviewTypeOthersCustom.trim();
+    }
+    return "Others";
+  }
+  return "Others";
+}
+
+function getSubmissionRowClassName(
+  isNew: boolean,
+  isRecent: boolean,
+  status: string
+): string {
+  if (status === "completed") {
+    return "border-l-4 border-l-green-500 bg-green-50 transition-colors hover:bg-green-100";
+  }
+  if (isNew) {
+    return "border-l-4 border-l-yellow-500 bg-yellow-50 transition-colors hover:bg-yellow-100";
+  }
+  if (isRecent) {
+    return "border-l-4 border-l-blue-500 bg-blue-50 transition-colors hover:bg-blue-100";
+  }
+  return "transition-colors hover:bg-gray-100";
+}
+
+type DashboardStatCardProps = {
+  emoji: string;
+  title: string;
+  value: number | string | null | undefined;
+  subtitle: string;
+  valueClassName: string;
+  cardClassName: string;
+};
+
+function DashboardStatCard({
+  emoji,
+  title,
+  value,
+  subtitle,
+  valueClassName,
+  cardClassName,
+}: DashboardStatCardProps) {
+  return (
+    <Card
+      className={cn(
+        "min-h-[6.75rem] overflow-hidden border shadow-sm transition-shadow duration-200 hover:shadow-md sm:min-h-[7.25rem]",
+        cardClassName
+      )}
+    >
+      <CardHeader className="space-y-0 px-3 pb-1 pt-3 sm:px-4 sm:pt-4">
+        <CardTitle className="flex items-center gap-1.5 text-[0.7rem] font-medium leading-snug text-gray-600 sm:text-sm">
+          <span className="shrink-0 text-base sm:text-lg" aria-hidden>
+            {emoji}
+          </span>
+          <span className="min-w-0 truncate">{title}</span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="px-3 pb-3 pt-0 sm:px-4 sm:pb-4">
+        <div
+          className={cn(
+            "text-2xl font-bold tabular-nums tracking-tight sm:text-3xl",
+            valueClassName
+          )}
+        >
+          {value ?? 0}
+        </div>
+        <p className="mt-1 text-[0.65rem] leading-snug text-gray-500 sm:text-xs">
+          {subtitle}
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function OverviewTab() {
   //data
@@ -145,73 +290,44 @@ export default function OverviewTab() {
 
   return (
     <>
-      <div className="flex gap-3 mb-3">
-        {/* New Submissions (Last 24 hours) */}
-        <Card className="w-1/4">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              🆕 New Submissions
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-yellow-600">
-              {newEval || 0}
-            </div>
-            <p className="text-sm text-gray-500 mt-1">Last 24 hours</p>
-          </CardContent>
-        </Card>
-
-        {/* Pending Approvals */}
-        <Card className="w-1/4">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              ⏳ Pending Approvals
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-orange-600">
-              {pendingEval || 0}
-            </div>
-            <p className="text-sm text-gray-500 mt-1">Needs review</p>
-          </CardContent>
-        </Card>
-
-        {/* Approved Evaluations */}
-        <Card className="w-1/4">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              ✅ Approved
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-green-600">
-              {completedEval || 0}
-            </div>
-            <p className="text-sm text-gray-500 mt-1">Completed reviews</p>
-          </CardContent>
-        </Card>
-
-        {/* Total Employees */}
-        <Card className="w-1/4">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              👥 Total Employees
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-blue-600">
-              {totalEmployees || 0}
-            </div>
-            <p className="text-sm text-gray-500 mt-1">
-              All registered employees
-            </p>
-          </CardContent>
-        </Card>
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:mb-5 sm:gap-4 lg:grid-cols-4">
+        <DashboardStatCard
+          emoji="🆕"
+          title="New Submissions"
+          value={newEval}
+          subtitle="Last 24 hours"
+          valueClassName="text-yellow-600"
+          cardClassName="border-yellow-200/90 bg-yellow-50/90"
+        />
+        <DashboardStatCard
+          emoji="⏳"
+          title="Pending Approvals"
+          value={pendingEval}
+          subtitle="Needs review"
+          valueClassName="text-orange-600"
+          cardClassName="border-orange-200/90 bg-orange-50/90"
+        />
+        <DashboardStatCard
+          emoji="✅"
+          title="Approved"
+          value={completedEval}
+          subtitle="Completed reviews"
+          valueClassName="text-green-600"
+          cardClassName="border-green-200/90 bg-green-50/90"
+        />
+        <DashboardStatCard
+          emoji="👥"
+          title="Total Employees"
+          value={totalEmployees}
+          subtitle="All registered employees"
+          valueClassName="text-blue-600"
+          cardClassName="border-blue-200/90 bg-blue-50/90"
+        />
       </div>
       <div className="relative space-y-6 pr-2">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex flex-wrap items-center gap-2 text-base sm:text-lg">
               Recent Evaluation Records
               {(() => {
                 const now = new Date();
@@ -236,13 +352,13 @@ export default function OverviewTab() {
               top)
             </CardDescription>
             {/* Search Bar and Refresh Button */}
-            <div className="mt-4 flex items-center gap-3">
-              <div className="relative flex-1 max-w-md">
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="relative min-w-0 flex-1 sm:max-w-md">
                 <Input
-                  placeholder="Search by employee, department, position, evaluator, or status..."
+                  placeholder="Search employee, status..."
                   value={overviewSearchTerm}
                   onChange={(e) => setOverviewSearchTerm(e.target.value)}
-                  className="pr-10"
+                  className="w-full pr-10 text-sm"
                 />
                 {overviewSearchTerm && (
                   <button
@@ -269,7 +385,7 @@ export default function OverviewTab() {
               <Button
                 onClick={() => setRefreshNonce((prev) => prev + 1)}
                 disabled={isRefreshing}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+                className="w-full shrink-0 bg-blue-600 px-4 py-2 text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-md active:translate-y-0 sm:w-auto"
                 title="Refresh evaluation records"
               >
                 {isRefreshing ? (
@@ -312,10 +428,19 @@ export default function OverviewTab() {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="p-0">
-            <div className=" h-64 overflow-x-auto w-full">
+          <CardContent className="p-0 sm:p-0">
+            <p className="border-b px-3 py-2 text-[0.65rem] text-muted-foreground lg:hidden">
+              Swipe horizontally to view all columns.
+            </p>
+            <div
+              className="relative max-h-[min(70vh,28rem)] w-full overflow-x-auto overflow-y-auto sm:max-h-[min(75vh,32rem)] lg:max-h-[28rem] [-webkit-overflow-scrolling:touch]"
+              style={{
+                scrollbarWidth: "thin",
+                scrollbarColor: "#cbd5e1 #f1f5f9",
+              }}
+            >
               {isRefreshing && (
-                <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none bg-white/60">
                   <div className="flex flex-col items-center gap-3 bg-white/95 px-6 md:px-8 py-4 md:py-6 rounded-lg shadow-lg">
                     <div className="relative">
                       <div className="animate-spin rounded-full h-12 md:h-16 w-12 md:w-16 border-4 border-blue-500 border-t-transparent"></div>
@@ -334,38 +459,32 @@ export default function OverviewTab() {
                 </div>
               )}
 
-              <Table className="min-w-full w-full">
-                <TableHeader className="sticky top-0 z-10 border-b border-gray-200 bg-white [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600">
-                  <TableRow>
-                    <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[140px] md:min-w-[160px] lg:min-w-[180px] xl:min-w-[200px]">
-                      <span className="text-sm">
-                        Employee Name
-                      </span>
+              <Table
+                className={HR_OVERVIEW_TABLE_CLASS}
+                wrapperClassName="overflow-visible"
+              >
+                <TableHeader className="sticky top-0 z-10 border-b border-gray-200 bg-white/95 backdrop-blur-sm">
+                  <TableRow className="border-0 hover:bg-transparent">
+                    <TableHead className="min-w-[7.5rem] sm:min-w-[9rem]">
+                      Employee
                     </TableHead>
-                    <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 text-left pl-0 min-w-[100px] md:min-w-[120px] lg:min-w-[140px]">
-                      <span className="text-sm">
-                        Rating
-                      </span>
+                    <TableHead className="hidden min-w-[4rem] sm:table-cell">
+                      Rating
                     </TableHead>
-                    <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[80px] md:min-w-[90px] lg:min-w-[100px]">
-                      <span className="text-sm">
-                        Quarter
-                      </span>
+                    <TableHead className="hidden min-w-[3.5rem] md:table-cell">
+                      Quarter
                     </TableHead>
-                    <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[90px] md:min-w-[100px] lg:min-w-[110px]">
-                      <span className="text-sm">
-                        Date
-                      </span>
+                    <TableHead className="hidden min-w-[5rem] sm:table-cell">
+                      Date
                     </TableHead>
-                    <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[110px] md:min-w-[130px] lg:min-w-[150px]">
-                      <span className="text-sm">
-                        Approval Status
-                      </span>
+                    <TableHead className="hidden min-w-[5.5rem] lg:table-cell">
+                      Status
                     </TableHead>
-                    <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[120px] md:min-w-[140px] lg:min-w-[160px]">
-                      <span className="text-sm">
-                        Actions
+                    <TableHead className={HR_OVERVIEW_ACTIONS_HEAD}>
+                      <span className="lg:hidden" aria-hidden>
+                        ⋮
                       </span>
+                      <span className="hidden lg:inline">Actions</span>
                     </TableHead>
                   </TableRow>
                 </TableHeader>
@@ -373,32 +492,32 @@ export default function OverviewTab() {
                   {isRefreshing ? (
                     Array.from({ length: 8 }).map((_, index) => (
                       <TableRow key={`skeleton-${index}`}>
-                        <TableCell className="px-6 py-3">
+                        <TableCell>
                           <div className="space-y-1">
-                            <div className="h-3 w-20 bg-gray-200 rounded animate-pulse"></div>
-                            <div className="h-2.5 w-24 bg-gray-200 rounded animate-pulse"></div>
+                            <div className="h-3 w-20 animate-pulse rounded bg-gray-200" />
+                            <div className="h-2.5 w-24 animate-pulse rounded bg-gray-200" />
                           </div>
                         </TableCell>
-                        <TableCell className="px-6 py-3 text-left pl-0">
-                          <div className="h-5 w-16 bg-gray-200 rounded-full animate-pulse"></div>
+                        <TableCell className="hidden sm:table-cell">
+                          <div className="h-5 w-14 animate-pulse rounded-full bg-gray-200" />
                         </TableCell>
-                        <TableCell className="px-6 py-3">
-                          <div className="h-5 w-12 bg-gray-200 rounded-full animate-pulse"></div>
+                        <TableCell className="hidden md:table-cell">
+                          <div className="h-5 w-12 animate-pulse rounded-full bg-gray-200" />
                         </TableCell>
-                        <TableCell className="px-6 py-3">
-                          <div className="h-3 w-16 bg-gray-200 rounded animate-pulse"></div>
+                        <TableCell className="hidden sm:table-cell">
+                          <div className="h-3 w-16 animate-pulse rounded bg-gray-200" />
                         </TableCell>
-                        <TableCell className="px-6 py-3">
-                          <div className="h-5 w-20 bg-gray-200 rounded-full animate-pulse"></div>
+                        <TableCell className="hidden lg:table-cell">
+                          <div className="h-5 w-20 animate-pulse rounded-full bg-gray-200" />
                         </TableCell>
-                        <TableCell className="px-6 py-3">
-                          <div className="h-6 w-16 bg-gray-200 rounded animate-pulse"></div>
+                        <TableCell className={hrOverviewActionsCellClass("")}>
+                          <div className="mx-auto h-8 w-8 animate-pulse rounded-md bg-gray-200 lg:mx-0 lg:h-6 lg:w-16" />
                         </TableCell>
                       </TableRow>
                     ))
                   ) : !submissions || submissions.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-12">
+                      <TableCell colSpan={6} className="py-10 text-center sm:py-12">
                         <div className="flex flex-col items-center justify-center gap-4">
                           <img
                             src="/not-found.gif"
@@ -439,135 +558,151 @@ export default function OverviewTab() {
                     </TableRow>
                   ) : (
                     submissions.map((submission: any) => {
-                      // Calculate time difference for indicators
-                      const submittedDate = new Date(submission.created_at);
                       const now = new Date();
                       const hoursDiff =
-                        (now.getTime() - submittedDate.getTime()) /
+                        (now.getTime() -
+                          new Date(submission.created_at).getTime()) /
                         (1000 * 60 * 60);
                       const isNew = hoursDiff <= 24;
-                      const isRecent = hoursDiff > 24 && hoursDiff <= 168; // 7 days
+                      const isRecent = hoursDiff > 24 && hoursDiff <= 168;
+                      const rowClassName = getSubmissionRowClassName(
+                        isNew,
+                        isRecent,
+                        submission.status
+                      );
+                      const reviewDate = formatSubmissionDate(
+                        submission.created_at
+                      );
+                      const statusLabels = formatApprovalStatus(
+                        submission.status
+                      );
+                      const quarterValue = getSubmissionQuarterDisplay(
+                        submission
+                      );
 
                       return (
-                        <TableRow
-                          key={submission.id}
-                          className="hover:bg-gray-100 transition-colors"
-                        >
-                          <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3">
-                            <div>
-                              <div className="flex flex-wrap items-center gap-1 md:gap-2 mb-1">
-                                <span className="font-medium text-gray-900 text-sm">
-                                  {submission.employee?.fname && submission.employee?.lname
+                        <TableRow key={submission.id} className={rowClassName}>
+                          <TableCell>
+                            <div className="min-w-0">
+                              <div className="mb-1 flex flex-wrap items-center gap-1">
+                                <span className="max-w-[10rem] truncate text-sm font-medium text-gray-900 sm:max-w-none">
+                                  {submission.employee?.fname &&
+                                  submission.employee?.lname
                                     ? `${submission.employee.fname} ${submission.employee.lname}`
                                     : "Unknown Employee"}
                                 </span>
                                 {isNew && (
-                                  <Badge className="bg-yellow-100 text-yellow-800 text-sm px-1.5 md:px-2 py-0.5 font-semibold">
+                                  <Badge className="px-1 py-0 text-[0.6rem] font-semibold text-yellow-800 bg-yellow-200 sm:text-xs">
                                     ⚡ NEW
                                   </Badge>
                                 )}
                                 {!isNew && isRecent && (
-                                  <Badge className="bg-blue-100 text-blue-800 text-sm px-1.5 md:px-2 py-0.5 font-semibold">
+                                  <Badge className="px-1 py-0 text-[0.6rem] font-semibold text-blue-800 sm:text-xs">
                                     🕐 RECENT
                                   </Badge>
                                 )}
-                                {submission.status === "completed" && (
-                                  <Badge className="bg-green-100 text-green-800 text-sm px-1.5 md:px-2 py-0.5 font-semibold">
-                                    ✓ APPROVED
-                                  </Badge>
-                                )}
                               </div>
-                              <div className="text-sm text-gray-500">
-                                {submission.employee?.email || ""}
+                              {submission.employee?.email ? (
+                                <div className="truncate text-[0.65rem] text-gray-500 sm:text-xs">
+                                  {submission.employee.email}
+                                </div>
+                              ) : null}
+                              <div className="mt-1.5 flex flex-wrap items-center gap-1 lg:hidden">
+                                {submission.rating ? (
+                                  <Badge
+                                    className={cn(
+                                      "text-[0.6rem] font-semibold sm:text-xs",
+                                      getRatingColor(submission.rating)
+                                    )}
+                                  >
+                                    {submission.rating > 0
+                                      ? `${submission.rating}/5`
+                                      : "N/A"}
+                                  </Badge>
+                                ) : null}
+                                <Badge
+                                  className={cn(
+                                    "max-w-[5rem] truncate text-[0.6rem] sm:max-w-none sm:text-xs",
+                                    getQuarterColor(quarterValue)
+                                  )}
+                                >
+                                  {quarterValue}
+                                </Badge>
+                                <span className="text-[0.65rem] text-gray-600 sm:hidden">
+                                  {reviewDate.short}
+                                </span>
+                                <Badge
+                                  className={cn(
+                                    "text-[0.6rem] sm:text-xs lg:hidden",
+                                    submission.status === "completed"
+                                      ? "bg-green-100 text-green-800"
+                                      : submission.status === "pending"
+                                      ? "bg-red-100 text-red-800"
+                                      : "bg-gray-100 text-gray-800"
+                                  )}
+                                >
+                                  {statusLabels.short}
+                                </Badge>
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 text-left pl-0">
-                            {submission.rating && (
+                          <TableCell className="hidden sm:table-cell">
+                            {submission.rating ? (
                               <Badge
-                                className={`text-sm font-semibold ${getRatingColor(
-                                  submission.rating
-                                )}`}
+                                className={cn(
+                                  "text-xs font-semibold",
+                                  getRatingColor(submission.rating)
+                                )}
                               >
                                 {submission.rating > 0
                                   ? `${submission.rating}/5`
                                   : "N/A"}
                               </Badge>
+                            ) : (
+                              <span className="text-xs text-gray-400">—</span>
                             )}
                           </TableCell>
-                          <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3">
-                            {(() => {
-                              // Check if "Others" is selected
-                              const isOthersSelected = 
-                                (submission.reviewTypeOthersImprovement != null && submission.reviewTypeOthersImprovement !== 0) || 
-                                (submission.reviewTypeOthersCustom && 
-                                 submission.reviewTypeOthersCustom.trim() !== "");
-                              
-                              // Check if regular or probationary types are empty/null
-                              const hasRegular = submission.reviewTypeRegular != null && 
-                                submission.reviewTypeRegular !== "" && 
-                                submission.reviewTypeRegular !== "null" &&
-                                String(submission.reviewTypeRegular).trim() !== "" &&
-                                submission.reviewTypeRegular !== 0;
-                              
-                              const hasProbationary = submission.reviewTypeProbationary != null && 
-                                submission.reviewTypeProbationary !== "" &&
-                                submission.reviewTypeProbationary !== "null" &&
-                                String(submission.reviewTypeProbationary).trim() !== "";
-                              
-                              // Determine the display value
-                              let displayValue: string = "Others";
-                              
-                              if (hasRegular) {
-                                displayValue = String(submission.reviewTypeRegular).trim();
-                              } else if (hasProbationary) {
-                                displayValue = "M" + String(submission.reviewTypeProbationary).trim();
-                              } else if (isOthersSelected) {
-                                // If custom value exists, use it; otherwise use "Others"
-                                if (submission.reviewTypeOthersCustom && submission.reviewTypeOthersCustom.trim() !== "") {
-                                  displayValue = submission.reviewTypeOthersCustom.trim();
-                                } else {
-                                  displayValue = "Others";
-                                }
-                              }
-                              
-                              return (
-                                <Badge className={`${getQuarterColor(displayValue)} text-sm`}>
-                                  {displayValue}
-                                </Badge>
-                              );
-                            })()}
-                          </TableCell>
-                          <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 text-sm text-gray-600">
-                            {new Date(
-                              submission.created_at
-                            ).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3">
+                          <TableCell className="hidden md:table-cell">
                             <Badge
-                              className={`text-sm ${
+                              className={cn(
+                                "max-w-[5.5rem] truncate text-xs",
+                                getQuarterColor(quarterValue)
+                              )}
+                            >
+                              {quarterValue}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="hidden whitespace-nowrap text-gray-600 sm:table-cell">
+                            <span className="lg:hidden">{reviewDate.short}</span>
+                            <span className="hidden lg:inline">{reviewDate.full}</span>
+                          </TableCell>
+                          <TableCell className="hidden lg:table-cell">
+                            <Badge
+                              className={cn(
+                                "text-xs",
                                 submission.status === "completed"
                                   ? "bg-green-100 text-green-800"
                                   : submission.status === "pending"
                                   ? "bg-red-100 text-red-800"
                                   : "bg-gray-100 text-gray-800"
-                              }`}
+                              )}
                             >
-                              {submission.status === "completed"
-                                ? "✓ Fully Approved"
-                                : submission.status === "pending"
-                                ? "⏳ Pending"
-                                : ""}
+                              {statusLabels.full}
                             </Badge>
                           </TableCell>
-                          <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3">
+                          <TableCell
+                            className={hrOverviewActionsCellClass(rowClassName)}
+                          >
                             <Button
+                              type="button"
                               variant="outline"
-                              size="sm"
+                              size="icon"
                               onClick={() => handleViewEvaluation(submission)}
-                              className="text-sm px-2 md:px-3 py-1 md:py-1.5 bg-blue-600 hover:bg-blue-700 text-white hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+                              aria-label="View evaluation"
+                              className="mx-auto h-8 w-8 shrink-0 cursor-pointer border-blue-700 bg-blue-600 text-white hover:bg-blue-700 hover:text-white lg:mx-0 lg:h-9 lg:w-auto lg:px-3 lg:transition-all lg:duration-200 lg:hover:-translate-y-0.5 lg:hover:shadow-md lg:active:translate-y-0"
                             >
-                              ☰ View
+                              <Eye className="h-4 w-4 lg:hidden" />
+                              <span className="hidden lg:inline">☰ View</span>
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -578,6 +713,7 @@ export default function OverviewTab() {
               </Table>
             </div>
             {overviewTotal > itemsPerPage && (
+              <div className="border-t px-3 py-3 sm:px-4">
               <EvaluationsPagination
                 currentPage={currentPage}
                 totalPages={totalPages}
@@ -587,6 +723,7 @@ export default function OverviewTab() {
                   setCurrentPage(page);
                 }}
               />
+              </div>
             )}
             {/* View Results Modal */}
             <ViewResultsModal
