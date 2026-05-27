@@ -509,6 +509,14 @@ input[type="date"]::-moz-calendar-picker-indicator:hover {
   filter: invert(0.3);
 }
 
+/* Memorandum add/edit forms: keep date fields inside narrow modals */
+.memorandum-violation-form input[type="date"] {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
 /* Print styles for evaluation form - 2 steps per page layout */
 @media print {
   /* Set page margins and size for better fit */

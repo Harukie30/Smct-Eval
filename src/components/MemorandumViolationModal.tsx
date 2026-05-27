@@ -804,10 +804,10 @@ export default function MemorandumViolationModal({
         }}
       >
         <DialogContent
-          className={`p-0 ${dialogAnimationClass} max-w-5xl max-h-[95vh] overflow-hidden relative`}
+          className={`relative max-h-[95vh] w-[min(100%,calc(100vw-2rem))] max-w-5xl overflow-x-hidden overflow-y-hidden p-0 ${dialogAnimationClass}`}
         >
           <div
-            className="relative overflow-hidden px-6 py-5"
+            className="relative overflow-hidden px-4 py-4 sm:px-6 sm:py-5"
             style={{
               backgroundImage: "url(/smct.png)",
               backgroundSize: "cover",
@@ -829,14 +829,14 @@ export default function MemorandumViolationModal({
             </div>
             <div className="relative z-10 pr-12 sm:pr-14">
               <DialogHeader className="pb-0 text-left">
-                <DialogTitle className="flex items-center gap-3 text-xl text-white drop-shadow-md">
+                <DialogTitle className="flex items-center gap-2 text-lg text-white drop-shadow-md sm:gap-3 sm:text-xl">
                   <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm shadow-lg">
                     <FileWarning className="h-5 w-5 text-white" />
                   </div>
                   <span>Memorandum Violation</span>
                 </DialogTitle>
                 {headerEmployeeName ? (
-                  <p className="mt-4 text-xl font-bold text-white/90 leading-snug">
+                  <p className="mt-3 break-words text-lg font-bold leading-snug text-white/90 sm:mt-4 sm:text-xl">
                     {headerEmployeeName}
                   </p>
                 ) : null}
@@ -849,10 +849,10 @@ export default function MemorandumViolationModal({
             </div>
           </div>
 
-          <div className="relative overflow-y-auto p-6 space-y-4">
+          <div className="relative min-w-0 space-y-4 overflow-x-hidden overflow-y-auto p-4 sm:p-6">
             {showEmployeePicker && (
-              <div className="flex flex-wrap items-center gap-4">
-                <Label className="text-sm font-medium text-gray-700 whitespace-nowrap">
+              <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
+                <Label className="text-sm font-medium text-gray-700">
                   Employee:
                 </Label>
                 {loadingPicker ? (
@@ -868,7 +868,7 @@ export default function MemorandumViolationModal({
                     placeholder="Select employee"
                     searchPlaceholder="Search employees…"
                     emptyText="No employees found."
-                    className="min-w-[280px] flex-1 max-w-xl"
+                    className="min-w-0 w-full max-w-full flex-1 sm:min-w-[280px] sm:max-w-xl"
                   />
                 )}
               </div>
@@ -912,19 +912,16 @@ export default function MemorandumViolationModal({
               {!loadingViolations && sessionRows.length > 0 ? (
                 <ViolationRowHighlightLegend className="text-gray-700" />
               ) : null}
-              <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+              <div className="min-w-0 overflow-hidden rounded-xl border border-gray-200 shadow-sm">
                 <div
                   className={cn(
+                    "min-w-0 overflow-x-auto",
                     violationsDisplayedRows.length > VIOLATIONS_SCROLL_AFTER_ROWS &&
-                      "max-h-[min(23rem,48vh)] overflow-y-auto overflow-x-auto"
+                      "max-h-[min(23rem,48vh)] overflow-y-auto"
                   )}
                 >
                 <Table
-                  wrapperClassName={
-                    violationsDisplayedRows.length > VIOLATIONS_SCROLL_AFTER_ROWS
-                      ? "overflow-visible"
-                      : undefined
-                  }
+                  wrapperClassName="min-w-0 overflow-visible"
                 >
                   <TableHeader
                     className={cn(
@@ -933,19 +930,19 @@ export default function MemorandumViolationModal({
                     )}
                   >
                     <TableRow className="bg-gradient-to-r from-amber-50 to-amber-100">
-                      <TableHead className="font-semibold text-amber-900 min-w-[min(40%,12rem)]">
+                      <TableHead className="min-w-0 font-semibold text-amber-900">
                         Title
                       </TableHead>
-                      <TableHead className="font-semibold text-amber-900 min-w-[7.5rem] whitespace-nowrap">
+                      <TableHead className="hidden min-w-[5.5rem] whitespace-nowrap font-semibold text-amber-900 md:table-cell">
                         Date
                       </TableHead>
-                      <TableHead className="font-semibold text-amber-900 min-w-[5.5rem] max-w-[7rem]">
+                      <TableHead className="hidden min-w-[5rem] font-semibold text-amber-900 lg:table-cell">
                         Offense
                       </TableHead>
-                      <TableHead className="min-w-[5.5rem] max-w-[7rem] font-semibold">
+                      <TableHead className="hidden min-w-[5rem] font-semibold lg:table-cell">
                         <SanctionTableHeadLabel theme="amber" />
                       </TableHead>
-                      <TableHead className="font-semibold text-amber-900 w-[1%] min-w-[5.25rem] whitespace-nowrap text-right">
+                      <TableHead className="w-[1%] min-w-[4.5rem] whitespace-nowrap text-right font-semibold text-amber-900">
                         Action
                       </TableHead>
                     </TableRow>
@@ -997,16 +994,37 @@ export default function MemorandumViolationModal({
                             hl === null && "hover:bg-gray-50"
                           )}
                         >
-                          <TableCell className="max-w-[14rem] text-gray-900 text-sm font-medium">
+                          <TableCell className="min-w-0 max-w-[14rem] text-sm font-medium text-gray-900">
                             <span className="line-clamp-2" title={row.title}>
                               {row.title}
                             </span>
+                            <div className="mt-1 space-y-0.5 text-[0.65rem] leading-snug text-gray-600 md:hidden">
+                              <p className="tabular-nums">
+                                {formatViolationDateCell(row)}
+                              </p>
+                              {fullOffense ? (
+                                <p className="line-clamp-2" title={fullOffense}>
+                                  <span className="font-medium text-gray-700">
+                                    Offense:{" "}
+                                  </span>
+                                  {offensePreview}
+                                </p>
+                              ) : null}
+                              {fullSanction ? (
+                                <p className="line-clamp-2" title={fullSanction}>
+                                  <span className="font-medium text-gray-700">
+                                    Sanction:{" "}
+                                  </span>
+                                  {sanctionPreview}
+                                </p>
+                              ) : null}
+                            </div>
                           </TableCell>
-                          <TableCell className="text-gray-700 text-sm whitespace-nowrap">
+                          <TableCell className="hidden whitespace-nowrap text-sm text-gray-700 md:table-cell">
                             {formatViolationDateCell(row)}
                           </TableCell>
                           <TableCell
-                            className="max-w-[7rem] text-sm text-gray-700"
+                            className="hidden max-w-[7rem] text-sm text-gray-700 lg:table-cell"
                             title={
                               fullOffense
                                 ? fullOffense
@@ -1016,7 +1034,7 @@ export default function MemorandumViolationModal({
                             {offensePreview}
                           </TableCell>
                           <TableCell
-                            className="max-w-[7rem] text-sm text-gray-700"
+                            className="hidden max-w-[7rem] text-sm text-gray-700 lg:table-cell"
                             title={
                               fullSanction
                                 ? fullSanction
@@ -1025,7 +1043,7 @@ export default function MemorandumViolationModal({
                           >
                             {sanctionPreview}
                           </TableCell>
-                          <TableCell className="w-[1%] min-w-[5.25rem] whitespace-nowrap text-right align-middle">
+                          <TableCell className="w-[1%] min-w-[4.5rem] whitespace-nowrap text-right align-middle">
                             <div className="inline-flex flex-nowrap items-center justify-end gap-1.5">
                               {canEditSummary ? (
                                 <Button
@@ -1088,7 +1106,7 @@ export default function MemorandumViolationModal({
       >
         <DialogContent
           className={cn(
-            "relative max-w-2xl p-0 overflow-hidden border-amber-200/50 shadow-xl",
+            "relative flex max-h-[min(88dvh,640px)] w-[min(86vw,20rem)] max-w-sm flex-col overflow-x-hidden overflow-y-hidden border-amber-200/50 p-0 shadow-xl sm:max-h-[min(92dvh,800px)] sm:w-full sm:max-w-md",
             dialogAnimationClass
           )}
         >
@@ -1124,7 +1142,7 @@ export default function MemorandumViolationModal({
             </div>
           )}
           <div
-            className="relative border-b border-amber-100/90 bg-gradient-to-br from-amber-50 via-white to-orange-50/40 px-6 py-5"
+            className="relative shrink-0 border-b border-amber-100/90 bg-gradient-to-br from-amber-50 via-white to-orange-50/40 px-3 py-3 sm:px-6 sm:py-5"
             style={{
               backgroundImage: "url(/smct.png)",
               backgroundSize: "cover",
@@ -1132,24 +1150,24 @@ export default function MemorandumViolationModal({
             }}
           >
             <div className="absolute inset-0 bg-gradient-to-r from-white/92 via-white/88 to-amber-50/85" />
-            <div className="relative flex gap-4">
+            <div className="relative flex gap-2.5 sm:gap-4">
               <div
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-600 text-white shadow-md ring-2 ring-amber-100"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-600 text-white shadow-md ring-2 ring-amber-100 sm:h-12 sm:w-12 sm:rounded-xl"
                 aria-hidden
               >
-                <FileWarning className="h-6 w-6" />
+                <FileWarning className="h-4 w-4 sm:h-6 sm:w-6" />
               </div>
-              <DialogHeader className="flex-1 space-y-1.5 text-left">
-                <DialogTitle className="text-xl font-semibold tracking-tight text-gray-900">
-                  Add memorandum violation
+              <DialogHeader className="min-w-0 flex-1 space-y-0.5 text-left sm:space-y-1.5">
+                <DialogTitle className="text-sm font-semibold leading-snug tracking-tight text-gray-900 break-words sm:text-xl">
+                  Add violation
                 </DialogTitle>
-                <DialogDescription className="text-sm leading-relaxed text-gray-600">
+                <DialogDescription className="hidden text-sm leading-relaxed text-gray-600 sm:block">
                   Enter title, violation date, and offense (required). Sanction is
                   optional.
                 </DialogDescription>
                 {headerEmployeeName ? (
-                  <p className="mt-2 rounded-lg border border-amber-200/80 bg-amber-50/90 px-3 py-2 text-xs font-medium text-amber-950">
-                    Recording for:{" "}
+                  <p className="mt-1 truncate rounded-md border border-amber-200/80 bg-amber-50/90 px-2 py-1 text-[0.65rem] font-medium text-amber-950 sm:mt-2 sm:rounded-lg sm:px-3 sm:py-2 sm:text-xs">
+                    <span className="text-amber-800/90">For:</span>{" "}
                     <span className="font-semibold">{headerEmployeeName}</span>
                   </p>
                 ) : null}
@@ -1157,38 +1175,36 @@ export default function MemorandumViolationModal({
             </div>
           </div>
 
-          <div className="max-h-[min(75vh,640px)] overflow-y-auto px-6 py-6">
-            <ol className="space-y-6">
-              <li className="space-y-3">
-                <div className="flex items-baseline gap-2">
+          <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-3 py-3 sm:max-h-none sm:px-6 sm:py-6">
+            <ol className="memorandum-violation-form min-w-0 space-y-3 sm:space-y-6">
+              <li className="min-w-0 space-y-1.5 sm:space-y-3">
+                <div className="flex min-w-0 items-center gap-2 sm:items-baseline">
                   <span
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-600 text-xs font-bold text-white"
+                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-600 text-[10px] font-bold text-white sm:h-7 sm:w-7 sm:text-xs"
                     aria-hidden
                   >
                     1
                   </span>
-                  <div>
-                    <Label
-                      htmlFor="add-violation-title"
-                      className="text-base font-semibold text-gray-900"
-                    >
-                      Violation title{" "}
-                      <span className="text-red-500" aria-hidden>
-                        *
-                      </span>
-                    </Label>
-                    <p className="mt-0.5 text-xs text-gray-500">
-                      Shown in the table. Example: “Uniform policy — first notice”.
-                    </p>
-                  </div>
+                  <Label
+                    htmlFor="add-violation-title"
+                    className="min-w-0 flex-1 text-xs font-semibold leading-snug text-gray-900 sm:text-base"
+                  >
+                    Violation title{" "}
+                    <span className="text-red-500" aria-hidden>
+                      *
+                    </span>
+                  </Label>
                 </div>
+                <p className="hidden text-xs text-gray-500 sm:ml-9 sm:block">
+                  Shown in the table. Example: “Uniform policy — first notice”.
+                </p>
                 <Input
                   id="add-violation-title"
-                  placeholder="Enter a short, descriptive title"
+                  placeholder="Short title"
                   value={addTitle}
                   onChange={(e) => setAddTitle(e.target.value)}
                   disabled={submittingAdd}
-                  className="h-11 text-base"
+                  className="h-9 w-full min-w-0 max-w-full bg-white text-sm sm:ml-9 sm:h-11 sm:text-base"
                   autoComplete="off"
                   aria-required
                 />
@@ -1196,37 +1212,32 @@ export default function MemorandumViolationModal({
 
               <li className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
 
-              <li className="space-y-3">
-                <div className="flex items-baseline gap-2">
+              <li className="min-w-0 space-y-1.5 sm:space-y-3">
+                <div className="flex min-w-0 items-center gap-2 sm:items-baseline">
                   <span
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-600 text-xs font-bold text-white"
+                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-600 text-[10px] font-bold text-white sm:h-7 sm:w-7 sm:text-xs"
                     aria-hidden
                   >
                     2
                   </span>
-                  <div>
-                    <Label
-                      htmlFor="add-violation-date"
-                      className="text-base font-semibold text-gray-900"
-                    >
-                      Violation date{" "}
-                      <span className="text-red-500" aria-hidden>
-                        *
-                      </span>
-                    </Label>
-                    <p className="mt-0.5 text-xs text-gray-500">
-                      Use the calendar control to pick the date of the violation.
-                    </p>
-                  </div>
+                  <Label
+                    htmlFor="add-violation-date"
+                    className="min-w-0 flex-1 text-xs font-semibold leading-snug text-gray-900 sm:text-base"
+                  >
+                    Violation date{" "}
+                    <span className="text-red-500" aria-hidden>
+                      *
+                    </span>
+                  </Label>
                 </div>
-                <div className="sm:ml-9">
+                <div className="min-w-0 w-full sm:ml-9 sm:max-w-xs">
                   <Input
                     id="add-violation-date"
                     type="date"
                     value={addDateStr}
                     onChange={(e) => setAddDateStr(e.target.value)}
                     disabled={submittingAdd}
-                    className="h-11 max-w-full sm:max-w-xs bg-white"
+                    className="h-9 w-full min-w-0 max-w-full bg-white text-sm sm:h-11"
                     aria-required
                   />
                 </div>
@@ -1234,81 +1245,68 @@ export default function MemorandumViolationModal({
 
               <li className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
 
-              <li className="space-y-3">
-                <div className="flex items-baseline gap-2">
+              <li className="min-w-0 space-y-1.5 sm:space-y-3">
+                <div className="flex min-w-0 items-center gap-2 sm:items-baseline">
                   <span
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-600 text-xs font-bold text-white"
+                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-600 text-[10px] font-bold text-white sm:h-7 sm:w-7 sm:text-xs"
                     aria-hidden
                   >
                     3
                   </span>
-                  <div>
-                    <Label
-                      htmlFor="add-violation-offense"
-                      className="text-base font-semibold text-gray-900"
-                    >
-                      Offense{" "}
-                      <span className="text-red-500" aria-hidden>
-                        *
-                      </span>
-                    </Label>
-                    <p className="mt-0.5 text-xs text-gray-500">
-                      One line — shown in the violations table as Offense.
-                    </p>
-                  </div>
+                  <Label
+                    htmlFor="add-violation-offense"
+                    className="min-w-0 flex-1 text-xs font-semibold leading-snug text-gray-900 sm:text-base"
+                  >
+                    Offense{" "}
+                    <span className="text-red-500" aria-hidden>
+                      *
+                    </span>
+                  </Label>
                 </div>
-                <div className="ml-0 sm:ml-9">
-                  <Input
-                    id="add-violation-offense"
-                    placeholder="e.g. Unauthorized absence on scheduled shift"
-                    value={addSummary}
-                    onChange={(e) => setAddSummary(e.target.value)}
-                    disabled={submittingAdd}
-                    className="h-11 bg-white text-base"
-                    autoComplete="off"
-                    aria-required
-                  />
-                </div>
+                <Input
+                  id="add-violation-offense"
+                  placeholder="e.g. Unauthorized absence"
+                  value={addSummary}
+                  onChange={(e) => setAddSummary(e.target.value)}
+                  disabled={submittingAdd}
+                  className="h-9 w-full min-w-0 max-w-full bg-white text-sm sm:ml-9 sm:h-11 sm:text-base"
+                  autoComplete="off"
+                  aria-required
+                />
               </li>
 
               <li className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
 
-              <li className="space-y-3">
-                <div className="flex items-baseline gap-2">
+              <li className="min-w-0 space-y-1.5 sm:space-y-3">
+                <div className="flex min-w-0 items-center gap-2 sm:items-baseline">
                   <span
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-600 text-xs font-bold text-white"
+                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-600 text-[10px] font-bold text-white sm:h-7 sm:w-7 sm:text-xs"
                     aria-hidden
                   >
                     4
                   </span>
-                  <div>
-                    <Label
-                      htmlFor="add-violation-sanction"
-                      className="text-base font-semibold text-gray-900"
-                    >
-                      Sanction{" "}
-                      <span className="font-normal text-gray-500">(optional)</span>
-                    </Label>
-                    <p className="mt-0.5 text-xs text-gray-500">
-                      Disciplinary action or penalty, if applicable.
-                    </p>
-                  </div>
+                  <Label
+                    htmlFor="add-violation-sanction"
+                    className="min-w-0 flex-1 text-xs font-semibold leading-snug text-gray-900 sm:text-base"
+                  >
+                    Sanction{" "}
+                    <span className="font-normal text-gray-500">(optional)</span>
+                  </Label>
                 </div>
-                <div className="ml-0 sm:ml-9">
-                  <Textarea
-                    id="add-violation-sanction"
-                    placeholder="e.g. Written warning, suspension, …"
-                    value={addSanction}
-                    onChange={(e) => setAddSanction(e.target.value)}
-                    disabled={submittingAdd}
-                    className="min-h-[88px] bg-white text-sm"
-                  />
-                </div>
+                <Textarea
+                  id="add-violation-sanction"
+                  placeholder="e.g. Written warning…"
+                  value={addSanction}
+                  onChange={(e) => setAddSanction(e.target.value)}
+                  disabled={submittingAdd}
+                  className="min-h-[3rem] w-full min-w-0 max-w-full resize-y bg-white text-sm sm:ml-9 sm:min-h-[88px]"
+                  rows={2}
+                />
               </li>
             </ol>
           </div>
 
-          <div className="flex flex-col-reverse gap-2 border-t border-gray-100 bg-gray-50/90 px-6 py-4 sm:flex-row sm:justify-end sm:gap-3">
+          <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-gray-100 bg-gray-50/90 px-3 py-2.5 sm:flex-row sm:justify-end sm:gap-3 sm:px-6 sm:py-4">
             <Button
               type="button"
               variant="outline"
@@ -1329,7 +1327,7 @@ export default function MemorandumViolationModal({
                 !addDateStr ||
                 !addSummary.trim()
               }
-              className="cursor-pointer w-full bg-amber-600 hover:bg-amber-700 text-white sm:w-auto min-w-[160px]"
+              className="cursor-pointer w-full bg-amber-600 text-white hover:bg-amber-700 sm:w-auto"
               onClick={handleAddViolationSubmit}
             >
               {submittingAdd ? (
@@ -1357,7 +1355,7 @@ export default function MemorandumViolationModal({
       >
         <DialogContent
           className={cn(
-            "relative max-w-xl p-0 overflow-hidden border-amber-200/50 shadow-xl",
+            "relative flex max-h-[min(88dvh,640px)] w-[min(86vw,20rem)] max-w-sm flex-col overflow-x-hidden overflow-y-hidden border-amber-200/50 p-0 shadow-xl sm:max-h-[min(92dvh,800px)] sm:w-full sm:max-w-md",
             dialogAnimationClass
           )}
         >
@@ -1379,7 +1377,7 @@ export default function MemorandumViolationModal({
             </div>
           )}
           <div
-            className="relative border-b border-amber-100/90 bg-gradient-to-br from-amber-50 via-white to-orange-50/40 px-6 py-5"
+            className="relative shrink-0 border-b border-amber-100/90 bg-gradient-to-br from-amber-50 via-white to-orange-50/40 px-3 py-3 sm:px-6 sm:py-5"
             style={{
               backgroundImage: "url(/smct.png)",
               backgroundSize: "cover",
@@ -1387,18 +1385,18 @@ export default function MemorandumViolationModal({
             }}
           >
             <div className="absolute inset-0 bg-gradient-to-r from-white/92 via-white/88 to-amber-50/85" />
-            <div className="relative flex gap-4">
+            <div className="relative flex gap-2.5 sm:gap-4">
               <div
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-600 text-white shadow-md ring-2 ring-amber-100"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-600 text-white shadow-md ring-2 ring-amber-100 sm:h-12 sm:w-12 sm:rounded-xl"
                 aria-hidden
               >
-                <Pencil className="h-6 w-6" />
+                <Pencil className="h-4 w-4 sm:h-6 sm:w-6" />
               </div>
-              <DialogHeader className="flex-1 space-y-1.5 text-left">
-                <DialogTitle className="text-xl font-semibold tracking-tight text-gray-900">
-                  Edit memorandum violation
+              <DialogHeader className="min-w-0 flex-1 space-y-0.5 text-left sm:space-y-1.5">
+                <DialogTitle className="text-sm font-semibold leading-snug tracking-tight text-gray-900 break-words sm:text-xl">
+                  Edit violation
                 </DialogTitle>
-                <DialogDescription className="text-sm leading-relaxed text-gray-600">
+                <DialogDescription className="hidden text-sm leading-relaxed text-gray-600 sm:block">
                   Update title, violation date, and offense (required). Sanction is
                   optional.
                 </DialogDescription>
@@ -1406,38 +1404,33 @@ export default function MemorandumViolationModal({
             </div>
           </div>
 
-          <div className="max-h-[min(70vh,560px)] overflow-y-auto px-6 py-6">
-            <ol className="space-y-6">
-              <li className="space-y-3">
-                <div className="flex items-baseline gap-2">
+          <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-3 py-3 sm:px-6 sm:py-6">
+            <ol className="memorandum-violation-form min-w-0 space-y-3 sm:space-y-6">
+              <li className="min-w-0 space-y-1.5 sm:space-y-3">
+                <div className="flex min-w-0 items-center gap-2">
                   <span
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-600 text-xs font-bold text-white"
+                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-600 text-[10px] font-bold text-white sm:h-7 sm:w-7 sm:text-xs"
                     aria-hidden
                   >
                     1
                   </span>
-                  <div>
-                    <Label
-                      htmlFor="edit-violation-title"
-                      className="text-base font-semibold text-gray-900"
-                    >
-                      Violation title{" "}
-                      <span className="text-red-500" aria-hidden>
-                        *
-                      </span>
-                    </Label>
-                    <p className="mt-0.5 text-xs text-gray-500">
-                      Shown in the violations table.
-                    </p>
-                  </div>
+                  <Label
+                    htmlFor="edit-violation-title"
+                    className="min-w-0 flex-1 text-xs font-semibold leading-snug text-gray-900 sm:text-base"
+                  >
+                    Violation title{" "}
+                    <span className="text-red-500" aria-hidden>
+                      *
+                    </span>
+                  </Label>
                 </div>
                 <Input
                   id="edit-violation-title"
-                  placeholder="Enter a short, descriptive title"
+                  placeholder="Short title"
                   value={editTitleDraft}
                   onChange={(e) => setEditTitleDraft(e.target.value)}
                   disabled={savingSummaryEdit}
-                  className="h-11 text-base"
+                  className="h-9 w-full min-w-0 max-w-full bg-white text-sm sm:ml-9 sm:h-11 sm:text-base"
                   autoComplete="off"
                   aria-required
                 />
@@ -1445,37 +1438,32 @@ export default function MemorandumViolationModal({
 
               <li className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
 
-              <li className="space-y-3">
-                <div className="flex items-baseline gap-2">
+              <li className="min-w-0 space-y-1.5 sm:space-y-3">
+                <div className="flex min-w-0 items-center gap-2">
                   <span
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-600 text-xs font-bold text-white"
+                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-600 text-[10px] font-bold text-white sm:h-7 sm:w-7 sm:text-xs"
                     aria-hidden
                   >
                     2
                   </span>
-                  <div>
-                    <Label
-                      htmlFor="edit-violation-date"
-                      className="text-base font-semibold text-gray-900"
-                    >
-                      Violation date{" "}
-                      <span className="text-red-500" aria-hidden>
-                        *
-                      </span>
-                    </Label>
-                    <p className="mt-0.5 text-xs text-gray-500">
-                      Date of the violation record.
-                    </p>
-                  </div>
+                  <Label
+                    htmlFor="edit-violation-date"
+                    className="min-w-0 flex-1 text-xs font-semibold leading-snug text-gray-900 sm:text-base"
+                  >
+                    Violation date{" "}
+                    <span className="text-red-500" aria-hidden>
+                      *
+                    </span>
+                  </Label>
                 </div>
-                <div className="sm:ml-9">
+                <div className="min-w-0 w-full sm:ml-9 sm:max-w-xs">
                   <Input
                     id="edit-violation-date"
                     type="date"
                     value={editDateDraft}
                     onChange={(e) => setEditDateDraft(e.target.value)}
                     disabled={savingSummaryEdit}
-                    className="h-11 max-w-full bg-white sm:max-w-xs"
+                    className="h-9 w-full min-w-0 max-w-full bg-white text-sm sm:h-11"
                     aria-required
                   />
                 </div>
@@ -1483,80 +1471,68 @@ export default function MemorandumViolationModal({
 
               <li className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
 
-              <li className="space-y-3">
-                <div className="flex items-baseline gap-2">
+              <li className="min-w-0 space-y-1.5 sm:space-y-3">
+                <div className="flex min-w-0 items-center gap-2">
                   <span
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-600 text-xs font-bold text-white"
+                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-600 text-[10px] font-bold text-white sm:h-7 sm:w-7 sm:text-xs"
                     aria-hidden
                   >
                     3
                   </span>
-                  <div>
-                    <Label
-                      htmlFor="edit-violation-offense"
-                      className="text-base font-semibold text-gray-900"
-                    >
-                      Offense{" "}
-                      <span className="text-red-500" aria-hidden>
-                        *
-                      </span>
-                    </Label>
-                    <p className="mt-0.5 text-xs text-gray-500">
-                      One line — shown in the violations table as Offense.
-                    </p>
-                  </div>
+                  <Label
+                    htmlFor="edit-violation-offense"
+                    className="min-w-0 flex-1 text-xs font-semibold leading-snug text-gray-900 sm:text-base"
+                  >
+                    Offense{" "}
+                    <span className="text-red-500" aria-hidden>
+                      *
+                    </span>
+                  </Label>
                 </div>
-                <div className="ml-0 sm:ml-9">
-                  <Input
-                    id="edit-violation-offense"
-                    placeholder="e.g. Unauthorized absence on scheduled shift"
-                    value={editSummaryDraft}
-                    onChange={(e) => setEditSummaryDraft(e.target.value)}
-                    disabled={savingSummaryEdit}
-                    className="h-11 bg-white text-base"
-                    autoComplete="off"
-                    aria-required
-                  />
-                </div>
+                <Input
+                  id="edit-violation-offense"
+                  placeholder="e.g. Unauthorized absence"
+                  value={editSummaryDraft}
+                  onChange={(e) => setEditSummaryDraft(e.target.value)}
+                  disabled={savingSummaryEdit}
+                  className="h-9 w-full min-w-0 max-w-full bg-white text-sm sm:ml-9 sm:h-11 sm:text-base"
+                  autoComplete="off"
+                  aria-required
+                />
               </li>
 
               <li className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
 
-              <li className="space-y-3">
-                <div className="flex items-baseline gap-2">
+              <li className="min-w-0 space-y-1.5 sm:space-y-3">
+                <div className="flex min-w-0 items-center gap-2">
                   <span
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-600 text-xs font-bold text-white"
+                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-600 text-[10px] font-bold text-white sm:h-7 sm:w-7 sm:text-xs"
                     aria-hidden
                   >
                     4
                   </span>
-                  <div>
-                    <Label
-                      htmlFor="edit-violation-sanction"
-                      className="text-base font-semibold text-gray-900"
-                    >
-                      Sanction
-                    </Label>
-                    <p className="mt-0.5 text-xs text-gray-500">
-                      Disciplinary action or penalty, if applicable.
-                    </p>
-                  </div>
+                  <Label
+                    htmlFor="edit-violation-sanction"
+                    className="min-w-0 flex-1 text-xs font-semibold leading-snug text-gray-900 sm:text-base"
+                  >
+                    Sanction{" "}
+                    <span className="font-normal text-gray-500">(optional)</span>
+                  </Label>
                 </div>
-                <div className="ml-0 sm:ml-9">
-                  <Textarea
-                    id="edit-violation-sanction"
-                    placeholder="e.g. Written warning, suspension, …"
-                    value={editSanctionDraft}
-                    onChange={(e) => setEditSanctionDraft(e.target.value)}
-                    disabled={savingSummaryEdit}
-                    className="min-h-[88px] resize-y bg-white text-sm"
-                  />
-                </div>
+                <Textarea
+                  id="edit-violation-sanction"
+                  placeholder="e.g. Written warning…"
+                  value={editSanctionDraft}
+                  onChange={(e) => setEditSanctionDraft(e.target.value)}
+                  disabled={savingSummaryEdit}
+                  className="min-h-[3rem] w-full min-w-0 max-w-full resize-y bg-white text-sm sm:ml-9 sm:min-h-[88px]"
+                  rows={2}
+                />
               </li>
             </ol>
           </div>
 
-          <div className="flex flex-col-reverse gap-2 border-t border-gray-100 bg-gray-50/90 px-6 py-4 sm:flex-row sm:justify-end sm:gap-3">
+          <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-gray-100 bg-gray-50/90 px-3 py-2.5 sm:flex-row sm:justify-end sm:gap-3 sm:px-6 sm:py-4">
             <Button
               type="button"
               variant="outline"
@@ -1574,7 +1550,7 @@ export default function MemorandumViolationModal({
                 !editDateDraft ||
                 !editSummaryDraft.trim()
               }
-              className="cursor-pointer w-full min-w-[160px] bg-amber-600 text-white hover:bg-amber-700 sm:w-auto"
+              className="cursor-pointer w-full bg-amber-600 text-white hover:bg-amber-700 sm:w-auto"
               onClick={() => void handleSaveViolationEdit()}
             >
               {savingSummaryEdit ? (

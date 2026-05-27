@@ -33,6 +33,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import EvaluationsPagination from "@/components/paginationComponent";
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
+import { cn } from "@/lib/utils";
 
 interface Review {
   id: number;
@@ -45,6 +46,99 @@ interface Review {
   created_at: string;
   rating: number;
   status: string;
+}
+
+type DashboardStatCardProps = {
+  title: string;
+  value: number | string | null | undefined;
+  subtitle: string;
+  valueClassName: string;
+  cardClassName: string;
+  trailing?: React.ReactNode;
+};
+
+function DashboardStatCard({
+  title,
+  value,
+  subtitle,
+  valueClassName,
+  cardClassName,
+  trailing,
+}: DashboardStatCardProps) {
+  return (
+    <Card
+      className={cn(
+        "min-h-[6.75rem] overflow-hidden border shadow-sm transition-shadow duration-200 hover:shadow-md sm:min-h-[7.25rem]",
+        cardClassName
+      )}
+    >
+      <CardHeader className="space-y-0 px-3 pb-1 pt-3 sm:px-4 sm:pt-4">
+        <CardTitle className="min-w-0 truncate text-[0.7rem] font-medium leading-snug text-gray-600 sm:text-sm">
+          {title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="px-3 pb-3 pt-0 sm:px-4 sm:pb-4">
+        <div className="flex items-center justify-between gap-2">
+          <div
+            className={cn(
+              "text-2xl font-bold tabular-nums tracking-tight sm:text-3xl",
+              valueClassName
+            )}
+          >
+            {value ?? 0}
+          </div>
+          {trailing ? <div className="shrink-0">{trailing}</div> : null}
+        </div>
+        <p className="mt-1 text-[0.65rem] leading-snug text-gray-500 sm:text-xs">
+          {subtitle}
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+const EVALUATOR_TABLE_CLASS =
+  "min-w-[34rem] sm:min-w-[42rem] md:min-w-[52rem] lg:min-w-0 lg:w-full [&_th]:h-auto [&_th]:min-h-8 [&_th]:whitespace-nowrap [&_th]:px-2 [&_th]:py-2 [&_th]:align-middle [&_th]:text-[0.6rem] [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600 sm:[&_th]:px-2.5 sm:[&_th]:py-2.5 sm:[&_th]:text-[0.65rem] lg:[&_th]:px-3 lg:[&_th]:text-xs [&_td]:min-w-0 [&_td]:px-2 [&_td]:py-2 [&_td]:align-top [&_td]:text-[0.7rem] [&_td]:leading-snug sm:[&_td]:px-2.5 sm:[&_td]:py-2.5 sm:[&_td]:text-xs lg:[&_td]:px-3 lg:[&_td]:text-sm";
+
+const EVALUATOR_ACTIONS_HEAD_CLASS =
+  "w-[3.25rem] min-w-[3.25rem] p-1 text-center lg:sticky lg:right-0 lg:z-[4] lg:min-w-[6.5rem] lg:bg-white lg:text-left lg:shadow-[-6px_0_12px_-4px_rgba(15,23,42,0.12)]";
+
+function evaluatorActionsCellClass(rowClassName: string) {
+  return cn(
+    "w-[3.25rem] min-w-[3.25rem] max-w-[3.25rem] p-1 sm:max-w-none sm:p-2",
+    "lg:sticky lg:right-0 lg:z-[3] lg:min-w-[6.5rem] lg:w-auto lg:shadow-[-6px_0_12px_-4px_rgba(15,23,42,0.12)]",
+    rowClassName.includes("bg-green-50") && "lg:bg-green-50",
+    rowClassName.includes("bg-yellow-50") && "lg:bg-yellow-50",
+    rowClassName.includes("bg-blue-50") && "lg:bg-blue-50",
+    rowClassName.includes("bg-orange-50") && "lg:bg-orange-50",
+    !rowClassName.includes("bg-green-50") &&
+      !rowClassName.includes("bg-yellow-50") &&
+      !rowClassName.includes("bg-blue-50") &&
+      !rowClassName.includes("bg-orange-50") &&
+      "lg:bg-white"
+  );
+}
+
+function formatListDate(createdAt: string): { short: string; full: string } {
+  const d = new Date(createdAt);
+  return {
+    short: d.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "2-digit",
+    }),
+    full: d.toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    }),
+  };
+}
+
+function formatStatusLabel(status: string): { short: string; full: string } {
+  if (status === "completed") return { short: "✓ Done", full: "✓ Completed" };
+  if (status === "pending") return { short: "⏳ Pend.", full: "⏳ Pending" };
+  return { short: status, full: status };
 }
 
 export default function OverviewTab() {
@@ -210,14 +304,6 @@ export default function OverviewTab() {
     return;
   };
 
-  const getQuarterColor = (quarter: string): string => {
-    if (quarter.includes("Q1")) return "bg-blue-100 text-blue-800";
-    if (quarter.includes("Q2")) return "bg-green-100 text-green-800";
-    if (quarter.includes("Q3")) return "bg-yellow-100 text-yellow-800";
-    if (quarter.includes("Q4")) return "bg-purple-100 text-purple-800";
-    return "bg-gray-100 text-gray-800";
-  };
-
   // Filter submissions for overview table
 
   return (
@@ -225,8 +311,8 @@ export default function OverviewTab() {
       <>
         {isRefreshing ? (
           // Skeleton cards for overview
-          <div className="flex gap-5">
-            <Card className="w-1/4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+            <Card>
               <CardHeader className="pb-2">
                 <Skeleton className="h-3 w-20" />
               </CardHeader>
@@ -239,7 +325,7 @@ export default function OverviewTab() {
               </CardContent>
             </Card>
 
-            <Card className="w-1/4">
+            <Card>
               <CardHeader className="pb-2">
                 <Skeleton className="h-3 w-22" />
               </CardHeader>
@@ -250,7 +336,7 @@ export default function OverviewTab() {
               </CardContent>
             </Card>
 
-            <Card className="w-1/4">
+            <Card>
               <CardHeader className="pb-2">
                 <Skeleton className="h-3 w-24" />
               </CardHeader>
@@ -260,7 +346,7 @@ export default function OverviewTab() {
               </CardContent>
             </Card>
 
-            <Card className="w-1/4">
+            <Card>
               <CardHeader className="pb-2">
                 <Skeleton className="h-3 w-24" />
               </CardHeader>
@@ -272,78 +358,53 @@ export default function OverviewTab() {
           </div>
         ) : (
           // Actual cards with real data
-          <div className="flex gap-5">
-            <Card className="w-1/4">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">
-                  Total Evaluations
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center space-x-2">
-                  <span className="text-3xl font-bold text-gray-900">
-                    {totalEvaluations ? totalEvaluations : 0}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-500 mt-1">Conducted by you</p>
-              </CardContent>
-            </Card>
-
-            <Card className="w-1/4">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">
-                  Pending Approvals
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-yellow-600">
-                  {totalPending ? totalPending : 0}
-                </div>
-                <p className="text-sm text-gray-500 mt-1">Awaiting approval</p>
-                <Progress
-                  value={
-                    totalPending > 0
-                      ? (totalPending / totalEvaluations) * 100
-                      : 0
-                  }
-                  className="mt-2"
-                />
-              </CardContent>
-            </Card>
-
-            <Card className="w-1/4">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">
-                  Fully Approved
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-green-600">
-                  {totalApproved ? totalApproved : 0}
-                </div>
-                <p className="text-sm text-gray-500 mt-1">Completed & signed</p>
-              </CardContent>
-            </Card>
-
-            <Card className="w-1/4">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">
-                  👥 Total Employees
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-blue-600">
-                  {totalEmployees ? totalEmployees : 0}
-                </div>
-                <p className="text-sm text-gray-500 mt-1">All registered employees</p>
-              </CardContent>
-            </Card>
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+            <DashboardStatCard
+              title="Total Evaluations"
+              value={totalEvaluations}
+              subtitle="Conducted by you"
+              valueClassName="text-gray-900"
+              cardClassName="border-gray-200 bg-white"
+            />
+            <DashboardStatCard
+              title="Pending Approvals"
+              value={totalPending}
+              subtitle="Awaiting approval"
+              valueClassName="text-yellow-600"
+              cardClassName="border-yellow-200/90 bg-yellow-50/90"
+              trailing={
+                <span className="hidden sm:block">
+                  <Progress
+                    value={
+                      totalPending > 0
+                        ? (totalPending / Math.max(1, totalEvaluations)) * 100
+                        : 0
+                    }
+                    className="w-20"
+                  />
+                </span>
+              }
+            />
+            <DashboardStatCard
+              title="Fully Approved"
+              value={totalApproved}
+              subtitle="Completed & signed"
+              valueClassName="text-green-600"
+              cardClassName="border-green-200/90 bg-green-50/90"
+            />
+            <DashboardStatCard
+              title="Total Employees"
+              value={totalEmployees}
+              subtitle="All registered employees"
+              valueClassName="text-blue-600"
+              cardClassName="border-blue-200/90 bg-blue-50/90"
+            />
           </div>
         )}
       </>
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex flex-wrap items-center gap-2 text-base sm:text-lg">
             Recent Submissions
             {(() => {
               const newCount =
@@ -368,18 +429,19 @@ export default function OverviewTab() {
         </CardHeader>
         <CardContent className="p-0">
           {/* Search and Filter Controls */}
-          <div className="px-6 py-4 flex gap-2 w-1/2 border-b border-gray-200">
+          <div className="border-b border-gray-200 px-3 py-3 sm:px-6 sm:py-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <Input
               placeholder="Search submissions by employee name ..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-1/2 bg-gray-100"
+              className="w-full min-w-0 bg-gray-100 sm:flex-1"
             />
             {searchTerm && (
               <Button
                 size="sm"
                 onClick={() => setSearchTerm("")}
-                className="px-3 py-2 text-white hover:text-white bg-blue-400 hover:bg-blue-500"
+                className="w-full bg-blue-400 px-3 py-2 text-white hover:bg-blue-500 hover:text-white sm:w-auto"
               >
                  Clear
               </Button>
@@ -391,7 +453,7 @@ export default function OverviewTab() {
                 setRefreshNonce((prev) => prev + 1);
               }}
               disabled={isRefreshing || isPaginate}
-              className="px-3 py-2 text-white hover:text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+              className="w-full cursor-pointer bg-blue-600 px-3 py-2 text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-md active:translate-y-0 disabled:bg-gray-400 sm:w-auto"
               title="Refresh submissions data"
             >
               {isRefreshing || isPaginate ? (
@@ -409,9 +471,10 @@ export default function OverviewTab() {
                 </>
               )}
             </Button>
+            </div>
           </div>
           {isRefreshing || isPaginate ? (
-            <div className="relative max-h-[350px] md:max-h-[500px] lg:max-h-[700px] xl:max-h-[750px] overflow-y-auto overflow-x-auto scrollable-table overview-table">
+            <div className="relative max-h-[min(70vh,32rem)] overflow-y-auto overflow-x-auto scrollable-table overview-table">
               {/* Centered Loading Spinner */}
               <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
                 <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
@@ -460,26 +523,33 @@ export default function OverviewTab() {
                 </div>
               </div>
               {/* Table structure visible in background */}
-              <Table className="table-fixed w-full">
-                <TableHeader className="sticky top-0 z-10 border-b border-gray-200 bg-white [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600">
-                  <TableRow key="overview-header">
-                    <TableHead className="w-1/5 pl-4">Employee</TableHead>
-                    <TableHead className="w-1/5 text-center pl-4">
+              <Table className={EVALUATOR_TABLE_CLASS} wrapperClassName="overflow-visible">
+                <TableHeader className="sticky top-0 z-10 border-b border-gray-200 bg-white/95 backdrop-blur-sm">
+                  <TableRow className="border-0 hover:bg-transparent" key="overview-header">
+                    <TableHead className="min-w-[7.5rem] sm:min-w-[9rem]">
+                      Employee
+                    </TableHead>
+                    <TableHead className="hidden min-w-[4rem] sm:table-cell">
                       Rating
                     </TableHead>
-                    <TableHead className="w-1/5 text-center">Date</TableHead>
-                    <TableHead className="w-1/5 text-right pr-4">
+                    <TableHead className="hidden min-w-[5rem] sm:table-cell">
+                      Date
+                    </TableHead>
+                    <TableHead className="hidden min-w-[3.5rem] md:table-cell">
                       Quarter
                     </TableHead>
-                    <TableHead className="w-1/5 text-right pr-4">
-                      Actions
+                    <TableHead className={EVALUATOR_ACTIONS_HEAD_CLASS}>
+                      <span className="lg:hidden" aria-hidden>
+                        ⋮
+                      </span>
+                      <span className="hidden lg:inline">Actions</span>
                     </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {Array.from({ length: itemsPerPage }).map((_, index) => (
                     <TableRow key={`skeleton-${index}`}>
-                      <TableCell className="w-1/5 pl-4">
+                      <TableCell>
                         <div className="flex items-center space-x-3">
                           <Skeleton className="h-8 w-8 rounded-full" />
                           <div className="space-y-2">
@@ -488,20 +558,17 @@ export default function OverviewTab() {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="w-1/5 pl-4">
-                        <Skeleton className="h-6 w-20 rounded-full mx-auto" />
+                      <TableCell className="hidden sm:table-cell">
+                        <Skeleton className="h-6 w-20 rounded-full" />
                       </TableCell>
-                      <TableCell className="w-1/5">
-                        <div className="flex flex-col items-center space-y-2">
-                          <Skeleton className="h-4 w-20" />
-                          <Skeleton className="h-3 w-16" />
-                        </div>
+                      <TableCell className="hidden sm:table-cell">
+                        <Skeleton className="h-4 w-20" />
                       </TableCell>
-                      <TableCell className="w-1/5 text-right pr-6">
-                        <Skeleton className="h-6 w-16 rounded-full ml-auto" />
+                      <TableCell className="hidden md:table-cell">
+                        <Skeleton className="h-6 w-16 rounded-full" />
                       </TableCell>
-                      <TableCell className="w-1/5 text-right pl-1 pr-4">
-                        <Skeleton className="h-8 w-16 ml-auto" />
+                      <TableCell className={evaluatorActionsCellClass("")}>
+                        <Skeleton className="mx-auto h-8 w-8 rounded-md bg-gray-200" />
                       </TableCell>
                     </TableRow>
                   ))}
@@ -538,20 +605,30 @@ export default function OverviewTab() {
               </div>
 
               {/* Scrollable Table */}
-              <div className="max-h-[350px] md:max-h-[500px] lg:max-h-[700px] xl:max-h-[750px] overflow-y-auto overflow-x-auto scrollable-table overview-table">
-                <Table className="table-fixed w-full">
-                  <TableHeader className="sticky top-0 z-10 border-b border-gray-200 bg-white [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600">
-                    <TableRow key="overview-header">
-                      <TableHead className="w-1/5 pl-4">Employee</TableHead>
-                      <TableHead className="w-1/5 text-center pl-4">
+              <p className="px-3 py-2 text-[0.65rem] text-muted-foreground lg:hidden">
+                Swipe horizontally to view all columns.
+              </p>
+              <div className="max-h-[min(70vh,32rem)] overflow-y-auto overflow-x-auto scrollable-table overview-table [-webkit-overflow-scrolling:touch]">
+                <Table className={EVALUATOR_TABLE_CLASS} wrapperClassName="overflow-visible">
+                  <TableHeader className="sticky top-0 z-10 border-b border-gray-200 bg-white/95 backdrop-blur-sm">
+                    <TableRow className="border-0 hover:bg-transparent" key="overview-header">
+                      <TableHead className="min-w-[7.5rem] sm:min-w-[9rem]">
+                        Employee
+                      </TableHead>
+                      <TableHead className="hidden min-w-[4rem] sm:table-cell">
                         Rating
                       </TableHead>
-                      <TableHead className="w-1/5 text-center">Date</TableHead>
-                      <TableHead className="w-1/5 text-right pr-4">
+                      <TableHead className="hidden min-w-[5rem] sm:table-cell">
+                        Date
+                      </TableHead>
+                      <TableHead className="hidden min-w-[3.5rem] md:table-cell">
                         Quarter
                       </TableHead>
-                      <TableHead className="w-1/5 text-right pr-4">
-                        Actions
+                      <TableHead className={EVALUATOR_ACTIONS_HEAD_CLASS}>
+                        <span className="lg:hidden" aria-hidden>
+                          ⋮
+                        </span>
+                        <span className="hidden lg:inline">Actions</span>
                       </TableHead>
                     </TableRow>
                   </TableHeader>
@@ -636,13 +713,16 @@ export default function OverviewTab() {
                           badgeClassName,
                           textClassName,
                         } = ratingBand;
+                        const reviewDate = formatListDate(review.created_at);
+                        const statusLabels = formatStatusLabel(review.status);
+                        const quarterValue = getQuarterFromEvaluationData(review);
 
                         return (
                           <TableRow key={review.id} className={rowClassName}>
-                            <TableCell className="px-6 py-4">
-                              <div>
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="font-medium text-gray-900">
+                            <TableCell>
+                              <div className="min-w-0">
+                                <div className="mb-1 flex flex-wrap items-center gap-1">
+                                  <span className="max-w-[10rem] truncate text-sm font-medium text-gray-900 sm:max-w-none">
                                     {[
                                       review.employee?.fname,
                                       review.employee?.lname,
@@ -652,35 +732,76 @@ export default function OverviewTab() {
                                       .trim() || "—"}
                                   </span>
                                   {isNew && (
-                                    <Badge className="bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 font-semibold">
+                                    <Badge className="bg-yellow-100 px-1 py-0 text-[0.6rem] font-semibold text-yellow-800 sm:text-xs">
                                       ⚡ New
                                     </Badge>
                                   )}
                                   {!isNew && isRecent && (
-                                    <Badge className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 font-semibold">
+                                    <Badge className="bg-blue-100 px-1 py-0 text-[0.6rem] font-semibold text-blue-800 sm:text-xs">
                                       🕐 Recent
                                     </Badge>
                                   )}
                                   {isPending && (
-                                    <Badge className="bg-orange-100 text-orange-800 text-xs px-2 py-0.5 font-semibold">
-                                      🕐 Pending
+                                    <Badge className="bg-orange-100 px-1 py-0 text-[0.6rem] font-semibold text-orange-800 sm:text-xs">
+                                      ⏳ Pending
                                     </Badge>
                                   )}
-
                                   {isCompleted && (
-                                    <Badge className="bg-green-100 text-green-800 text-xs px-2 py-0.5 font-semibold">
-                                      ✓ COMPLETED
+                                    <Badge className="bg-green-100 px-1 py-0 text-[0.6rem] font-semibold text-green-800 sm:text-xs">
+                                      ✓ Completed
                                     </Badge>
                                   )}
                                 </div>
+
+                                <div className="mt-1.5 flex flex-wrap items-center gap-1 lg:hidden">
+                                  <div
+                                    className={cn(
+                                      "flex items-center justify-center gap-1.5",
+                                      textClassName
+                                    )}
+                                  >
+                                    <span
+                                      className={cn(
+                                        "rounded-full px-2 py-0.5 text-[0.6rem] font-medium sm:text-xs",
+                                        badgeClassName
+                                      )}
+                                    >
+                                      {ratingLabel}
+                                    </span>
+                                    <span className="text-[0.65rem] font-bold sm:text-xs">
+                                      {formatRatingDisplay(review.rating)}
+                                    </span>
+                                  </div>
+                                  <Badge
+                                    className={cn(
+                                      "max-w-[5rem] truncate text-[0.6rem] sm:max-w-none sm:text-xs",
+                                      getQuarterColor(String(quarterValue))
+                                    )}
+                                  >
+                                    {String(quarterValue)}
+                                  </Badge>
+                                  <span className="text-[0.65rem] text-gray-600 sm:hidden">
+                                    {reviewDate.short}
+                                  </span>
+                                  <Badge className="bg-gray-100 text-[0.6rem] text-gray-800 sm:text-xs">
+                                    {statusLabels.short}
+                                  </Badge>
+                                </div>
                               </div>
                             </TableCell>
-                            <TableCell className="w-1/5 pl-4">
+
+                            <TableCell className="hidden sm:table-cell">
                               <div
-                                className={`flex items-center justify-center gap-2 ${textClassName}`}
+                                className={cn(
+                                  "flex items-center justify-center gap-2",
+                                  textClassName
+                                )}
                               >
                                 <span
-                                  className={`px-2 py-1 rounded-full text-xs font-medium ${badgeClassName}`}
+                                  className={cn(
+                                    "rounded-full px-2 py-1 text-xs font-medium",
+                                    badgeClassName
+                                  )}
                                 >
                                   {ratingLabel}
                                 </span>
@@ -689,70 +810,33 @@ export default function OverviewTab() {
                                 </span>
                               </div>
                             </TableCell>
-                            <TableCell className="w-1/5">
+
+                            <TableCell className="hidden sm:table-cell">
                               <div className="flex flex-col items-center">
-                                <span className="font-medium">
-                                  {new Date(
-                                    review.created_at
-                                  ).toLocaleDateString()}
-                                </span>
+                                <span className="font-medium">{reviewDate.short}</span>
                                 <span className="text-xs text-gray-500">
                                   {getTimeAgo(String(review.created_at))}
                                 </span>
                               </div>
                             </TableCell>
-                            <TableCell className="w-1/5 text-right pr-6">
-                              {(() => {
-                                // Check if "Others" is selected
-                                const isOthersSelected = 
-                                  (review.reviewTypeOthersImprovement != null && review.reviewTypeOthersImprovement !== 0) || 
-                                  (review.reviewTypeOthersCustom && 
-                                   review.reviewTypeOthersCustom.trim() !== "");
-                                
-                                // Check if regular or probationary types are empty/null
-                                const hasRegular = review.reviewTypeRegular != null && 
-                                  review.reviewTypeRegular !== "" && 
-                                  review.reviewTypeRegular !== "null" &&
-                                  String(review.reviewTypeRegular).trim() !== "" &&
-                                  review.reviewTypeRegular !== 0;
-                                
-                                const hasProbationary = review.reviewTypeProbationary != null && 
-                                  review.reviewTypeProbationary !== "" &&
-                                  review.reviewTypeProbationary !== "null" &&
-                                  String(review.reviewTypeProbationary).trim() !== "";
-                                
-                                // Determine the display value
-                                let displayValue: string = "Others";
-                                
-                                if (hasRegular) {
-                                  displayValue = String(review.reviewTypeRegular).trim();
-                                } else if (hasProbationary) {
-                                  displayValue = "M" + String(review.reviewTypeProbationary).trim();
-                                } else if (isOthersSelected) {
-                                  // If custom value exists, use it; otherwise use "Others"
-                                  if (review.reviewTypeOthersCustom && review.reviewTypeOthersCustom.trim() !== "") {
-                                    displayValue = review.reviewTypeOthersCustom.trim();
-                                  } else {
-                                    displayValue = "Others";
-                                  }
-                                }
-                                
-                                return (
-                                  <Badge className={getQuarterColor(displayValue)}>
-                                    {displayValue}
-                                  </Badge>
-                                );
-                              })()}
+
+                            <TableCell className="hidden md:table-cell">
+                              <Badge className={getQuarterColor(String(quarterValue))}>
+                                {String(quarterValue)}
+                              </Badge>
                             </TableCell>
-                            <TableCell className="w-1/5 text-right pl-1 pr-4">
+
+                            <TableCell className={evaluatorActionsCellClass(rowClassName)}>
                               <Button
-                                size="sm"
+                                type="button"
+                                size="icon"
                                 variant="outline"
                                 onClick={() => handleViewEvaluation(review)}
-                                className="bg-blue-600 hover:bg-blue-700 hover:text-white text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+                                aria-label="View evaluation"
+                                className="mx-auto h-8 w-8 shrink-0 cursor-pointer border-blue-700 bg-blue-600 text-white hover:bg-blue-700 hover:text-white lg:mx-0 lg:h-9 lg:w-auto lg:px-3 lg:transition-all lg:duration-200 lg:hover:-translate-y-0.5 lg:hover:shadow-md lg:active:translate-y-0"
                               >
-                                <Eye className="w-4 h-4" />
-                                View
+                                <Eye className="h-4 w-4 lg:hidden" />
+                                <span className="hidden lg:inline">☰ View</span>
                               </Button>
                             </TableCell>
                           </TableRow>
