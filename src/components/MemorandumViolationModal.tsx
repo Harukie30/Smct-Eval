@@ -1106,7 +1106,7 @@ export default function MemorandumViolationModal({
       >
         <DialogContent
           className={cn(
-            "relative flex max-h-[min(88dvh,640px)] w-[min(86vw,20rem)] max-w-sm flex-col overflow-x-hidden overflow-y-hidden border-amber-200/50 p-0 shadow-xl sm:max-h-[min(92dvh,800px)] sm:w-full sm:max-w-md",
+            "relative flex max-h-[min(88dvh,640px)] w-[min(92vw,24rem)] max-w-md flex-col overflow-x-hidden overflow-y-hidden border-amber-200/50 p-0 shadow-xl sm:max-h-[min(92dvh,800px)] sm:w-full sm:max-w-lg",
             dialogAnimationClass
           )}
         >
@@ -1176,68 +1176,35 @@ export default function MemorandumViolationModal({
           </div>
 
           <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-3 py-3 sm:max-h-none sm:px-6 sm:py-6">
-            <ol className="memorandum-violation-form min-w-0 space-y-3 sm:space-y-6">
-              <li className="min-w-0 space-y-1.5 sm:space-y-3">
-                <div className="flex min-w-0 items-center gap-2 sm:items-baseline">
-                  <span
-                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-600 text-[10px] font-bold text-white sm:h-7 sm:w-7 sm:text-xs"
-                    aria-hidden
-                  >
-                    1
-                  </span>
+            <ol className="memorandum-violation-form min-w-0 space-y-4 sm:space-y-6">
+              <li className="grid min-w-0 grid-cols-[1.75rem_minmax(0,1fr)] items-start gap-x-2.5 gap-y-0 sm:grid-cols-[2.25rem_minmax(0,1fr)] sm:gap-x-3">
+                <span
+                  className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-600 text-[10px] font-bold text-white sm:mt-1 sm:h-7 sm:w-7 sm:text-xs"
+                  aria-hidden
+                >
+                  1
+                </span>
+                <div className="min-w-0 space-y-1.5 sm:space-y-2">
                   <Label
                     htmlFor="add-violation-title"
-                    className="min-w-0 flex-1 text-xs font-semibold leading-snug text-gray-900 sm:text-base"
+                    className="block text-xs font-semibold leading-snug text-gray-900 sm:text-base"
                   >
                     Violation title{" "}
                     <span className="text-red-500" aria-hidden>
                       *
                     </span>
                   </Label>
-                </div>
-                <p className="hidden text-xs text-gray-500 sm:ml-9 sm:block">
-                  Shown in the table. Example: “Uniform policy — first notice”.
-                </p>
-                <Input
-                  id="add-violation-title"
-                  placeholder="Short title"
-                  value={addTitle}
-                  onChange={(e) => setAddTitle(e.target.value)}
-                  disabled={submittingAdd}
-                  className="h-9 w-full min-w-0 max-w-full bg-white text-sm sm:ml-9 sm:h-11 sm:text-base"
-                  autoComplete="off"
-                  aria-required
-                />
-              </li>
-
-              <li className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
-
-              <li className="min-w-0 space-y-1.5 sm:space-y-3">
-                <div className="flex min-w-0 items-center gap-2 sm:items-baseline">
-                  <span
-                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-600 text-[10px] font-bold text-white sm:h-7 sm:w-7 sm:text-xs"
-                    aria-hidden
-                  >
-                    2
-                  </span>
-                  <Label
-                    htmlFor="add-violation-date"
-                    className="min-w-0 flex-1 text-xs font-semibold leading-snug text-gray-900 sm:text-base"
-                  >
-                    Violation date{" "}
-                    <span className="text-red-500" aria-hidden>
-                      *
-                    </span>
-                  </Label>
-                </div>
-                <div className="min-w-0 w-full sm:ml-9 sm:max-w-xs">
+                  <p className="hidden text-xs leading-relaxed text-gray-500 sm:block">
+                    Shown in the table. Example: “Uniform policy — first notice”.
+                  </p>
                   <Input
-                    id="add-violation-date"
-                    type="date"
-                    value={addDateStr}
-                    onChange={(e) => setAddDateStr(e.target.value)}
+                    id="add-violation-title"
+                    placeholder="Short title"
+                    value={addTitle}
+                    onChange={(e) => setAddTitle(e.target.value)}
                     disabled={submittingAdd}
-                    className="h-9 w-full min-w-0 max-w-full bg-white text-sm sm:h-11"
+                    className="h-9 w-full min-w-0 bg-white text-sm sm:h-11 sm:text-base"
+                    autoComplete="off"
                     aria-required
                   />
                 </div>
@@ -1245,63 +1212,94 @@ export default function MemorandumViolationModal({
 
               <li className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
 
-              <li className="min-w-0 space-y-1.5 sm:space-y-3">
-                <div className="flex min-w-0 items-center gap-2 sm:items-baseline">
-                  <span
-                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-600 text-[10px] font-bold text-white sm:h-7 sm:w-7 sm:text-xs"
-                    aria-hidden
+              <li className="grid min-w-0 grid-cols-[1.75rem_minmax(0,1fr)] items-start gap-x-2.5 gap-y-0 sm:grid-cols-[2.25rem_minmax(0,1fr)] sm:gap-x-3">
+                <span
+                  className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-600 text-[10px] font-bold text-white sm:mt-1 sm:h-7 sm:w-7 sm:text-xs"
+                  aria-hidden
+                >
+                  2
+                </span>
+                <div className="min-w-0 space-y-1.5 sm:space-y-2">
+                  <Label
+                    htmlFor="add-violation-date"
+                    className="block text-xs font-semibold leading-snug text-gray-900 sm:text-base"
                   >
-                    3
-                  </span>
+                    Violation date{" "}
+                    <span className="text-red-500" aria-hidden>
+                      *
+                    </span>
+                  </Label>
+                  <Input
+                    id="add-violation-date"
+                    type="date"
+                    value={addDateStr}
+                    onChange={(e) => setAddDateStr(e.target.value)}
+                    disabled={submittingAdd}
+                    className="h-9 w-full min-w-0 max-w-full bg-white text-sm sm:h-11 sm:max-w-xs"
+                    aria-required
+                  />
+                </div>
+              </li>
+
+              <li className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
+
+              <li className="grid min-w-0 grid-cols-[1.75rem_minmax(0,1fr)] items-start gap-x-2.5 gap-y-0 sm:grid-cols-[2.25rem_minmax(0,1fr)] sm:gap-x-3">
+                <span
+                  className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-600 text-[10px] font-bold text-white sm:mt-1 sm:h-7 sm:w-7 sm:text-xs"
+                  aria-hidden
+                >
+                  3
+                </span>
+                <div className="min-w-0 space-y-1.5 sm:space-y-2">
                   <Label
                     htmlFor="add-violation-offense"
-                    className="min-w-0 flex-1 text-xs font-semibold leading-snug text-gray-900 sm:text-base"
+                    className="block text-xs font-semibold leading-snug text-gray-900 sm:text-base"
                   >
                     Offense{" "}
                     <span className="text-red-500" aria-hidden>
                       *
                     </span>
                   </Label>
+                  <Input
+                    id="add-violation-offense"
+                    placeholder="e.g. Unauthorized absence"
+                    value={addSummary}
+                    onChange={(e) => setAddSummary(e.target.value)}
+                    disabled={submittingAdd}
+                    className="h-9 w-full min-w-0 bg-white text-sm sm:h-11 sm:text-base"
+                    autoComplete="off"
+                    aria-required
+                  />
                 </div>
-                <Input
-                  id="add-violation-offense"
-                  placeholder="e.g. Unauthorized absence"
-                  value={addSummary}
-                  onChange={(e) => setAddSummary(e.target.value)}
-                  disabled={submittingAdd}
-                  className="h-9 w-full min-w-0 max-w-full bg-white text-sm sm:ml-9 sm:h-11 sm:text-base"
-                  autoComplete="off"
-                  aria-required
-                />
               </li>
 
               <li className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
 
-              <li className="min-w-0 space-y-1.5 sm:space-y-3">
-                <div className="flex min-w-0 items-center gap-2 sm:items-baseline">
-                  <span
-                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-600 text-[10px] font-bold text-white sm:h-7 sm:w-7 sm:text-xs"
-                    aria-hidden
-                  >
-                    4
-                  </span>
+              <li className="grid min-w-0 grid-cols-[1.75rem_minmax(0,1fr)] items-start gap-x-2.5 gap-y-0 sm:grid-cols-[2.25rem_minmax(0,1fr)] sm:gap-x-3">
+                <span
+                  className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-600 text-[10px] font-bold text-white sm:mt-1 sm:h-7 sm:w-7 sm:text-xs"
+                  aria-hidden
+                >
+                  4
+                </span>
+                <div className="min-w-0 space-y-1.5 sm:space-y-2">
                   <Label
                     htmlFor="add-violation-sanction"
-                    className="min-w-0 flex-1 text-xs font-semibold leading-snug text-gray-900 sm:text-base"
+                    className="block text-xs font-semibold leading-snug text-gray-900 sm:text-base"
                   >
                     Sanction{" "}
                     <span className="font-normal text-gray-500">(optional)</span>
                   </Label>
+                  <Textarea
+                    id="add-violation-sanction"
+                    placeholder="e.g. Written warning…"
+                    value={addSanction}
+                    onChange={(e) => setAddSanction(e.target.value)}
+                    disabled={submittingAdd}
+                    className="min-h-[3.5rem] w-full min-w-0 resize-y bg-white text-sm sm:min-h-[5.5rem]"
+                    rows={3}
+                  />
                 </div>
-                <Textarea
-                  id="add-violation-sanction"
-                  placeholder="e.g. Written warning…"
-                  value={addSanction}
-                  onChange={(e) => setAddSanction(e.target.value)}
-                  disabled={submittingAdd}
-                  className="min-h-[3rem] w-full min-w-0 max-w-full resize-y bg-white text-sm sm:ml-9 sm:min-h-[88px]"
-                  rows={2}
-                />
               </li>
             </ol>
           </div>
@@ -1405,65 +1403,32 @@ export default function MemorandumViolationModal({
           </div>
 
           <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-3 py-3 sm:px-6 sm:py-6">
-            <ol className="memorandum-violation-form min-w-0 space-y-3 sm:space-y-6">
-              <li className="min-w-0 space-y-1.5 sm:space-y-3">
-                <div className="flex min-w-0 items-center gap-2">
-                  <span
-                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-600 text-[10px] font-bold text-white sm:h-7 sm:w-7 sm:text-xs"
-                    aria-hidden
-                  >
-                    1
-                  </span>
+            <ol className="memorandum-violation-form min-w-0 space-y-4 sm:space-y-6">
+              <li className="grid min-w-0 grid-cols-[1.75rem_minmax(0,1fr)] items-start gap-x-2.5 gap-y-0 sm:grid-cols-[2.25rem_minmax(0,1fr)] sm:gap-x-3">
+                <span
+                  className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-600 text-[10px] font-bold text-white sm:mt-1 sm:h-7 sm:w-7 sm:text-xs"
+                  aria-hidden
+                >
+                  1
+                </span>
+                <div className="min-w-0 space-y-1.5 sm:space-y-2">
                   <Label
                     htmlFor="edit-violation-title"
-                    className="min-w-0 flex-1 text-xs font-semibold leading-snug text-gray-900 sm:text-base"
+                    className="block text-xs font-semibold leading-snug text-gray-900 sm:text-base"
                   >
                     Violation title{" "}
                     <span className="text-red-500" aria-hidden>
                       *
                     </span>
                   </Label>
-                </div>
-                <Input
-                  id="edit-violation-title"
-                  placeholder="Short title"
-                  value={editTitleDraft}
-                  onChange={(e) => setEditTitleDraft(e.target.value)}
-                  disabled={savingSummaryEdit}
-                  className="h-9 w-full min-w-0 max-w-full bg-white text-sm sm:ml-9 sm:h-11 sm:text-base"
-                  autoComplete="off"
-                  aria-required
-                />
-              </li>
-
-              <li className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
-
-              <li className="min-w-0 space-y-1.5 sm:space-y-3">
-                <div className="flex min-w-0 items-center gap-2">
-                  <span
-                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-600 text-[10px] font-bold text-white sm:h-7 sm:w-7 sm:text-xs"
-                    aria-hidden
-                  >
-                    2
-                  </span>
-                  <Label
-                    htmlFor="edit-violation-date"
-                    className="min-w-0 flex-1 text-xs font-semibold leading-snug text-gray-900 sm:text-base"
-                  >
-                    Violation date{" "}
-                    <span className="text-red-500" aria-hidden>
-                      *
-                    </span>
-                  </Label>
-                </div>
-                <div className="min-w-0 w-full sm:ml-9 sm:max-w-xs">
                   <Input
-                    id="edit-violation-date"
-                    type="date"
-                    value={editDateDraft}
-                    onChange={(e) => setEditDateDraft(e.target.value)}
+                    id="edit-violation-title"
+                    placeholder="Short title"
+                    value={editTitleDraft}
+                    onChange={(e) => setEditTitleDraft(e.target.value)}
                     disabled={savingSummaryEdit}
-                    className="h-9 w-full min-w-0 max-w-full bg-white text-sm sm:h-11"
+                    className="h-9 w-full min-w-0 bg-white text-sm sm:h-11 sm:text-base"
+                    autoComplete="off"
                     aria-required
                   />
                 </div>
@@ -1471,63 +1436,94 @@ export default function MemorandumViolationModal({
 
               <li className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
 
-              <li className="min-w-0 space-y-1.5 sm:space-y-3">
-                <div className="flex min-w-0 items-center gap-2">
-                  <span
-                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-600 text-[10px] font-bold text-white sm:h-7 sm:w-7 sm:text-xs"
-                    aria-hidden
+              <li className="grid min-w-0 grid-cols-[1.75rem_minmax(0,1fr)] items-start gap-x-2.5 gap-y-0 sm:grid-cols-[2.25rem_minmax(0,1fr)] sm:gap-x-3">
+                <span
+                  className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-600 text-[10px] font-bold text-white sm:mt-1 sm:h-7 sm:w-7 sm:text-xs"
+                  aria-hidden
+                >
+                  2
+                </span>
+                <div className="min-w-0 space-y-1.5 sm:space-y-2">
+                  <Label
+                    htmlFor="edit-violation-date"
+                    className="block text-xs font-semibold leading-snug text-gray-900 sm:text-base"
                   >
-                    3
-                  </span>
+                    Violation date{" "}
+                    <span className="text-red-500" aria-hidden>
+                      *
+                    </span>
+                  </Label>
+                  <Input
+                    id="edit-violation-date"
+                    type="date"
+                    value={editDateDraft}
+                    onChange={(e) => setEditDateDraft(e.target.value)}
+                    disabled={savingSummaryEdit}
+                    className="h-9 w-full min-w-0 bg-white text-sm sm:h-11 sm:max-w-xs"
+                    aria-required
+                  />
+                </div>
+              </li>
+
+              <li className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
+
+              <li className="grid min-w-0 grid-cols-[1.75rem_minmax(0,1fr)] items-start gap-x-2.5 gap-y-0 sm:grid-cols-[2.25rem_minmax(0,1fr)] sm:gap-x-3">
+                <span
+                  className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-600 text-[10px] font-bold text-white sm:mt-1 sm:h-7 sm:w-7 sm:text-xs"
+                  aria-hidden
+                >
+                  3
+                </span>
+                <div className="min-w-0 space-y-1.5 sm:space-y-2">
                   <Label
                     htmlFor="edit-violation-offense"
-                    className="min-w-0 flex-1 text-xs font-semibold leading-snug text-gray-900 sm:text-base"
+                    className="block text-xs font-semibold leading-snug text-gray-900 sm:text-base"
                   >
                     Offense{" "}
                     <span className="text-red-500" aria-hidden>
                       *
                     </span>
                   </Label>
+                  <Input
+                    id="edit-violation-offense"
+                    placeholder="e.g. Unauthorized absence"
+                    value={editSummaryDraft}
+                    onChange={(e) => setEditSummaryDraft(e.target.value)}
+                    disabled={savingSummaryEdit}
+                    className="h-9 w-full min-w-0 bg-white text-sm sm:h-11 sm:text-base"
+                    autoComplete="off"
+                    aria-required
+                  />
                 </div>
-                <Input
-                  id="edit-violation-offense"
-                  placeholder="e.g. Unauthorized absence"
-                  value={editSummaryDraft}
-                  onChange={(e) => setEditSummaryDraft(e.target.value)}
-                  disabled={savingSummaryEdit}
-                  className="h-9 w-full min-w-0 max-w-full bg-white text-sm sm:ml-9 sm:h-11 sm:text-base"
-                  autoComplete="off"
-                  aria-required
-                />
               </li>
 
               <li className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
 
-              <li className="min-w-0 space-y-1.5 sm:space-y-3">
-                <div className="flex min-w-0 items-center gap-2">
-                  <span
-                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-600 text-[10px] font-bold text-white sm:h-7 sm:w-7 sm:text-xs"
-                    aria-hidden
-                  >
-                    4
-                  </span>
+              <li className="grid min-w-0 grid-cols-[1.75rem_minmax(0,1fr)] items-start gap-x-2.5 gap-y-0 sm:grid-cols-[2.25rem_minmax(0,1fr)] sm:gap-x-3">
+                <span
+                  className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-600 text-[10px] font-bold text-white sm:mt-1 sm:h-7 sm:w-7 sm:text-xs"
+                  aria-hidden
+                >
+                  4
+                </span>
+                <div className="min-w-0 space-y-1.5 sm:space-y-2">
                   <Label
                     htmlFor="edit-violation-sanction"
-                    className="min-w-0 flex-1 text-xs font-semibold leading-snug text-gray-900 sm:text-base"
+                    className="block text-xs font-semibold leading-snug text-gray-900 sm:text-base"
                   >
                     Sanction{" "}
                     <span className="font-normal text-gray-500">(optional)</span>
                   </Label>
+                  <Textarea
+                    id="edit-violation-sanction"
+                    placeholder="e.g. Written warning…"
+                    value={editSanctionDraft}
+                    onChange={(e) => setEditSanctionDraft(e.target.value)}
+                    disabled={savingSummaryEdit}
+                    className="min-h-[3.5rem] w-full min-w-0 resize-y bg-white text-sm sm:min-h-[5.5rem]"
+                    rows={3}
+                  />
                 </div>
-                <Textarea
-                  id="edit-violation-sanction"
-                  placeholder="e.g. Written warning…"
-                  value={editSanctionDraft}
-                  onChange={(e) => setEditSanctionDraft(e.target.value)}
-                  disabled={savingSummaryEdit}
-                  className="min-h-[3rem] w-full min-w-0 max-w-full resize-y bg-white text-sm sm:ml-9 sm:min-h-[88px]"
-                  rows={2}
-                />
               </li>
             </ol>
           </div>

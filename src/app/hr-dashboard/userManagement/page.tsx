@@ -1569,30 +1569,50 @@ export default function UserManagementTab() {
   const userTableBusy = refresh || isPageLoading;
 
   return (
-    <div className="relative overflow-y-auto pr-2 min-h-[400px]">
+    <div className="relative min-h-[400px] overflow-y-auto pr-0 sm:pr-2">
       <Card>
-        <CardHeader>
-          <CardTitle>User Management</CardTitle>
-          <CardDescription>Manage system users and permissions</CardDescription>
+        <CardHeader className="space-y-1 p-4 sm:p-6">
+          <CardTitle className="text-base sm:text-lg">User Management</CardTitle>
+          <CardDescription className="text-xs leading-relaxed sm:text-sm">
+            Manage system users and permissions
+          </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
           {/* Tab Navigation */}
-          <div className="flex space-x-1 mb-6">
+          <div
+            className="mb-4 flex max-w-full flex-wrap items-center gap-2 sm:mb-6 sm:gap-1.5"
+            role="tablist"
+            aria-label="User management views"
+          >
             <Button
+              type="button"
+              role="tab"
+              aria-selected={tab === "active"}
               variant={tab === "active" ? "default" : "outline"}
               onClick={() => handleTabChange("active")}
-              className="flex items-center gap-2 cursor-pointer"
+              className="h-9 w-auto max-w-full shrink-0 cursor-pointer gap-1.5 px-3 text-sm whitespace-nowrap sm:gap-2"
             >
-              <span>👥</span>
-              Active Users ({activeTotalItems})
+              <span className="shrink-0" aria-hidden>
+                👥
+              </span>
+              <span className="tabular-nums">
+                Active Users ({activeTotalItems})
+              </span>
             </Button>
             <Button
+              type="button"
+              role="tab"
+              aria-selected={tab === "new"}
               variant={tab === "new" ? "default" : "outline"}
               onClick={() => handleTabChange("new")}
-              className="flex items-center gap-2 cursor-pointer"
+              className="h-9 w-auto max-w-full shrink-0 cursor-pointer gap-1.5 px-3 text-sm whitespace-nowrap sm:gap-2"
             >
-              <span>🆕</span>
-              New Registrations ({pendingTotalItems})
+              <span className="shrink-0" aria-hidden>
+                🆕
+              </span>
+              <span className="tabular-nums">
+                New Registrations ({pendingTotalItems})
+              </span>
             </Button>
           </div>
         </CardContent>
