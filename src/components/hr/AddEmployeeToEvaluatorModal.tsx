@@ -9,7 +9,6 @@ import {
   useState,
 } from "react";
 import {
-  Inbox,
   Loader2,
   Plus,
   Search,
@@ -517,7 +516,7 @@ export default function AddEmployeeToEvaluatorModal({
     <>
       <Dialog open={open} onOpenChangeAction={onOpenChange}>
         <DialogContent
-          className="relative max-h-[95vh] max-w-[88rem] gap-0 overflow-hidden border-slate-200/80 p-0 shadow-2xl sm:rounded-xl"
+          className="relative max-h-[110vh] max-w-[95rem] gap-0 overflow-hidden border-slate-200/80 p-0 shadow-2xl sm:rounded-xl"
           style={{
             backgroundImage: "url(/smct.png)",
             backgroundSize: "85%",
@@ -712,9 +711,14 @@ export default function AddEmployeeToEvaluatorModal({
                           <TableRow className="hover:bg-transparent">
                             <TableCell colSpan={6} className="py-12 text-center">
                               <div className="mx-auto flex max-w-sm flex-col items-center gap-2">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400">
-                                  <Inbox className="h-5 w-5" strokeWidth={1.5} aria-hidden />
-                                </div>
+                                <img
+                                  src="/not-found.gif"
+                                  alt=""
+                                  width={96}
+                                  height={96}
+                                  className="h-20 w-20 object-contain"
+                                  decoding="async"
+                                />
                                 <p className="text-sm font-medium text-slate-700">
                                   No one assigned yet
                                 </p>
@@ -841,9 +845,14 @@ export default function AddEmployeeToEvaluatorModal({
                           <TableRow className="hover:bg-transparent">
                             <TableCell colSpan={6} className="py-12 text-center">
                               <div className="mx-auto flex max-w-sm flex-col items-center gap-2">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400">
-                                  <Search className="h-5 w-5" strokeWidth={1.5} aria-hidden />
-                                </div>
+                                <img
+                                  src="/not-found.gif"
+                                  alt=""
+                                  width={96}
+                                  height={96}
+                                  className="h-20 w-20 object-contain"
+                                  decoding="async"
+                                />
                                 <p className="text-sm font-medium text-slate-700">
                                   No matches
                                 </p>
