@@ -517,7 +517,7 @@ export default function AddEmployeeToEvaluatorModal({
     <>
       <Dialog open={open} onOpenChangeAction={onOpenChange}>
         <DialogContent
-          className="relative max-h-[90vh] max-w-5xl gap-0 overflow-hidden border-slate-200/80 p-0 shadow-2xl sm:rounded-xl"
+          className="relative max-h-[95vh] max-w-[88rem] gap-0 overflow-hidden border-slate-200/80 p-0 shadow-2xl sm:rounded-xl"
           style={{
             backgroundImage: "url(/smct.png)",
             backgroundSize: "85%",
@@ -643,7 +643,7 @@ export default function AddEmployeeToEvaluatorModal({
               />
             </div>
 
-            <div className="space-y-5">
+            <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
               <section className="overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-950/5">
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 bg-slate-50/80 px-4 py-3">
                   <div className="flex items-center gap-2.5">
@@ -666,7 +666,7 @@ export default function AddEmployeeToEvaluatorModal({
                       : `${filteredAssignedRows.length} shown`}
                   </Badge>
                 </div>
-                <div className="max-h-[22vh] min-h-[132px] overflow-auto">
+                  <div className="max-h-[30vh] min-h-[180px] overflow-auto xl:max-h-[58vh]">
                   {loadingAssigned || tableActionLoading ? (
                     <div className="space-y-2 p-4">
                       {Array.from({ length: 4 }).map((_, idx) => (
@@ -795,7 +795,7 @@ export default function AddEmployeeToEvaluatorModal({
                       : `${filteredUnassignedRows.length} shown`}
                   </Badge>
                 </div>
-                <div className="max-h-[22vh] min-h-[132px] overflow-auto">
+                <div className="max-h-[30vh] min-h-[180px] overflow-auto xl:max-h-[58vh]">
                   {loadingPool || tableActionLoading ? (
                     <div className="space-y-2 p-4">
                       {Array.from({ length: 5 }).map((_, idx) => (
