@@ -79,20 +79,22 @@ export function Combobox({
             role="combobox"
             aria-expanded={open}
             className={cn(
-              "w-full justify-between",
+              "w-full min-w-0 justify-between",
               !value && "text-muted-foreground",
               className
             )}
             disabled={disabled}
           >
-            {value
-              ? (() => {
-                  const selectedOption = safeOptions.find(
-                    (option) => option && String(getOptionValue(option)) === String(value)
-                  );
-                  return selectedOption ? getOptionText(selectedOption) : value;
-                })()
-              : placeholder}
+            <span className="min-w-0 flex-1 truncate text-left">
+              {value
+                ? (() => {
+                    const selectedOption = safeOptions.find(
+                      (option) => option && String(getOptionValue(option)) === String(value)
+                    );
+                    return selectedOption ? getOptionText(selectedOption) : value;
+                  })()
+                : placeholder}
+            </span>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
@@ -123,7 +125,7 @@ export function Combobox({
                   <div
                     key={typeof option === "string" ? option : option.value}
                     className={cn(
-                      "relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground",
+                      "relative flex cursor-pointer select-none items-start rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground",
                       String(value) === String(getOptionValue(option)) &&
                         "bg-accent"
                     )}
@@ -141,7 +143,9 @@ export function Combobox({
                           : "opacity-0"
                       )}
                     />
-                    {getOptionText(option)}
+                    <span className="min-w-0 break-words leading-snug">
+                      {getOptionText(option)}
+                    </span>
                   </div>
                 ))}
               </div>

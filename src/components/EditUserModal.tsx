@@ -1307,7 +1307,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
             </div>
 
             {/* Position */}
-            <div className="space-y-2 w-2/3">
+            <div className="min-w-0 space-y-2 w-full sm:w-2/3">
               <Label htmlFor="position">Position *</Label>
               <Combobox
                 options={
@@ -1331,7 +1331,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 placeholder="Select position"
                 searchPlaceholder="Search positions..."
                 emptyText="No positions found."
-                className={errors.position ? "border-red-500" : "bg-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"}
+                className={errors.position ? "w-full min-w-0 border-red-500" : "w-full min-w-0 bg-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"}
               />
               {errors.position && (
                 <p className="text-sm text-red-500">{errors.position}</p>
@@ -1341,7 +1341,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
             {/* Department - Show only if branch is HO, Head Office, or none, AND position is NOT Branch Manager or Area Manager */}
             {isBranchHOOrNone(formData.branch) &&
               !isManagerPosition(formData.position) && (
-                <div className="space-y-2">
+                <div className="min-w-0 space-y-2 w-full sm:w-1/2">
                   <Label htmlFor="department">Department</Label>
                   <Combobox
                     options={
@@ -1365,7 +1365,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                     placeholder="Select your department"
                     searchPlaceholder="Search departments..."
                     emptyText="No departments found."
-                    className="w-1/2 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"
+                    className="w-full min-w-0 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"
                   />
                   {errors?.department && (
                     <p className="text-sm text-red-500">{errors?.department}</p>
@@ -1374,7 +1374,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               )}
 
             {/* Branch */}
-            <div className="space-y-2 w-1/2">
+            <div className="min-w-0 space-y-2 w-full sm:w-1/2">
               <Label htmlFor="branch">Branch *</Label>
               <Combobox
               
@@ -1402,7 +1402,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 placeholder="Select branch"
                 searchPlaceholder="Search branches..."
                 emptyText="No branches found."
-                className={errors.branch ? "border-red-500" : "cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"}
+                className={errors.branch ? "w-full min-w-0 border-red-500" : "w-full min-w-0 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"}
               />
               {errors.branch && (
                 <p className="text-sm text-red-500">{errors.branch}</p>

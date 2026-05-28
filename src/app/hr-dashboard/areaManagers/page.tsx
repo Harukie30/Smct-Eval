@@ -813,7 +813,7 @@ export default function AreaManagersTab() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="text-white bg-blue-400 hover:text-blue-700 hover:bg-blue-50 cursor-pointer"
+                              className="text-white bg-blue-600 hover:text-white hover:bg-blue-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                               onClick={async () => {
                                 setAreaManagerToEdit(manager);
                                 setIsEditModalOpen(true);
@@ -848,7 +848,7 @@ export default function AreaManagersTab() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="text-white bg-red-400 hover:text-red-700 hover:bg-red-50 cursor-pointer"
+                              className="text-white bg-red-600 hover:text-white hover:bg-red-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                               onClick={() => {
                                 setAreaManagerToDelete(manager);
                                 setIsDeleteModalOpen(true);
@@ -1229,7 +1229,7 @@ export default function AreaManagersTab() {
                       <TableRow>
                         <TableHead className="w-2/5">Branch Code</TableHead>
                         <TableHead className="w-2/5 text-center">
-                          Branch ID
+                          Branch Name
                         </TableHead>
                         <TableHead className="w-1/5 text-center">
                           Actions
@@ -1303,40 +1303,66 @@ export default function AreaManagersTab() {
 
       {/* Success Dialog */}
       <Dialog open={showSuccessDialog} onOpenChangeAction={() => {}}>
-        <DialogContent className={`max-w-md p-6 ${dialogAnimationClass}`}>
-          <div className="flex flex-col items-center justify-center py-6">
-            <div className="relative mb-4">
-              <div className="animate-success-ripple absolute inset-0 rounded-full bg-green-200"></div>
-              <div className="relative w-16 h-16 bg-green-100 rounded-full flex items-center justify-center animate-success-scale">
+        <DialogContent className={`max-w-sm w-[90vw] px-6 py-6 text-center ${dialogAnimationClass}`}>
+          <DialogHeader className="border-0 pb-0 text-center sm:text-center">
+            <div className="relative mx-auto mb-5 flex h-[5.75rem] w-[5.75rem] items-center justify-center">
+              <span
+                className="absolute inset-0 rounded-full bg-emerald-400/30 motion-safe:animate-ping"
+                style={{ animationDuration: "2.4s" }}
+                aria-hidden
+              />
+              <div
+                className="absolute inset-[3px] rounded-full bg-gradient-to-br from-emerald-100/90 to-green-50 blur-[1px]"
+                aria-hidden
+              />
+              <div className="relative flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 via-green-500 to-emerald-700 shadow-[0_12px_40px_-8px_rgba(16,185,129,0.55)] ring-4 ring-white animate-success-badge-pop">
                 <svg
-                  className="w-8 h-8 text-green-600 animate-success-checkmark"
-                  fill="none"
-                  stroke="currentColor"
+                  className="h-11 w-11 text-white drop-shadow-sm"
                   viewBox="0 0 24 24"
-                  strokeWidth={3}
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden
                 >
                   <path
+                    className="animate-success-check-draw"
+                    d="M6.5 12.5l3.8 3.8L17.8 8.8"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    strokeDasharray="20"
-                    strokeDashoffset="20"
-                    d="M5 13l4 4L19 7"
                   />
                 </svg>
               </div>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <DialogTitle className="text-xl font-bold text-gray-900">
               Success!
-            </h3>
-            <p className="text-sm text-gray-600 text-center">
-              {successData.areaManager && successData.branches.length > 0 && (
+            </DialogTitle>
+            <DialogDescription className="text-gray-700">
+              {successData.areaManager && successData.branches.length > 0 ? (
                 <>
-                  {successData.areaManager.name} has been assigned to{" "}
-                  {successData.branches.map((b) => b.name).join(", ")}
+                  <span className="font-semibold text-green-700">
+                    {successData.areaManager.name}
+                  </span>{" "}
+                  has been assigned to{" "}
+                  {successData.branches.length}{" "}
+                  {successData.branches.length === 1 ? "branch" : "branches"}.
                 </>
+              ) : (
+                "Branch assignment completed successfully."
               )}
+            </DialogDescription>
+            <p className="mt-2 text-xs text-gray-500">
+              This dialog will close automatically in 2 seconds.
             </p>
-          </div>
+          </DialogHeader>
+          <DialogFooter className="border-t border-gray-200 pt-4 sm:justify-center">
+            <Button
+              className="bg-green-600 hover:bg-green-700 text-white cursor-pointer px-6 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+              onClick={() => setShowSuccessDialog(false)}
+            >
+              OK
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -1489,7 +1515,7 @@ export default function AreaManagersTab() {
                               {branch.code || branch.name}
                             </TableCell>
                             <TableCell className="py-3 text-center">
-                              {branch.id}
+                              {branch.name || "N/A"}
                             </TableCell>
                             <TableCell className="py-3 text-center">
                               <div className="flex justify-center">
@@ -1661,58 +1687,61 @@ export default function AreaManagersTab() {
         open={showEditSuccessDialog}
         onOpenChangeAction={setShowEditSuccessDialog}
       >
-        <DialogContent className={`max-w-md p-6 ${dialogAnimationClass}`}>
-          <div className="flex flex-col items-center justify-center py-6 space-y-4">
-            {/* Success Animation */}
-            <div className="relative">
-              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center animate-success-scale">
+        <DialogContent className={`max-w-sm w-[90vw] px-6 py-6 text-center ${dialogAnimationClass}`}>
+          <DialogHeader className="border-0 pb-0 text-center sm:text-center">
+            <div className="relative mx-auto mb-5 flex h-[5.75rem] w-[5.75rem] items-center justify-center">
+              <span
+                className="absolute inset-0 rounded-full bg-emerald-400/30 motion-safe:animate-ping"
+                style={{ animationDuration: "2.4s" }}
+                aria-hidden
+              />
+              <div
+                className="absolute inset-[3px] rounded-full bg-gradient-to-br from-emerald-100/90 to-green-50 blur-[1px]"
+                aria-hidden
+              />
+              <div className="relative flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 via-green-500 to-emerald-700 shadow-[0_12px_40px_-8px_rgba(16,185,129,0.55)] ring-4 ring-white animate-success-badge-pop">
                 <svg
-                  className="w-12 h-12 text-green-600 animate-success-checkmark"
-                  fill="none"
-                  stroke="currentColor"
+                  className="h-11 w-11 text-white drop-shadow-sm"
                   viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden
                 >
                   <path
+                    className="animate-success-check-draw"
+                    d="M6.5 12.5l3.8 3.8L17.8 8.8"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    strokeWidth={3}
-                    d="M5 13l4 4L19 7"
-                    strokeDasharray="20"
-                    strokeDashoffset="20"
-                    className="animate-draw-checkmark"
                   />
                 </svg>
               </div>
-              {/* Ripple effect */}
-              <div className="absolute inset-0 bg-green-200 rounded-full animate-success-ripple opacity-0"></div>
             </div>
-
-            {/* Success Message */}
-            <div className="text-center space-y-2">
-              <DialogTitle className="text-2xl font-bold text-gray-900">
-                Updated!
-              </DialogTitle>
-              <DialogDescription className="text-base text-gray-600">
-                {editSuccessData.areaManager &&
-                  editSuccessData.branches.length > 0 && (
-                    <>
-                      <span className="font-semibold">
-                        {editSuccessData.areaManager.name}
-                      </span>
-                      's branch assignment has been updated to{" "}
-                      {editSuccessData.branches.length}{" "}
-                      {editSuccessData.branches.length === 1
-                        ? "branch"
-                        : "branches"}
-                      .
-                    </>
-                  )}
-              </DialogDescription>
-              <p className="text-sm text-gray-500 mt-2">
-                Closing automatically...
-              </p>
-            </div>
-          </div>
+            <DialogTitle className="text-xl font-bold text-gray-900">
+              Updated!
+            </DialogTitle>
+            <DialogDescription className="text-gray-700">
+              {editSuccessData.areaManager && editSuccessData.branches.length > 0 ? (
+                <>
+                  <span className="font-semibold text-green-700">
+                    {editSuccessData.areaManager.name}
+                  </span>
+                  {"'s"} branch assignment has been updated to{" "}
+                  {editSuccessData.branches.length}{" "}
+                  {editSuccessData.branches.length === 1 ? "branch" : "branches"}.
+                </>
+              ) : (
+                "Branch assignment updated successfully."
+              )}
+            </DialogDescription>
+            <p className="mt-2 text-xs text-gray-500">
+              This dialog will close automatically in 2 seconds.
+            </p>
+          </DialogHeader>
+          <DialogFooter className="border-t border-gray-200 pt-4 sm:justify-center">
+            
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
