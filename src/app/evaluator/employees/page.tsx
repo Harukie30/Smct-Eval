@@ -35,6 +35,8 @@ import EvaluationsPagination from "@/components/paginationComponent";
 import ViewEmployeeModal from "@/components/ViewEmployeeModal";
 import MemorandumViolationModal from "@/components/MemorandumViolationModal";
 import { useBranchesForEvaluation } from "@/hooks/useBranchesForEvaluation";
+import ViewEvaluationMobileWarningModal from "@/components/evaluation/ViewEvaluationMobileWarningModal";
+import { useMobileViewport } from "@/hooks/useMobileViewport";
 import {
   getEmployeeBranchCodeDisplay,
 } from "@/components/evaluation/employeeBranchLabel";
@@ -42,6 +44,7 @@ import { dedupeUsersById } from "@/lib/sortUsersByName";
 
 export default function EmployeesTab() {
   const { user } = useAuth();
+  const isMobileViewport = useMobileViewport();
   const { branchOptions, isLoading: branchListLoading } =
     useBranchesForEvaluation();
 
@@ -122,6 +125,8 @@ export default function EmployeesTab() {
   const [isEvaluationTypeModalOpen, setIsEvaluationTypeModalOpen] =
     useState(false);
   const [isEvaluationModalOpen, setIsEvaluationModalOpen] = useState(false);
+  const [bypassEvaluationMobileWarning, setBypassEvaluationMobileWarning] =
+    useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<User | null>(null);
   const [evaluationType, setEvaluationType] = useState<
     "employee" | "manager" | "areaManager" | null
@@ -271,6 +276,18 @@ export default function EmployeesTab() {
     }, 500);
     return () => clearTimeout(debounceSearch);
   }, [employeeSearch]);
+
+  useEffect(() => {
+    if (!isEvaluationModalOpen) {
+      setBypassEvaluationMobileWarning(false);
+    }
+  }, [isEvaluationModalOpen]);
+
+  const closeEvaluationModal = () => {
+    setIsEvaluationModalOpen(false);
+    setSelectedEmployee(null);
+    setEvaluationType(null);
+  };
 
   const newHiresThisMonth = (() => {
     const now = new Date();
@@ -759,81 +776,69 @@ export default function EmployeesTab() {
         hideAddViolationButton
       />
 
-      <Dialog
-        open={isEvaluationModalOpen}
-        onOpenChangeAction={(open) => {
-          if (!open) {
-            setIsEvaluationModalOpen(false);
-            setSelectedEmployee(null);
-            setEvaluationType(null);
-          }
-        }}
-      >
-        <DialogContent className="max-w-7xl max-h-[101vh] overflow-hidden p-0 evaluation-container">
-          {selectedEmployeeForEvaluation && evaluationType === "employee" && (
-            <>
-              {/* If employee is HO, use HO evaluation forms (RankNfileHo) */}
-              {/* If employee is NOT HO, use BranchEvaluationForm which routes correctly */}
-              {isEmployeeHO(selectedEmployeeForEvaluation) ? (
-                <RankNfileHo
-                  employee={selectedEmployeeForEvaluation}
-                  onCloseAction={() => {
-                    setIsEvaluationModalOpen(false);
-                    setSelectedEmployee(null);
-                    setEvaluationType(null);
-                  }}
-                />
-              ) : (
-                <BranchEvaluationForm
-                  employee={selectedEmployeeForEvaluation}
-                  onCloseAction={() => {
-                    setIsEvaluationModalOpen(false);
-                    setSelectedEmployee(null);
-                    setEvaluationType(null);
-                  }}
-                  evaluationType="rankNfile"
-                />
-              )}
-            </>
-          )}
-          {selectedEmployeeForEvaluation && evaluationType === "manager" && (
-            <>
-              {/* If employee is HO, use HO evaluation forms (BasicHo) */}
-              {/* If employee is NOT HO (Branch), use BranchManagerEvaluationForm directly */}
-              {isEmployeeHO(selectedEmployeeForEvaluation) ? (
-                <BasicHo
-                  employee={selectedEmployeeForEvaluation}
-                  onCloseAction={() => {
-                    setIsEvaluationModalOpen(false);
-                    setSelectedEmployee(null);
-                    setEvaluationType(null);
-                  }}
-                />
-              ) : (
-                <BranchManagerEvaluationForm
-                  employee={selectedEmployeeForEvaluation}
-                  onCloseAction={() => {
-                    setIsEvaluationModalOpen(false);
-                    setSelectedEmployee(null);
-                    setEvaluationType(null);
-                  }}
-                  evaluationType="basic"
-                />
-              )}
-            </>
-          )}
-          {selectedEmployeeForEvaluation && evaluationType === "areaManager" && (
-            <AreaManagerEvaluationForm
-              employee={selectedEmployeeForEvaluation}
-              onCloseAction={() => {
-                setIsEvaluationModalOpen(false);
-                setSelectedEmployee(null);
-                setEvaluationType(null);
-              }}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+      {isEvaluationModalOpen &&
+      isMobileViewport &&
+      !bypassEvaluationMobileWarning ? (
+        <ViewEvaluationMobileWarningModal
+          isOpen={isEvaluationModalOpen}
+          onCloseAction={closeEvaluationModal}
+          onViewAnywayAction={() => setBypassEvaluationMobileWarning(true)}
+        />
+      ) : (
+        <Dialog
+          open={isEvaluationModalOpen}
+          onOpenChangeAction={(open) => {
+            if (!open) {
+              closeEvaluationModal();
+            }
+          }}
+        >
+          <DialogContent className="max-w-7xl max-h-[101vh] overflow-hidden p-0 evaluation-container">
+            {selectedEmployeeForEvaluation && evaluationType === "employee" && (
+              <>
+                {/* If employee is HO, use HO evaluation forms (RankNfileHo) */}
+                {/* If employee is NOT HO, use BranchEvaluationForm which routes correctly */}
+                {isEmployeeHO(selectedEmployeeForEvaluation) ? (
+                  <RankNfileHo
+                    employee={selectedEmployeeForEvaluation}
+                    onCloseAction={closeEvaluationModal}
+                  />
+                ) : (
+                  <BranchEvaluationForm
+                    employee={selectedEmployeeForEvaluation}
+                    onCloseAction={closeEvaluationModal}
+                    evaluationType="rankNfile"
+                  />
+                )}
+              </>
+            )}
+            {selectedEmployeeForEvaluation && evaluationType === "manager" && (
+              <>
+                {/* If employee is HO, use HO evaluation forms (BasicHo) */}
+                {/* If employee is NOT HO (Branch), use BranchManagerEvaluationForm directly */}
+                {isEmployeeHO(selectedEmployeeForEvaluation) ? (
+                  <BasicHo
+                    employee={selectedEmployeeForEvaluation}
+                    onCloseAction={closeEvaluationModal}
+                  />
+                ) : (
+                  <BranchManagerEvaluationForm
+                    employee={selectedEmployeeForEvaluation}
+                    onCloseAction={closeEvaluationModal}
+                    evaluationType="basic"
+                  />
+                )}
+              </>
+            )}
+            {selectedEmployeeForEvaluation && evaluationType === "areaManager" && (
+              <AreaManagerEvaluationForm
+                employee={selectedEmployeeForEvaluation}
+                onCloseAction={closeEvaluationModal}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
     </>
   );
 }

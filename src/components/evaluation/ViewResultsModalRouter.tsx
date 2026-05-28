@@ -1,11 +1,13 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import ViewResultsModalBranchRankNfile from "./ViewResultsModalBranchRankNfile";
 import ViewResultsModalBranchManager from "./ViewResultsModalBranchManager";
 import ViewResultsModalAreaManager from "./ViewResultsModalAreaManager";
 import ViewResultsModalDefault from "./ViewResultsModalDefault";
 import ViewResultsModalBasic from "./ViewResultsModalBasic";
+import ViewEvaluationMobileWarningModal from "./ViewEvaluationMobileWarningModal";
+import { useMobileViewport } from "@/hooks/useMobileViewport";
 
 export type Submission = {
   id: number;
@@ -199,7 +201,26 @@ export default function ViewResultsModalRouter({
   currentUserSignature,
   showApprovalButton = false,
 }: ViewResultsModalProps) {
+  const isMobileViewport = useMobileViewport();
+  const [bypassMobileWarning, setBypassMobileWarning] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setBypassMobileWarning(false);
+    }
+  }, [isOpen]);
+
   if (!submission) return null;
+
+  if (isOpen && isMobileViewport && !bypassMobileWarning) {
+    return (
+      <ViewEvaluationMobileWarningModal
+        isOpen={isOpen}
+        onCloseAction={onCloseAction}
+        onViewAnywayAction={() => setBypassMobileWarning(true)}
+      />
+    );
+  }
 
   // Get evaluationType from API response (primary routing method)
   // Check multiple possible field names
