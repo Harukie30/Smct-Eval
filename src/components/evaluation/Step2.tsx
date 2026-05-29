@@ -10,7 +10,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ChevronDownIcon } from "lucide-react";
 import { EvaluationPayload } from "./types";
-import { User, useAuth } from "@/contexts/UserContext";
+import { isEmployeeHeadOffice } from "./employeeBranchLabel";
+import { User } from "@/contexts/UserContext";
 import { isNumberObject } from "node:util/types";
 
 interface Step2Props {
@@ -96,63 +97,7 @@ function ScoreDropdown({
 }
 
 export default function Step2({ data, updateDataAction, employee, evaluationType }: Step2Props) {
-  const { user } = useAuth();
-  
-  // Check if employee being evaluated is HO (Head Office)
-  // This determines the evaluationType based on the employee being evaluated, not the evaluator
-  const isEmployeeHO = () => {
-    const isHoBranchObj = (branchObj: unknown): boolean => {
-      if (!branchObj || typeof branchObj !== "object") return false;
-      const b = branchObj as any;
-      const branchName = String(b.branch_name ?? b.name ?? "").toUpperCase().trim();
-      const branchCode = String(b.branch_code ?? b.code ?? b.acronym ?? "").toUpperCase().trim();
-      return (
-        branchName === "HO" ||
-        branchCode === "HO" ||
-        branchCode === "126" ||
-        branchName === "HEAD OFFICE" ||
-        branchCode === "HEAD OFFICE" ||
-        branchName.includes("HEAD OFFICE") ||
-        branchCode.includes("HEAD OFFICE")
-      );
-    };
-
-    // 1) Prefer direct `employee.branch` object/value
-    const branchVal = (employee as any)?.branch;
-    if (branchVal !== undefined && branchVal !== null && branchVal !== "") {
-      if (isHoBranchObj(branchVal)) return true;
-      const s = String(branchVal).toUpperCase().trim();
-      return s === "HO" || s === "126" || s === "HEAD OFFICE" || s.includes("HEAD OFFICE");
-    }
-
-    // 2) Scan `employee.branches` for an HO entry
-    const branchesVal = (employee as any)?.branches;
-    if (Array.isArray(branchesVal)) {
-      return branchesVal.some((b: any) => isHoBranchObj(b));
-    }
-    if (branchesVal && typeof branchesVal === "object") {
-      return isHoBranchObj(branchesVal);
-    }
-
-    // 3) Legacy: branch_id / branchId
-    const branchIdOrValue = (employee as any)?.branch_id ?? (employee as any)?.branchId;
-    if (branchIdOrValue !== undefined && branchIdOrValue !== null && branchIdOrValue !== "") {
-      const s = String(branchIdOrValue).toUpperCase().trim();
-      return (
-        s === "HO" ||
-        s === "126" ||
-        s === "HEAD OFFICE" ||
-        s.includes("HEAD OFFICE")
-      );
-    }
-
-    // 4) Final fallback: evaluationType implies HO route
-    return evaluationType === "rankNfile" || evaluationType === "basic";
-  };
-
-  // Determine if this is an HO evaluation based on employee's branch
-  // If evaluationType is 'rankNfile' or 'basic', it's definitely an HO evaluation
-  const isHO = isEmployeeHO();
+  const isHO = isEmployeeHeadOffice(employee);
   
   // Debug: Log to verify evaluationType is being passed
   // console.log('Step2 - evaluationType:', evaluationType, 'isHO:', isHO);

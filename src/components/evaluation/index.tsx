@@ -25,6 +25,7 @@ import { apiService } from "@/lib/apiService";
 import { createEvaluationNotification } from "@/lib/notificationUtils";
 import { User, useAuth } from "../../contexts/UserContext";
 import { branchEvaluationSteps, branchRankNfileSteps } from "./configs";
+import { isEmployeeHeadOffice } from "./employeeBranchLabel";
 import { useBranchesForEvaluation } from "@/hooks/useBranchesForEvaluation";
 
 // Default steps use branch evaluation configuration
@@ -405,19 +406,6 @@ export default function EvaluationForm({
           hasValidCoverageDates
         );
       case 2: // Quality of Work
-        // Check if employee being evaluated is HO (not the evaluator)
-        // Use the existing isEmployeeHO function, but also check evaluationType as fallback
-        const isEmployeeHOForStep2 = () => {
-          // If evaluationType is 'rankNfile' or 'basic', employee is definitely HO
-          if (evaluationType === 'rankNfile' || evaluationType === 'basic') {
-            return true;
-          }
-          
-          // Otherwise, check employee's branch
-          return isEmployeeHO();
-        };
-        
-        // Check if employee is Area Manager or Branch Manager/Supervisor
         const isEmployeeAreaManagerForStep2 = () => {
           return isEmployeeAreaManager();
         };
@@ -437,7 +425,7 @@ export default function EvaluationForm({
           );
         };
         
-        const isHO = isEmployeeHOForStep2();
+        const isHO = isEmployeeHeadOffice(employee);
         const isAreaMgr = isEmployeeAreaManagerForStep2();
         const isBranchMgrOrSup = isEmployeeBranchManagerOrSupervisorForStep2();
         
@@ -575,53 +563,12 @@ export default function EvaluationForm({
           );
         }
         
-        // If step 7 is Customer Service (for branch evaluations), validate customer service scores
-        // Check if evaluator is HO - Step 7 Customer Service is not applicable for HO
-        const isEvaluatorHO_Step7 = () => {
-          if (!user?.branches) return false;
-          
-          // Handle branches as array
-          if (Array.isArray(user.branches)) {
-            const branch = user.branches[0];
-            if (branch) {
-              const branchName = branch.branch_name?.toUpperCase() || "";
-              const branchCode = branch.branch_code?.toUpperCase() || "";
-              return (
-                branchName === "HO" || 
-                branchCode === "HO" || 
-                branchName.includes("HEAD OFFICE") ||
-                branchCode.includes("HEAD OFFICE") ||
-                branchName === "HEAD OFFICE" ||
-                branchCode === "HEAD OFFICE"
-              );
-            }
-          }
-          
-          // Handle branches as object
-          if (typeof user.branches === 'object') {
-            const branchName = (user.branches as any)?.branch_name?.toUpperCase() || "";
-            const branchCode = (user.branches as any)?.branch_code?.toUpperCase() || "";
-            return (
-              branchName === "HO" || 
-              branchCode === "HO" || 
-              branchName.includes("HEAD OFFICE") ||
-              branchCode.includes("HEAD OFFICE") ||
-              branchName === "HEAD OFFICE" ||
-              branchCode === "HEAD OFFICE"
-            );
-          }
-          
-          return false;
-        };
-        
-        const isHO_Step7 = isEvaluatorHO_Step7();
-        
-        // Step 7 Customer Service is always valid for HO evaluators (not applicable)
-        if (isHO_Step7) {
+        // Customer Service applies to branch employees only (not HO), regardless of evaluator role (HR or evaluator)
+        if (isEmployeeHeadOffice(employee) && !isAreaMgr) {
           return true;
         }
-        
-        // For non-HO evaluators, require all customer service scores
+
+        // Branch employee: require all customer service scores
         return (
           form.customerServiceScore1 &&
           form.customerServiceScore1 !== 0 &&

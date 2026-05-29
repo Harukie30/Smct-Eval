@@ -272,3 +272,73 @@ export function getEmployeeBranchCodeDisplay(
 
   return "N/A";
 }
+
+function isHoBranchObject(branchObj: unknown): boolean {
+  if (branchObj == null || typeof branchObj !== "object") return false;
+  const b = branchObj as Record<string, unknown>;
+  const branchName = String(b.branch_name ?? b.name ?? "")
+    .toUpperCase()
+    .trim();
+  const branchCode = String(b.branch_code ?? b.code ?? b.acronym ?? "")
+    .toUpperCase()
+    .trim();
+  return (
+    branchName === "HO" ||
+    branchCode === "HO" ||
+    branchCode === "126" ||
+    branchName === "HEAD OFFICE" ||
+    branchCode === "HEAD OFFICE" ||
+    branchName.includes("HEAD OFFICE") ||
+    branchCode.includes("HEAD OFFICE")
+  );
+}
+
+/**
+ * True when the employee being evaluated belongs to Head Office (HO).
+ * Does not use evaluationType — branch rank-and-file uses evaluationType "rankNfile" too.
+ */
+export function isEmployeeHeadOffice(
+  employee: User | null | undefined
+): boolean {
+  if (!employee) return false;
+
+  const anyEmp = employee as unknown as Record<string, unknown>;
+  const branchVal = anyEmp.branch;
+  if (branchVal !== undefined && branchVal !== null && branchVal !== "") {
+    if (isHoBranchObject(branchVal)) return true;
+    const s = String(branchVal).toUpperCase().trim();
+    if (
+      s === "HO" ||
+      s === "126" ||
+      s === "HEAD OFFICE" ||
+      s.includes("HEAD OFFICE")
+    ) {
+      return true;
+    }
+  }
+
+  const branchesVal = anyEmp.branches;
+  if (Array.isArray(branchesVal)) {
+    return branchesVal.some((b) => isHoBranchObject(b));
+  }
+  if (branchesVal && typeof branchesVal === "object") {
+    return isHoBranchObject(branchesVal);
+  }
+
+  const branchIdOrValue = anyEmp.branch_id ?? anyEmp.branchId;
+  if (
+    branchIdOrValue !== undefined &&
+    branchIdOrValue !== null &&
+    String(branchIdOrValue).trim() !== ""
+  ) {
+    const s = String(branchIdOrValue).toUpperCase().trim();
+    return (
+      s === "HO" ||
+      s === "126" ||
+      s === "HEAD OFFICE" ||
+      s.includes("HEAD OFFICE")
+    );
+  }
+
+  return false;
+}
