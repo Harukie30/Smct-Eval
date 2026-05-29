@@ -86,7 +86,7 @@ const MANAGEMENT_OVERFLOW_SCROLL_CLASS =
 
 /** Sidebar submenu — container fade; items use `.sidebar-submenu-stagger` in globals.css. */
 const SIDEBAR_SUBMENU_COLLAPSE_CLASS = cn(
-  "sidebar-submenu-stagger mt-2",
+  "sidebar-submenu-stagger mt-2 mb-1",
   "motion-safe:data-[state=open]:animate-in motion-safe:data-[state=closed]:animate-out",
   "motion-safe:data-[state=closed]:fade-out-0 motion-safe:data-[state=open]:fade-in-0",
   "motion-safe:duration-500 motion-safe:ease-out"
@@ -95,13 +95,20 @@ const SIDEBAR_SUBMENU_COLLAPSE_CLASS = cn(
 const SIDEBAR_SUBMENU_ITEM_CLASS = "sidebar-submenu-item";
 
 /** Outer collapsible wrapper (Radix keeps overflow-hidden for open/close). */
-const MANAGEMENT_DROPDOWN_CONTENT_CLASS = SIDEBAR_SUBMENU_COLLAPSE_CLASS;
+const MANAGEMENT_DROPDOWN_CONTENT_CLASS = cn(
+  SIDEBAR_SUBMENU_COLLAPSE_CLASS,
+  "pb-1 data-[state=open]:overflow-visible"
+);
 
 /** Inner scroll list — ref + maxHeight apply here so all items stay reachable. */
 const MANAGEMENT_SCROLL_INNER_CLASS = cn(
-  "space-y-1.5 pl-3 pr-2 pb-4 sm:pl-4 sm:pr-2.5",
+  "space-y-1 scroll-pb-4 pl-3 pr-1.5 pb-6 pt-0.5 sm:pl-4 sm:pr-2",
+  "[&_.sidebar-submenu-item:last-child]:mb-0.5",
   MANAGEMENT_OVERFLOW_SCROLL_CLASS
 );
+
+/** Extra space so Violation Summary (last row) is not clipped by max-height math. */
+const MANAGEMENT_MENU_HEIGHT_BUFFER_PX = 20;
 
 /** Viewports below `lg` use overlay nav (footer stays full width). */
 const MOBILE_NAV_MEDIA_QUERY = "(max-width: 1023px)";
@@ -133,7 +140,7 @@ const SIDEBAR_NAV_ROW_SUB_CLASS =
 /** Management submenu rows — extra padding; labels may wrap (e.g. Violation Summary). */
 const MANAGEMENT_NAV_ROW_SUB_CLASS = cn(
   SIDEBAR_NAV_ROW_SUB_CLASS,
-  "items-start py-2 sm:py-2.5"
+  "min-h-[2.35rem] items-start py-2 sm:min-h-[2.5rem] sm:py-2.5"
 );
 
 const MANAGEMENT_NAV_SUB_LABEL_CLASS =
@@ -420,10 +427,13 @@ export default function DashboardShell(props: DashboardShellProps) {
     let limitBottom = window.innerHeight;
     if (aside) {
       // Full sidebar to the bottom while Management is open (art hidden).
-      limitBottom = aside.getBoundingClientRect().bottom - 8;
+      limitBottom = aside.getBoundingClientRect().bottom - 12;
     }
 
-    const available = Math.max(0, Math.floor(limitBottom - triggerRect.bottom - 4));
+    const available = Math.max(
+      0,
+      Math.floor(limitBottom - triggerRect.bottom - 8)
+    );
     if (available <= 0) return;
 
     const prevMax = contentEl.style.maxHeight;
@@ -434,7 +444,9 @@ export default function DashboardShell(props: DashboardShellProps) {
     if (contentH <= 0) return;
 
     const next =
-      contentH <= available ? undefined : available;
+      contentH + MANAGEMENT_MENU_HEIGHT_BUFFER_PX <= available
+        ? undefined
+        : Math.max(120, available);
 
     setManagementMenuMaxH((prev) => (prev === next ? prev : next));
   }, [isManagementOpen]);
@@ -1115,7 +1127,14 @@ export default function DashboardShell(props: DashboardShellProps) {
               </Button>
 
               <h2 className={SIDEBAR_HEADING_CLASS}>Navigation</h2>
-              <nav className={cn("space-y-2", SIDEBAR_NAV_SCROLL_CLASS)}>
+              <nav
+                className={cn(
+                  "space-y-2",
+                  SIDEBAR_NAV_SCROLL_CLASS,
+                  isManagementOpen && "pb-3",
+                  isAnalyticsOpen && "pb-3"
+                )}
+              >
                 {(() => {
                   // Use the memoized dashboard type values
 
