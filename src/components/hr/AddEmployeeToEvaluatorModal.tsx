@@ -516,7 +516,7 @@ export default function AddEmployeeToEvaluatorModal({
     <>
       <Dialog open={open} onOpenChangeAction={onOpenChange}>
         <DialogContent
-          className="relative max-h-[110vh] max-w-[95rem] gap-0 overflow-hidden border-slate-200/80 p-0 shadow-2xl sm:rounded-xl"
+          className="relative flex h-[min(92vh,880px)] max-h-[min(92vh,880px)] max-w-[95rem] flex-col gap-0 overflow-hidden border-slate-200/80 p-0 shadow-2xl sm:rounded-xl"
           style={{
             backgroundImage: "url(/smct.png)",
             backgroundSize: "85%",
@@ -528,92 +528,81 @@ export default function AddEmployeeToEvaluatorModal({
             className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-br from-blue-100/95 to-indigo-100/95"
             aria-hidden
           />
-          <div className="relative z-10 flex max-h-[90vh] min-h-0 flex-col overflow-y-auto">
-          <DialogHeader className="space-y-0 border-0 p-0 text-left">
+          <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden">
+          <DialogHeader className="shrink-0 space-y-0 border-0 p-0 text-left">
             <div className="relative overflow-hidden border-b border-blue-400/60 bg-blue-600">
               <div
-                className="h-1.5 w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 shadow-[0_1px_0_0_rgba(255,255,255,0.35)_inset]"
+                className="h-1 w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 shadow-[0_1px_0_0_rgba(255,255,255,0.35)_inset]"
                 aria-hidden
               />
               <div
-                className="pointer-events-none absolute inset-0 bg-center bg-no-repeat opacity-[0.12]"
+                className="pointer-events-none absolute inset-0 bg-center bg-no-repeat opacity-[0.1]"
                 style={{ backgroundImage: "url('/smct.png')", backgroundSize: "110%" }}
                 aria-hidden
               />
-              <div
-                className="pointer-events-none absolute -right-16 -top-24 h-56 w-56 rounded-full bg-blue-400/10 blur-3xl"
-                aria-hidden
-              />
-              <div className="relative px-4 py-1.5 sm:px-5 sm:py-2">
-                <div className="flex flex-col gap-2 lg:flex-row lg:items-stretch lg:justify-between lg:gap-3">
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-blue-100">
-                      HR · Staff assignment
-                    </p>
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-2.5">
-                      <div
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-blue-200/80 bg-white/95 shadow-md shadow-blue-900/5 ring-1 ring-blue-900/[0.04]"
-                        aria-hidden
-                      >
-                        <UserPlus className="h-4 w-4 text-blue-800" strokeWidth={1.7} />
-                      </div>
-                      <div className="min-w-0 space-y-1">
-                        <DialogTitle className="bg-gradient-to-r from-blue-950 to-indigo-950 bg-clip-text text-base font-bold tracking-tight text-white sm:text-[1.02rem] sm:leading-snug">
-                          Assign staff
-                        </DialogTitle>
-                        {evaluator ? (
-                          <div className="space-y-1">
-                            <p className="text-[10px] text-white/95 sm:text-[11px]">
-                              Link staff to this evaluator so they appear in coverage and
-                              reporting.
-                            </p>
-                            <div className="flex max-w-xl flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2.5">
-                              <span className="shrink-0 text-xs font-medium uppercase tracking-wide text-white">
-                                Evaluator
-                              </span>
-                              <div className="flex min-w-0 items-center gap-2 rounded-xl border border-blue-200/70 bg-white/90 px-2.5 py-1.5 shadow-sm shadow-blue-900/5 backdrop-blur-sm">
-                                <div
-                                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-indigo-700 text-[11px] font-semibold text-white shadow-inner"
-                                  aria-hidden
-                                >
-                                  {(evaluator.name.trim().charAt(0) || "?").toUpperCase()}
-                                </div>
-                                <div className="min-w-0">
-                                  <p className="truncate text-xs font-semibold text-slate-900">
-                                    {evaluator.name}
-                                  </p>
-                                  <p className="text-[10px] text-slate-500">
-                                    Current team and available staff are listed below
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ) : (
-                          <p className="text-sm text-slate-600">
-                            Choose who this evaluator can manage.
-                          </p>
-                        )}
-                      </div>
+              <div className="relative px-3 py-2 sm:px-4">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                  <div className="flex min-w-0 flex-1 items-center gap-2">
+                    <div
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-blue-200/80 bg-white/95 shadow-sm"
+                      aria-hidden
+                    >
+                      <UserPlus className="h-3.5 w-3.5 text-blue-800" strokeWidth={1.75} />
                     </div>
+                    <div className="min-w-0">
+                      <p className="text-[8px] font-semibold uppercase tracking-[0.16em] text-blue-100/95">
+                        HR · Staff assignment
+                      </p>
+                      <DialogTitle className="text-sm font-bold leading-tight tracking-tight text-white sm:text-[0.95rem]">
+                        Assign staff
+                      </DialogTitle>
+                    </div>
+                    {evaluator ? (
+                      <div className="ml-1 hidden min-w-0 flex-1 items-center gap-2 border-l border-blue-400/50 pl-3 sm:flex">
+                        <span className="shrink-0 text-[10px] font-medium uppercase tracking-wide text-blue-100">
+                          Evaluator
+                        </span>
+                        <div className="flex min-w-0 items-center gap-1.5 rounded-lg border border-blue-200/70 bg-white/90 px-2 py-1 shadow-sm">
+                          <div
+                            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-blue-600 to-indigo-700 text-[10px] font-semibold text-white"
+                            aria-hidden
+                          >
+                            {(evaluator.name.trim().charAt(0) || "?").toUpperCase()}
+                          </div>
+                          <p className="truncate text-xs font-semibold text-slate-900">
+                            {evaluator.name}
+                          </p>
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
 
-                  <div className="flex shrink-0 flex-col justify-center border-t border-blue-300/40 pt-2 sm:pt-0 lg:min-w-[152px] lg:border-l lg:border-t-0 lg:border-blue-300/40 lg:pl-3 lg:pt-0">
-                    <p className="mb-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-blue-100/90 lg:text-right">
-                      At a glance
-                    </p>
-                    <div className="grid grid-cols-2 gap-1.5 sm:flex sm:flex-wrap lg:grid lg:max-w-[180px]">
-                      <div className="rounded-lg border border-blue-200/60 bg-white/90 px-2.5 py-1 text-center shadow-sm shadow-blue-900/5 backdrop-blur-sm sm:flex-1 lg:min-w-0">
-                        <p className="text-base font-bold tabular-nums text-blue-950">
+                  <div className="flex shrink-0 items-center gap-2">
+                    {evaluator ? (
+                      <div className="flex min-w-0 items-center gap-1.5 rounded-lg border border-blue-200/70 bg-white/90 px-2 py-1 shadow-sm sm:hidden">
+                        <div
+                          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-blue-600 to-indigo-700 text-[10px] font-semibold text-white"
+                          aria-hidden
+                        >
+                          {(evaluator.name.trim().charAt(0) || "?").toUpperCase()}
+                        </div>
+                        <p className="truncate text-xs font-semibold text-slate-900">
+                          {evaluator.name}
+                        </p>
+                      </div>
+                    ) : null}
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <div className="rounded-md border border-blue-200/60 bg-white/90 px-2 py-0.5 text-center shadow-sm">
+                        <p className="text-sm font-bold tabular-nums leading-tight text-blue-950">
                           {loadingAssigned ? "—" : assignedRows.length}
                         </p>
-                        <p className="text-[11px] font-medium text-blue-900/55">On team</p>
+                        <p className="text-[10px] font-medium text-blue-900/55">On team</p>
                       </div>
-                      <div className="rounded-lg border border-indigo-200/60 bg-white/90 px-2.5 py-1 text-center shadow-sm shadow-indigo-900/5 backdrop-blur-sm sm:flex-1 lg:min-w-0">
-                        <p className="text-base font-bold tabular-nums text-indigo-950">
+                      <div className="rounded-md border border-indigo-200/60 bg-white/90 px-2 py-0.5 text-center shadow-sm">
+                        <p className="text-sm font-bold tabular-nums leading-tight text-indigo-950">
                           {selectedIds.size}
                         </p>
-                        <p className="text-[11px] font-medium text-indigo-900/55">To add</p>
+                        <p className="text-[10px] font-medium text-indigo-900/55">To add</p>
                       </div>
                     </div>
                   </div>
@@ -627,8 +616,8 @@ export default function AddEmployeeToEvaluatorModal({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 bg-gradient-to-b from-blue-50/25 to-indigo-50/20 px-6 py-4">
-            <div className="relative max-w-lg">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-gradient-to-b from-blue-50/25 to-indigo-50/20 px-4 py-3 sm:px-5">
+            <div className="relative mb-3 max-w-lg shrink-0">
               <Search
                 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
                 aria-hidden
@@ -638,34 +627,34 @@ export default function AddEmployeeToEvaluatorModal({
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 disabled={isAnySaving}
-                className="h-10 border-slate-200 bg-white pl-9 shadow-sm placeholder:text-slate-400 focus-visible:ring-slate-400/30"
+                className="h-9 border-slate-200 bg-white pl-9 text-sm shadow-sm placeholder:text-slate-400 focus-visible:ring-slate-400/30"
               />
             </div>
 
-            <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-              <section className="overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-950/5">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 bg-slate-50/80 px-4 py-3">
-                  <div className="flex items-center gap-2.5">
-                    <Users className="h-4 w-4 text-slate-500" strokeWidth={1.75} aria-hidden />
+            <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-2 gap-3 xl:grid-cols-2 xl:grid-rows-1 xl:gap-4">
+              <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-950/5">
+                <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-slate-100 bg-slate-50/80 px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-3.5 w-3.5 text-slate-500" strokeWidth={1.75} aria-hidden />
                     <div>
-                      <h3 className="text-sm font-semibold text-slate-900">
+                      <h3 className="text-xs font-semibold text-slate-900 sm:text-sm">
                         Current assignments
                       </h3>
-                      <p className="text-xs text-slate-500">
-                        Uncheck and click Unassign to remove from this team
+                      <p className="text-[11px] text-slate-500">
+                        Uncheck, then Unassign to remove
                       </p>
                     </div>
                   </div>
                   <Badge
                     variant="secondary"
-                    className="shrink-0 border border-slate-200/80 bg-white font-normal text-slate-700 shadow-sm"
+                    className="shrink-0 border border-slate-200/80 bg-white text-[11px] font-normal text-slate-700 shadow-sm"
                   >
                     {loadingAssigned || tableActionLoading
                       ? "…"
                       : `${filteredAssignedRows.length} shown`}
                   </Badge>
                 </div>
-                  <div className="max-h-[30vh] min-h-[180px] overflow-auto xl:max-h-[58vh]">
+                  <div className="min-h-0 flex-1 overflow-auto">
                   {loadingAssigned || tableActionLoading ? (
                     <div className="space-y-2 p-4">
                       {Array.from({ length: 4 }).map((_, idx) => (
@@ -777,29 +766,29 @@ export default function AddEmployeeToEvaluatorModal({
                 </div>
               </section>
 
-              <section className="overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-950/5">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 bg-slate-50/80 px-4 py-3">
-                  <div className="flex items-center gap-2.5">
-                    <UsersRound className="h-4 w-4 text-slate-500" strokeWidth={1.75} aria-hidden />
+              <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-950/5">
+                <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-slate-100 bg-slate-50/80 px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <UsersRound className="h-3.5 w-3.5 text-slate-500" strokeWidth={1.75} aria-hidden />
                     <div>
-                      <h3 className="text-sm font-semibold text-slate-900">
+                      <h3 className="text-xs font-semibold text-slate-900 sm:text-sm">
                         Available to assign
                       </h3>
-                      <p className="text-xs text-slate-500">
-                        Employees, evaluators, and HR not on this team — select to add
+                      <p className="text-[11px] text-slate-500">
+                        Select staff to add to this team
                       </p>
                     </div>
                   </div>
                   <Badge
                     variant="secondary"
-                    className="shrink-0 border border-slate-200/80 bg-white font-normal text-slate-700 shadow-sm"
+                    className="shrink-0 border border-slate-200/80 bg-white text-[11px] font-normal text-slate-700 shadow-sm"
                   >
                     {loadingPool || tableActionLoading
                       ? "…"
                       : `${filteredUnassignedRows.length} shown`}
                   </Badge>
                 </div>
-                <div className="max-h-[30vh] min-h-[180px] overflow-auto xl:max-h-[58vh]">
+                <div className="min-h-0 flex-1 overflow-auto">
                   {loadingPool || tableActionLoading ? (
                     <div className="space-y-2 p-4">
                       {Array.from({ length: 5 }).map((_, idx) => (
@@ -908,7 +897,7 @@ export default function AddEmployeeToEvaluatorModal({
             </div>
           </div>
 
-          <DialogFooter className="flex flex-col-reverse gap-2 border-t border-blue-200/50 bg-white/90 px-6 py-4 backdrop-blur-sm sm:flex-row sm:items-center sm:justify-end sm:gap-3">
+          <DialogFooter className="flex shrink-0 flex-col-reverse gap-2 border-t border-blue-200/50 bg-white/90 px-4 py-3 backdrop-blur-sm sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-5">
             <Button
               type="button"
               variant="outline"

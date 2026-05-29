@@ -17,11 +17,11 @@ import UpdatePositionModal from "@/components/hr/UpdatePositionModal";
 import EvaluationsPagination from "@/components/paginationComponent";
 import { cn } from "@/lib/utils";
 import SmctLoadingOverlay from "@/components/SmctLoadingOverlay";
+import { parseApiTimestampMs, pickApiTimestamp } from "@/lib/parseApiTimestamp";
 
 function isCreatedWithinLast24Hours(createdAt: string | null | undefined): boolean {
-  if (createdAt == null || createdAt === "") return false;
-  const t = new Date(createdAt).getTime();
-  if (Number.isNaN(t)) return false;
+  const t = parseApiTimestampMs(createdAt);
+  if (t == null) return false;
   return t >= Date.now() - 24 * 60 * 60 * 1000;
 }
 
@@ -29,9 +29,8 @@ function isCreatedWithinLast24Hours(createdAt: string | null | undefined): boole
 type RecencyTier = "new" | "mid" | "late";
 
 function getRecency24hTier(createdAt: string | null | undefined): RecencyTier | null {
-  if (createdAt == null || createdAt === "") return null;
-  const created = new Date(createdAt).getTime();
-  if (Number.isNaN(created)) return null;
+  const created = parseApiTimestampMs(createdAt);
+  if (created == null) return null;
   const ageMs = Date.now() - created;
   const ageHours = ageMs / (60 * 60 * 1000);
   if (ageHours < 0) return "new";
@@ -86,12 +85,26 @@ export default function PositionsTab() {
       try {
         const res = await apiService.getPositions();
         const list = Array.isArray(res) ? res : [];
-        const normalized: Position[] = list.map((p: any) => ({
-          id: Number(p.value),
-          label: String(p.label ?? ""),
-          createdAt: p.created_at != null ? String(p.created_at) : null,
-          updatedAt: p.updated_at != null ? String(p.updated_at) : null,
-        }));
+        const normalized: Position[] = list.map((p) => {
+          const row =
+            p && typeof p === "object"
+              ? (p as Record<string, unknown>)
+              : ({} as Record<string, unknown>);
+          return {
+            id: Number(row.value ?? row.id),
+            label: String(row.label ?? ""),
+            createdAt: pickApiTimestamp(row, [
+              "created_at",
+              "createdAt",
+              "created",
+            ]),
+            updatedAt: pickApiTimestamp(row, [
+              "updated_at",
+              "updatedAt",
+              "updated",
+            ]),
+          };
+        });
         setPositions(normalized);
       } catch (error) {
         console.error("Error loading positions:", error);
@@ -133,8 +146,8 @@ export default function PositionsTab() {
     }
     if (showRecent24h) {
       list = [...list].sort((a, b) => {
-        const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        const ta = parseApiTimestampMs(a.createdAt) ?? 0;
+        const tb = parseApiTimestampMs(b.createdAt) ?? 0;
         return tb - ta;
       });
     }

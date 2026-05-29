@@ -1,4 +1,5 @@
 import { api, sanctum } from "./api";
+import { pickApiTimestamp } from "@/lib/parseApiTimestamp";
 
 /** Ask API for stable name order so OFFSET pagination does not overlap pages (backend may ignore). */
 const USER_LIST_SORT_PARAMS = {
@@ -150,11 +151,28 @@ export const apiService = {
     }[]
   > => {
     const response = await api.get("/positions");
-    return response.data.positions.map((position: any) => ({
-      value: position.id,
-      label: position.label,
-      created_at: position.created_at ?? null,
-      updated_at: position.updated_at ?? null,
+    const payload = response.data;
+    const list = Array.isArray(payload?.positions)
+      ? payload.positions
+      : Array.isArray(payload?.data)
+        ? payload.data
+        : Array.isArray(payload)
+          ? payload
+          : [];
+
+    return list.map((position: Record<string, unknown>) => ({
+      value: String(position.id ?? position.value ?? ""),
+      label: String(position.label ?? position.name ?? ""),
+      created_at: pickApiTimestamp(position, [
+        "created_at",
+        "createdAt",
+        "created",
+      ]),
+      updated_at: pickApiTimestamp(position, [
+        "updated_at",
+        "updatedAt",
+        "updated",
+      ]),
     }));
   },
 

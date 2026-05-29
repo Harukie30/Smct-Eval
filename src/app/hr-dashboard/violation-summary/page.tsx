@@ -45,8 +45,6 @@ import {
 } from "@/components/ui/dialog";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 
-/** Rows requested from the API (server may cap). */
-const API_FETCH_PER_PAGE = 100;
 /** Pages to pull when exporting a month/year (each page up to `EXPORT_FETCH_PER_PAGE`). */
 const EXPORT_FETCH_PER_PAGE = 100;
 const EXPORT_MAX_PAGES = 50;
@@ -215,6 +213,25 @@ function extractLastPageFromViolationResponse(raw: unknown): number {
   return Number.isFinite(lp) && lp >= 1 ? lp : 1;
 }
 
+function extractTotalFromViolationResponse(raw: unknown): number {
+  if (!raw || typeof raw !== "object") return 0;
+  const root = raw as Record<string, unknown>;
+  const meta =
+    root.meta && typeof root.meta === "object" && !Array.isArray(root.meta)
+      ? (root.meta as Record<string, unknown>)
+      : null;
+  const total = Number(
+    root.total ??
+      meta?.total ??
+      root.total_count ??
+      meta?.total_count ??
+      root.totalCount ??
+      meta?.totalCount ??
+      0
+  );
+  return Number.isFinite(total) && total >= 0 ? total : 0;
+}
+
 /** Parse API `years` list, e.g. `[{ "years": 2026 }]`. */
 function parseYearValue(value: unknown): number | null {
   if (typeof value === "number" && Number.isFinite(value)) {
@@ -339,6 +356,8 @@ export default function ViolationSummaryPage() {
   /** Years from API `years` (e.g. `[{ years: 2026 }]`). */
   const [apiYears, setApiYears] = useState<number[]>([]);
   const [page, setPage] = useState(1);
+  const [serverLastPage, setServerLastPage] = useState(1);
+  const [serverTotal, setServerTotal] = useState(0);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [exportModalMonth, setExportModalMonth] = useState(String(now.getMonth() + 1));
   const [exportModalYear, setExportModalYear] = useState(String(now.getFullYear()));
@@ -375,12 +394,13 @@ export default function ViolationSummaryPage() {
   const isSearchPending = search.trim() !== debouncedSearch;
   const listBusy = loading || refreshing;
 
-  const totalRows = rows.length;
-  const totalPages = Math.max(1, Math.ceil(totalRows / TABLE_PAGE_SIZE));
-  const pageRows = useMemo(() => {
-    const start = (page - 1) * TABLE_PAGE_SIZE;
-    return rows.slice(start, start + TABLE_PAGE_SIZE);
-  }, [rows, page]);
+  const totalPages = Math.max(1, serverLastPage);
+  const totalRows =
+    serverTotal > 0
+      ? serverTotal
+      : rows.length > 0
+        ? (serverLastPage - 1) * TABLE_PAGE_SIZE + rows.length
+        : 0;
 
   useEffect(() => {
     setPage((p) => (p > totalPages ? totalPages : p < 1 ? 1 : p));
@@ -389,6 +409,7 @@ export default function ViolationSummaryPage() {
   useEffect(() => {
     const t = window.setTimeout(() => {
       setDebouncedSearch(search.trim());
+      setPage(1);
     }, SEARCH_DEBOUNCE_MS);
     return () => window.clearTimeout(t);
   }, [search]);
@@ -400,9 +421,10 @@ export default function ViolationSummaryPage() {
       try {
         const raw = await apiService.getMemorandumViolations({
           search: debouncedSearch,
-          per_page: API_FETCH_PER_PAGE,
+          per_page: TABLE_PAGE_SIZE,
           month: monthFilter,
           year: yearFilter,
+          page,
         });
         const yearsFromApi = extractYearsFromViolationResponse(raw);
         if (yearsFromApi.length > 0) {
@@ -414,11 +436,16 @@ export default function ViolationSummaryPage() {
           }
         }
         const next = mapMemorandumViolationsResponse(raw);
+        const lastPage = extractLastPageFromViolationResponse(raw);
+        const total = extractTotalFromViolationResponse(raw);
         setRows(next);
-        setPage(1);
+        setServerLastPage(lastPage);
+        setServerTotal(total);
       } catch (e) {
         console.error(e);
         setRows([]);
+        setServerLastPage(1);
+        setServerTotal(0);
         toastMessages.generic.error(
           "Could not load violation summary",
           "Please try again or check your connection."
@@ -428,7 +455,7 @@ export default function ViolationSummaryPage() {
         setRefreshing(false);
       }
     },
-    [debouncedSearch, monthFilter, yearFilter]
+    [debouncedSearch, monthFilter, yearFilter, page]
   );
 
   const openExportModal = useCallback(() => {
@@ -484,7 +511,7 @@ export default function ViolationSummaryPage() {
   }, [exportModalMonth, exportModalYear]);
 
   useEffect(() => {
-    void load(false);
+    void load(page > 1);
   }, [load]);
 
   return (
@@ -517,8 +544,8 @@ export default function ViolationSummaryPage() {
               </div>
               <CardDescription className="max-w-xl text-xs leading-snug text-blue-50/95 sm:text-sm">
                 Memorandum records for{" "}
-                <span className="font-medium text-white">{periodLabel}</span>. Change filters
-                below; each load replaces the list from the server.
+                <span className="font-medium text-white">{periodLabel}</span>. Filters and
+                each table page reload data from the server.
               </CardDescription>
             </div>
           </div>
@@ -586,7 +613,13 @@ export default function ViolationSummaryPage() {
                   <Label className="text-[0.7rem] font-medium text-slate-700 sm:text-xs">
                     Month
                   </Label>
-                  <Select value={monthFilter} onValueChange={setMonthFilter}>
+                  <Select
+                    value={monthFilter}
+                    onValueChange={(v) => {
+                      setMonthFilter(v);
+                      setPage(1);
+                    }}
+                  >
                     <SelectTrigger className="h-8 w-full cursor-pointer bg-white text-xs sm:h-9 sm:text-sm">
                       <SelectValue placeholder="Month" />
                     </SelectTrigger>
@@ -605,7 +638,13 @@ export default function ViolationSummaryPage() {
                 </div>
                 <div className="space-y-1 lg:col-span-2">
                   <Label className="text-[0.7rem] font-medium text-slate-700 sm:text-xs">Year</Label>
-                  <Select value={yearFilter} onValueChange={setYearFilter}>
+                  <Select
+                    value={yearFilter}
+                    onValueChange={(v) => {
+                      setYearFilter(v);
+                      setPage(1);
+                    }}
+                  >
                     <SelectTrigger className="h-8 w-full cursor-pointer bg-white text-xs sm:h-9 sm:text-sm">
                       <SelectValue placeholder="Year" />
                     </SelectTrigger>
@@ -642,11 +681,8 @@ export default function ViolationSummaryPage() {
                     className="h-8 flex-1 cursor-pointer gap-1.5 bg-blue-600 px-3 text-xs text-white shadow-sm hover:bg-blue-700 hover:text-white lg:flex-initial sm:h-9 sm:gap-2 sm:px-4 sm:text-sm disabled:opacity-70"
                     title="Reload violation list"
                   >
-                    <RefreshCw
-                      className={cn("h-3.5 w-3.5 sm:h-4 sm:w-4", refreshing ? "animate-spin" : "")}
-                      aria-hidden
-                    />
-                    {listBusy && loading ? "Loading…" : refreshing ? "Refreshing…" : "Refresh"}
+                    <RefreshCw className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden />
+                    {listBusy && loading ? "Loading…" : "Refresh"}
                   </Button>
                 </div>
               </div>
@@ -721,7 +757,7 @@ export default function ViolationSummaryPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  pageRows.map((r) => (
+                  rows.map((r) => (
                     <TableRow
                       key={r.id}
                       className="border-slate-100 transition-colors hover:bg-blue-50/40"
@@ -745,7 +781,7 @@ export default function ViolationSummaryPage() {
                 )}
               </TableBody>
             </Table>
-            {!loading && rows.length > 0 && totalPages > 1 ? (
+            {!loading && totalRows > 0 && totalPages > 1 ? (
               <div className="border-t border-slate-100 bg-slate-50/50 px-1 py-1 sm:px-2">
                 <EvaluationsPagination
                   currentPage={page}
@@ -761,15 +797,13 @@ export default function ViolationSummaryPage() {
           {!loading ? (
             <div className="flex flex-col gap-1.5 border-t border-slate-100 pt-1 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-[0.65rem] leading-snug text-slate-500 sm:text-xs">
-                {totalRows >= API_FETCH_PER_PAGE
-                  ? `Up to ${API_FETCH_PER_PAGE} loaded from the server; more may exist. ${TABLE_PAGE_SIZE} per page.`
-                  : totalRows === 0
-                    ? "No rows in this result set."
-                    : totalPages > 1
-                      ? `${totalRows} memorandum${totalRows === 1 ? "" : "s"}, ${totalPages} pages (${TABLE_PAGE_SIZE}/page).`
-                      : `${totalRows} memorandum${totalRows === 1 ? "" : "s"} (${TABLE_PAGE_SIZE}/page).`}
+                {totalRows === 0
+                  ? "No rows in this result set."
+                  : totalPages > 1
+                    ? `Page ${page} of ${totalPages} · ${totalRows} memorandum${totalRows === 1 ? "" : "s"} (${TABLE_PAGE_SIZE}/page, server-loaded).`
+                    : `${totalRows} memorandum${totalRows === 1 ? "" : "s"} (${TABLE_PAGE_SIZE}/page).`}
               </p>
-              {rows.length > 0 ? (
+              {totalRows > 0 ? (
                 <Badge
                   variant="outline"
                   className="self-start border-slate-200 py-0 text-[0.65rem] sm:self-auto sm:text-xs"
