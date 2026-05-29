@@ -3,7 +3,7 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import clientDataService, { apiService } from "@/lib/apiService";
 import EvaluationsPagination from "@/components/paginationComponent";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -40,26 +40,32 @@ import {
 } from "@/components/ui/select";
 
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
-import { setQuarter } from "date-fns";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 import { toastMessages } from "@/lib/toastMessages";
 import { Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useBranchesForEvaluation } from "@/hooks/useBranchesForEvaluation";
+import { getEmployeeBranchCodeDisplay } from "@/components/evaluation/employeeBranchLabel";
 import {
-  getEmployeeBranchCodeDisplay,
-} from "@/components/evaluation/employeeBranchLabel";
-interface Review {
-  id: number;
-  employee: any;
-  evaluator: any;
-  reviewTypeProbationary: number | string;
-  reviewTypeRegular: number | string;
-  reviewTypeOthersImprovement?: boolean | number;
-  reviewTypeOthersCustom?: string;
-  created_at: string;
-  rating: number;
-  status: string;
-}
+  type EvaluationRecordReview,
+  EVAL_RECORDS_TABLE_CLASS,
+  EVAL_TABLE_ACTIONS_HEAD_CLASS,
+  EvalRecordRowActions,
+  RATING_DISPLAY_BANDS,
+  evalTableActionsCellClass,
+  formatRatingDisplay,
+  formatReviewListDate,
+  formatReviewStatusLabel,
+  getQuarterColor,
+  getRatingBadgeClassFromBands,
+  getReviewListRating,
+  getReviewQuarterDisplay,
+  getReviewRowClassName,
+  isReviewDeletable,
+  ratingPillClass,
+} from "@/components/evaluation/evaluationRecordsShared";
+
+type Review = EvaluationRecordReview;
 
 export default function OverviewTab() {
   const { branchOptions, isLoading: branchListLoading } =
@@ -84,7 +90,7 @@ export default function OverviewTab() {
   const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(4);
+  const [itemsPerPage] = useState(5);
   const [overviewTotal, setOverviewTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [perPage, setPerPage] = useState(0);
@@ -95,6 +101,21 @@ export default function OverviewTab() {
   const [years, setYears] = useState<any[]>([]);
   const evaluationsInFlightKeyRef = useRef<string | null>(null);
   const evaluationsInFlightPromiseRef = useRef<Promise<void> | null>(null);
+  const prevFilterSnapshotForPageRef = useRef<string | null>(null);
+
+  const hasActiveDebouncedFilters = useMemo(() => {
+    if (debouncedSearchTerm.trim() !== "") return true;
+    const isAll = (v: string) => v === "" || v === "0";
+    if (!isAll(debouncedStatusFilter)) return true;
+    if (!isAll(debouncedQuarterFilter)) return true;
+    if (!isAll(debouncedYearFilter)) return true;
+    return false;
+  }, [
+    debouncedSearchTerm,
+    debouncedStatusFilter,
+    debouncedQuarterFilter,
+    debouncedYearFilter,
+  ]);
 
   const loadEvaluations = async (
     searchValue: string,
@@ -189,9 +210,20 @@ export default function OverviewTab() {
 
   useEffect(() => {
     const handler = setTimeout(() => {
-      if (searchTerm.trim() !== "") {
+      const snapshot = JSON.stringify({
+        searchTerm,
+        statusFilter,
+        quarterFilter,
+        yearFilter,
+      });
+      if (
+        prevFilterSnapshotForPageRef.current !== null &&
+        prevFilterSnapshotForPageRef.current !== snapshot
+      ) {
         setCurrentPage(1);
       }
+      prevFilterSnapshotForPageRef.current = snapshot;
+
       setDebouncedSearchTerm(searchTerm);
       setDebouncedStatusFilter(statusFilter);
       setDebouncedQuarterFilter(quarterFilter);
@@ -258,13 +290,6 @@ export default function OverviewTab() {
     }
   };
 
-  const getQuarterColor = (quarter: string): string => {
-    if (quarter.includes("Q1")) return "bg-blue-100 text-blue-800";
-    if (quarter.includes("Q2")) return "bg-green-100 text-green-800";
-    if (quarter.includes("Q3")) return "bg-yellow-100 text-yellow-800";
-    return "bg-purple-100 text-purple-800";
-  };
-
   const handleViewEvaluation = async (review: Review) => {
     try {
       const submission = await clientDataService.getSubmissionById(review.id);
@@ -281,8 +306,8 @@ export default function OverviewTab() {
   };
 
   const handleDeleteClick = async (submission: any) => {
-    if (!submission) return;
-    
+    if (!submission || !isReviewDeletable(submission as Review)) return;
+
     setDeletingReviewId(submission.id);
     try {
       await clientDataService.deleteSubmission(submission.id);
@@ -300,6 +325,7 @@ export default function OverviewTab() {
   };
 
   const openDeleteModal = (review: Review) => {
+    if (!isReviewDeletable(review)) return;
     setReviewToDelete(review);
     setIsDeleteModalOpen(true);
   };
@@ -315,25 +341,25 @@ export default function OverviewTab() {
       <div className="relative  overflow-y-auto">
         <Card className="">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 w-100">
+            <CardTitle className="flex flex-wrap items-center gap-2 text-base sm:text-lg">
               All Evaluation Records
-              <Badge variant="outline" className="text-xs font-normal">
+              <Badge variant="outline" className="text-[0.65rem] font-normal sm:text-xs">
                 {overviewTotal} Total Records
               </Badge>
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs sm:text-sm">
               Complete evaluation history with advanced filtering
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:flex-wrap">
+            <div className="mb-6 flex flex-col flex-wrap gap-4 lg:flex-row lg:items-end">
               {/* Search */}
-              <div className="flex-1">
+              <div className="min-w-0 w-full flex-1 lg:min-w-[min(100%,14rem)]">
                 <Label htmlFor="records-search" className="text-sm font-medium">
                   Search
                 </Label>
-                <div className=" relative ">
-                  <div className="relative ">
+                <div className="relative">
+                  <div className="relative w-full min-w-0">
                     <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                       <svg
                         className="h-5 w-5 text-gray-400"
@@ -347,10 +373,11 @@ export default function OverviewTab() {
                       </svg>
                     </span>
                     <Input
+                      id="records-search"
                       placeholder="Search by employee, evaluator"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pr-10 pl-10"
+                      className="w-full min-w-0 pl-10 pr-10"
                     />
                     {searchTerm && (
                       <button
@@ -377,7 +404,7 @@ export default function OverviewTab() {
               </div>
 
               {/* Approval Status Filter */}
-              <div className="w-full lg:w-[180px]">
+              <div className="w-full min-w-0 sm:min-w-[10rem] sm:max-w-[12rem] lg:w-48 lg:max-w-none">
                 <Label
                   htmlFor="records-approval-status"
                   className="text-sm font-medium"
@@ -388,7 +415,10 @@ export default function OverviewTab() {
                   value={statusFilter}
                   onValueChange={(value) => setStatusFilter(value)}
                 >
-                  <SelectTrigger className="w-full cursor-pointer">
+                  <SelectTrigger
+                    id="records-approval-status"
+                    className="w-full cursor-pointer"
+                  >
                     <SelectValue placeholder="Filter by status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -404,7 +434,7 @@ export default function OverviewTab() {
               </div>
 
               {/* Quarter Filter */}
-              <div className="w-full lg:w-[180px]">
+              <div className="w-full min-w-0 sm:min-w-[10rem] sm:max-w-[12rem] lg:w-48 lg:max-w-none">
                 <Label
                   htmlFor="records-quarter"
                   className="text-sm font-medium"
@@ -415,7 +445,10 @@ export default function OverviewTab() {
                   value={quarterFilter}
                   onValueChange={(value) => setQuarterFilter(value)}
                 >
-                  <SelectTrigger className="w-full cursor-pointer">
+                  <SelectTrigger
+                    id="records-quarter"
+                    className="w-full cursor-pointer"
+                  >
                     <SelectValue placeholder="Filter by quarter" />
                   </SelectTrigger>
                   <SelectContent>
@@ -432,7 +465,7 @@ export default function OverviewTab() {
               </div>
 
               {/* Year Filter */}
-              <div className="w-full lg:w-[180px]">
+              <div className="w-full min-w-0 sm:min-w-[10rem] sm:max-w-[12rem] lg:w-48 lg:max-w-none">
                 <Label htmlFor="records-year" className="text-sm font-medium">
                   Year
                 </Label>
@@ -440,7 +473,10 @@ export default function OverviewTab() {
                   value={yearFilter}
                   onValueChange={(value) => setYearFilter(value)}
                 >
-                  <SelectTrigger className="mt-1 cursor-pointer">
+                  <SelectTrigger
+                    id="records-year"
+                    className="mt-1 w-full cursor-pointer"
+                  >
                     <SelectValue placeholder="Select a year" />
                   </SelectTrigger>
                   <SelectContent>
@@ -455,8 +491,8 @@ export default function OverviewTab() {
               </div>
 
               {/* Refresh Button */}
-              <div className="flex w-full gap-2 lg:w-auto">
-                <div className="w-full lg:w-32">
+              <div className="flex w-full min-w-0 gap-2 sm:w-auto">
+                <div className="w-full min-w-[8rem] sm:w-32">
                   <Label className="text-sm font-medium opacity-0">
                     Refresh
                   </Label>
@@ -487,9 +523,9 @@ export default function OverviewTab() {
       </div>
       <div className="space-y-6 mt-2">
         {/* Main Container Div (replacing Card) */}
-        <div className="bg-white border rounded-lg p-6">
+        <div className="rounded-lg border bg-white p-4 sm:p-6">
           {/* Table Header Section */}
-          <div className="flex items-center justify-between mb-4">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 sm:mb-4">
             <div className="flex items-center gap-2">
               {(() => {
                 const now = new Date();
@@ -510,9 +546,9 @@ export default function OverviewTab() {
           </div>
 
           {/* Indicator Legend */}
-          <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 mb-4">
-            <div className="flex flex-wrap gap-4 text-xs">
-              <span className="text-sm font-medium text-gray-700 mr-2">
+          <div className="mb-3 rounded-lg border border-gray-200 bg-gray-50 p-2.5 sm:mb-4 sm:p-3">
+            <div className="flex flex-wrap gap-2 text-[0.65rem] sm:gap-3 sm:text-xs md:gap-4">
+              <span className="mr-1 w-full text-xs font-medium text-gray-700 sm:mr-2 sm:w-auto sm:text-sm">
                 Indicators:
               </span>
               <div className="flex items-center gap-1">
@@ -539,13 +575,29 @@ export default function OverviewTab() {
                   Completed
                 </Badge>
               </div>
+              <span className="mr-1 mt-1 w-full text-xs font-medium text-gray-700 sm:mr-2 sm:mt-0 sm:w-auto sm:text-sm">
+                Rating:
+              </span>
+              {RATING_DISPLAY_BANDS.map((band) => (
+                <div key={band.legend} className="flex items-center gap-1">
+                  <span
+                    className={cn(ratingPillClass, band.badgeClass, "text-xs")}
+                  >
+                    {band.legend}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
 
+          <p className="mb-2 text-[0.65rem] text-muted-foreground lg:hidden">
+            Swipe horizontally to view all columns.
+          </p>
+
           {/* Table Section */}
-          <div className="border rounded-lg overflow-hidden">
+          <div className="overflow-hidden rounded-lg border">
             <div
-              className="relative max-h-[min(68vh,34rem)] overflow-y-auto overflow-x-auto"
+              className="relative max-h-[min(70vh,32rem)] overflow-x-auto overflow-y-auto sm:max-h-[min(75vh,36rem)] lg:max-h-[600px] [-webkit-overflow-scrolling:touch]"
               style={{
                 scrollbarWidth: "thin",
                 scrollbarColor: "#cbd5e1 #f1f5f9",
@@ -572,60 +624,83 @@ export default function OverviewTab() {
                   </div>
                 </div>
               )}
-              <Table className="min-w-[1200px] w-full">
-                <TableHeader className="sticky top-0 z-10 border-b border-gray-200 bg-white [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600">
-                  <TableRow>
-                    <TableHead className="px-6 py-4">Employee</TableHead>
-                    <TableHead className="px-6 py-4">Evaluator</TableHead>
-                    <TableHead className="px-6 py-4">Branch</TableHead>
-                    <TableHead className="px-6 py-4">Quarter</TableHead>
-                    <TableHead className="px-6 py-4">Date</TableHead>
-                    <TableHead className="px-6 py-4">Rating</TableHead>
-                    <TableHead className="px-6 py-4">Status</TableHead>
-                    <TableHead className="px-6 py-4">Employee Sign</TableHead>
-                    <TableHead className="px-6 py-4">Evaluator Sign</TableHead>
-                    <TableHead className="px-6 py-4">Actions</TableHead>
+              <Table
+                className={EVAL_RECORDS_TABLE_CLASS}
+                wrapperClassName="overflow-visible"
+              >
+                <TableHeader className="sticky top-0 z-10 border-b border-gray-200 bg-white/95 shadow-[inset_0_-1px_0_0_rgb(226_232_240)] backdrop-blur-sm">
+                  <TableRow className="border-0 hover:bg-transparent">
+                    <TableHead className="min-w-[6.5rem] sm:min-w-[7.5rem] lg:min-w-[8.5rem]">
+                      Employee
+                    </TableHead>
+                    <TableHead className="min-w-[6.5rem] sm:min-w-[7.5rem] lg:min-w-[8.5rem]">
+                      Evaluator
+                    </TableHead>
+                    <TableHead className="hidden min-w-[4rem] md:table-cell">
+                      Branch
+                    </TableHead>
+                    <TableHead className="min-w-[3.5rem]">Quarter</TableHead>
+                    <TableHead className="min-w-[5rem] sm:min-w-[6.5rem] lg:min-w-[8rem]">
+                      Date
+                    </TableHead>
+                    <TableHead className="min-w-[3.25rem]">Rating</TableHead>
+                    <TableHead className="min-w-[4.5rem] sm:min-w-[5rem]">
+                      Status
+                    </TableHead>
+                    <TableHead className="hidden min-w-[4.5rem] lg:table-cell xl:min-w-[5.5rem]">
+                      <span className="xl:hidden">Emp. Sign</span>
+                      <span className="hidden xl:inline">Employee Sign</span>
+                    </TableHead>
+                    <TableHead className="hidden min-w-[4.5rem] xl:table-cell">
+                      Evaluator Sign
+                    </TableHead>
+                    <TableHead className={EVAL_TABLE_ACTIONS_HEAD_CLASS}>
+                      <span className="lg:hidden" aria-hidden>
+                        ⋮
+                      </span>
+                      <span className="hidden lg:inline">Actions</span>
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody className="divide-y divide-gray-200">
                   {refreshing || isPageLoading ? (
                     Array.from({ length: itemsPerPage }).map((_, index) => (
                       <TableRow key={`skeleton-${index}`}>
-                        <TableCell className="px-6 py-4">
-                          <Skeleton className="h-6 w-24" />
+                        <TableCell>
+                          <Skeleton className="h-5 w-20 sm:h-6 sm:w-24" />
                         </TableCell>
-                        <TableCell className="px-6 py-4">
-                          <Skeleton className="h-6 w-24" />
+                        <TableCell>
+                          <Skeleton className="h-5 w-20 sm:h-6 sm:w-24" />
                         </TableCell>
-                        <TableCell className="px-6 py-4">
-                          <Skeleton className="h-6 w-24" />
+                        <TableCell className="hidden md:table-cell">
+                          <Skeleton className="h-5 w-14 sm:h-6 sm:w-20" />
                         </TableCell>
-                        <TableCell className="px-6 py-4">
-                          <Skeleton className="h-6 w-24" />
+                        <TableCell>
+                          <Skeleton className="h-5 w-12 sm:h-6 sm:w-16" />
                         </TableCell>
-                        <TableCell className="px-6 py-4">
-                          <Skeleton className="h-6 w-24" />
+                        <TableCell>
+                          <Skeleton className="h-5 w-24 sm:h-6 sm:w-28" />
                         </TableCell>
-                        <TableCell className="px-6 py-4">
-                          <Skeleton className="h-6 w-24" />
+                        <TableCell>
+                          <Skeleton className="h-5 w-12 sm:h-6 sm:w-16" />
                         </TableCell>
-                        <TableCell className="px-6 py-4">
-                          <Skeleton className="h-6 w-24" />
+                        <TableCell>
+                          <Skeleton className="h-5 w-16 sm:h-6 sm:w-20" />
                         </TableCell>
-                        <TableCell className="px-6 py-4">
-                          <Skeleton className="h-6 w-24" />
+                        <TableCell className="hidden lg:table-cell">
+                          <Skeleton className="h-5 w-14 sm:h-6 sm:w-20" />
                         </TableCell>
-                        <TableCell className="px-6 py-4">
-                          <Skeleton className="h-6 w-24" />
+                        <TableCell className="hidden xl:table-cell">
+                          <Skeleton className="h-5 w-14 sm:h-6 sm:w-20" />
                         </TableCell>
-                        <TableCell className="px-6 py-4">
-                          <Skeleton className="h-6 w-24" />
+                        <TableCell className={evalTableActionsCellClass("")}>
+                          <Skeleton className="mx-auto h-8 w-8 rounded-md sm:mx-0 sm:h-8 sm:w-24" />
                         </TableCell>
                       </TableRow>
                     ))
-                  ) : !evaluations || evaluations.length === 0 ? (
+                  ) : evaluations?.length === 0 || !evaluations ? (
                     <TableRow>
-                      <TableCell colSpan={10} className="text-center py-12">
+                      <TableCell colSpan={10} className="py-10 text-center sm:py-12">
                         <div className="flex flex-col items-center justify-center gap-4">
                           <img
                             src="/not-found.gif"
@@ -640,21 +715,21 @@ export default function OverviewTab() {
                             }}
                           />
                           <div className="text-gray-500">
-                            {searchTerm ? (
+                            {hasActiveDebouncedFilters ? (
                               <>
-                                <p className="text-base font-medium mb-1">
+                                <p className="mb-1 text-sm font-medium sm:text-base">
                                   No results found
                                 </p>
-                                <p className="text-sm text-gray-400">
+                                <p className="text-xs text-gray-400 sm:text-sm">
                                   Try adjusting your search or filters
                                 </p>
                               </>
                             ) : (
                               <>
-                                <p className="text-base font-medium mb-1">
+                                <p className="mb-1 text-sm font-medium sm:text-base">
                                   No evaluation records to display
                                 </p>
-                                <p className="text-sm text-gray-400">
+                                <p className="text-xs text-gray-400 sm:text-sm">
                                   Records will appear here when evaluations are
                                   submitted
                                 </p>
@@ -666,181 +741,119 @@ export default function OverviewTab() {
                     </TableRow>
                   ) : (
                     evaluations.map((review) => {
-                      const submittedDate = new Date(review.created_at);
-                      const now = new Date();
-                      const hoursDiff =
-                        (now.getTime() - submittedDate.getTime()) /
-                        (1000 * 60 * 60);
-                      const isNew = hoursDiff <= 24;
-                      const isRecent = hoursDiff > 24 && hoursDiff <= 168; // 7 days
-                      const isCompleted = review.status === "completed";
-                      const isPending = review.status === "pending";
-
-                      // Determine row background color
-                      let rowClassName = "hover:bg-gray-100 transition-colors";
-                      if (isCompleted) {
-                        rowClassName =
-                          "bg-green-50 hover:bg-green-100 border-l-4 border-l-green-500 transition-colors";
-                      } else if (isNew) {
-                        rowClassName =
-                          "bg-yellow-50 hover:bg-yellow-100 border-l-4 border-l-yellow-500 transition-colors";
-                      } else if (isRecent) {
-                        rowClassName =
-                          "bg-blue-50 hover:bg-blue-100 border-l-4 border-l-blue-500 transition-colors";
-                      } else if (isPending) {
-                        rowClassName =
-                          "bg-orange-50 hover:bg-orange-100 border-l-4 border-l-orange-500 transition-colors";
-                      }
+                      const rowClassName = getReviewRowClassName(review);
+                      const reviewDate = formatReviewListDate(review.created_at);
+                      const statusLabels = formatReviewStatusLabel(review.status);
+                      const quarterDisplay = getReviewQuarterDisplay(review);
 
                       return (
                         <TableRow key={review.id} className={rowClassName}>
-                          <TableCell className="px-6 py-4">
-                            <div>
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="font-medium text-gray-900">
-                                  {review.employee?.fname +
-                                    " " +
-                                    review.employee?.lname}
-                                </span>
-                              </div>
-                            </div>
+                          <TableCell>
+                            <span className="block max-w-[9rem] truncate font-medium text-gray-900 sm:max-w-[11rem] lg:max-w-none">
+                              {[review.employee?.fname, review.employee?.lname]
+                                .filter(Boolean)
+                                .join(" ")
+                                .trim() || "—"}
+                            </span>
                           </TableCell>
-                          <TableCell className="px-6 py-4">
-                            <div className="font-medium text-gray-900">
-                              {review.evaluator?.fname +
-                                " " +
-                                review.evaluator?.lname}
-                            </div>
+                          <TableCell>
+                            <span className="block max-w-[9rem] truncate font-medium text-gray-900 sm:max-w-[11rem] lg:max-w-none">
+                              {[review.evaluator?.fname, review.evaluator?.lname]
+                                .filter(Boolean)
+                                .join(" ")
+                                .trim() || "—"}
+                            </span>
                           </TableCell>
-                          <TableCell className="px-6 py-4 text-sm text-gray-600">
-                            {getEmployeeBranchCodeDisplay(
-                              review.employee,
-                              branchOptions,
-                              branchListLoading
-                            )}
+                          <TableCell className="hidden text-gray-600 md:table-cell">
+                            <span className="block max-w-[5rem] truncate sm:max-w-none">
+                              {getEmployeeBranchCodeDisplay(
+                                review.employee,
+                                branchOptions,
+                                branchListLoading
+                              )}
+                            </span>
                           </TableCell>
-                          <TableCell className="px-6 py-4">
+                          <TableCell>
+                            <Badge
+                              className={cn(
+                                "max-w-[5.5rem] truncate text-[0.65rem] sm:max-w-none sm:text-xs",
+                                getQuarterColor(quarterDisplay)
+                              )}
+                            >
+                              {quarterDisplay}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap text-gray-600">
+                            <span className="sm:hidden">{reviewDate.short}</span>
+                            <span className="hidden sm:inline">{reviewDate.full}</span>
+                          </TableCell>
+                          <TableCell>
                             {(() => {
-                              // Check if "Others" is selected
-                              const isOthersSelected = 
-                                (review.reviewTypeOthersImprovement != null && review.reviewTypeOthersImprovement !== 0) || 
-                                (review.reviewTypeOthersCustom && 
-                                 review.reviewTypeOthersCustom.trim() !== "");
-                              
-                              // Check if regular or probationary types are empty/null
-                              const hasRegular = review.reviewTypeRegular != null && 
-                                review.reviewTypeRegular !== "" && 
-                                review.reviewTypeRegular !== "null" &&
-                                String(review.reviewTypeRegular).trim() !== "" &&
-                                review.reviewTypeRegular !== 0;
-                              
-                              const hasProbationary = review.reviewTypeProbationary != null && 
-                                review.reviewTypeProbationary !== "" &&
-                                review.reviewTypeProbationary !== "null" &&
-                                String(review.reviewTypeProbationary).trim() !== "";
-                              
-                              // Determine the display value
-                              let displayValue: string = "Others";
-                              
-                              if (hasRegular) {
-                                displayValue = String(review.reviewTypeRegular).trim();
-                              } else if (hasProbationary) {
-                                displayValue = "M" + String(review.reviewTypeProbationary).trim();
-                              } else if (isOthersSelected) {
-                                // If custom value exists, use it; otherwise use "Others"
-                                if (review.reviewTypeOthersCustom && review.reviewTypeOthersCustom.trim() !== "") {
-                                  displayValue = review.reviewTypeOthersCustom.trim();
-                                } else {
-                                  displayValue = "Others";
-                                }
-                              }
-                              
+                              const ratingValue = getReviewListRating(review);
                               return (
-                                <Badge className={getQuarterColor(displayValue)}>
-                                  {displayValue}
-                                </Badge>
+                                <span
+                                  className={cn(
+                                    ratingPillClass,
+                                    getRatingBadgeClassFromBands(ratingValue)
+                                  )}
+                                >
+                                  {formatRatingDisplay(ratingValue)}
+                                </span>
                               );
                             })()}
                           </TableCell>
-                          <TableCell className="px-6 py-4 text-sm text-gray-600">
-                            {new Date(review.created_at).toLocaleString(
-                              undefined,
-                              {
-                                year: "numeric",
-                                month: "short",
-                                day: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              }
-                            )}
-                          </TableCell>
-                          <TableCell className="px-6 py-4 text-sm text-gray-600">
-                            {review.rating}
-                          </TableCell>
-                          <TableCell className="px-6 py-4">
+                          <TableCell>
                             <Badge
-                              className={
+                              className={cn(
+                                "text-[0.65rem] sm:text-xs",
                                 review.status === "completed"
                                   ? "bg-green-100 text-green-800"
                                   : review.status === "pending"
                                   ? "bg-yellow-100 text-yellow-800"
                                   : "bg-yellow-100 text-yellow-800"
-                              }
+                              )}
                             >
-                              {review.status === "completed"
-                                ? `✓ ${review.status}`
-                                : review.status === "pending"
-                                ? `⏳ ${review.status}`
-                                : review.status}
+                              <span className="sm:hidden">{statusLabels.short}</span>
+                              <span className="hidden sm:inline">
+                                {statusLabels.full}
+                              </span>
                             </Badge>
                           </TableCell>
-                          <TableCell className="px-6 py-4 text-sm text-gray-600">
+                          <TableCell className="hidden text-gray-600 lg:table-cell">
                             {review.status === "completed" ? (
-                              <Badge className="bg-green-100 text-green-800 text-xs">
+                              <Badge className="bg-green-100 text-[0.65rem] text-green-800 sm:text-xs">
                                 ✓ Signed
                               </Badge>
                             ) : review.status === "pending" ? (
-                              <Badge className="bg-gray-100 text-gray-600 text-xs">
+                              <Badge className="bg-gray-100 text-[0.65rem] text-gray-600 sm:text-xs">
                                 ⏳ Pending
                               </Badge>
                             ) : (
-                              <span className="text-xs text-gray-400">—</span>
+                              <span className="text-[0.65rem] text-gray-400 sm:text-xs">
+                                —
+                              </span>
                             )}
                           </TableCell>
-                          <TableCell className="px-6 py-4 text-sm text-gray-600">
-                            <Badge className="bg-green-100 text-green-800 text-xs">
-                              ✓ Signed
-                            </Badge>
+                          <TableCell className="hidden text-gray-600 xl:table-cell">
+                            {review.evaluator?.roles?.[0]?.name ===
+                            "evaluator" ? (
+                              <Badge className="bg-green-100 text-[0.65rem] text-green-800 sm:text-xs">
+                                ✓ Signed
+                              </Badge>
+                            ) : (
+                              <span className="text-[0.65rem] text-gray-400 sm:text-xs">
+                                —
+                              </span>
+                            )}
                           </TableCell>
 
-                          <TableCell className="px-6 py-4">
-                            <div className="flex gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleViewEvaluation(review)}
-                                className="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-700 hover:text-white text-white cursor-pointer"
-                              >
-                                ☰ View
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => openDeleteModal(review)}
-                                disabled={deletingReviewId === review.id}
-                                className="text-xs px-2 py-1 bg-red-100 hover:bg-red-500 text-gray-700 hover:text-white border-red-200 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
-                                title="Delete this evaluation record"
-                              >
-                                {deletingReviewId === review.id ? (
-                                  <div className="flex items-center gap-1">
-                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                    <span>Deleting...</span>
-                                  </div>
-                                ) : (
-                                  "❌ Delete"
-                                )}
-                              </Button>
-                            </div>
+                          <TableCell className={evalTableActionsCellClass(rowClassName)}>
+                            <EvalRecordRowActions
+                              review={review}
+                              onView={() => handleViewEvaluation(review)}
+                              onDelete={() => openDeleteModal(review)}
+                              deleting={deletingReviewId === review.id}
+                            />
                           </TableCell>
                         </TableRow>
                       );
@@ -852,7 +865,7 @@ export default function OverviewTab() {
           </div>
 
           {/* Pagination Controls */}
-          {overviewTotal > itemsPerPage && (
+          {totalPages > 1 && (
             <EvaluationsPagination
               currentPage={currentPage}
               totalPages={totalPages}
