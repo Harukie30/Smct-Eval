@@ -98,6 +98,55 @@ function pickSupervisorFromEmployee(
   return null;
 }
 
+type BranchLike = {
+  branch_name?: string;
+  branch?: string;
+  name?: string;
+  acronym?: string;
+  branch_code?: string;
+};
+
+/** API may send `branch` (object), `branches` (array/object), or flat `branch_name`. */
+function pickEmployeeBranchLabel(emp: UserType | null): string {
+  if (!emp) return "";
+  const e = emp as unknown as Record<string, unknown>;
+
+  const fromBranchObject = (raw: unknown): string => {
+    if (!raw || typeof raw !== "object") return "";
+    const o = raw as BranchLike;
+    return (
+      String(o.branch_name ?? "").trim() ||
+      String(o.branch ?? "").trim() ||
+      String(o.name ?? "").trim() ||
+      String(o.acronym ?? "").trim() ||
+      String(o.branch_code ?? "").trim()
+    );
+  };
+
+  if (typeof e.branch === "string" && String(e.branch).trim()) {
+    return String(e.branch).trim();
+  }
+
+  const fromSingular = fromBranchObject(e.branch);
+  if (fromSingular) return fromSingular;
+
+  const branches = e.branches;
+  if (Array.isArray(branches)) {
+    for (const item of branches) {
+      const label =
+        typeof item === "string"
+          ? item.trim()
+          : fromBranchObject(item);
+      if (label) return label;
+    }
+  } else {
+    const fromPlural = fromBranchObject(branches);
+    if (fromPlural) return fromPlural;
+  }
+
+  return String(e.branch_name ?? "").trim();
+}
+
 function pickSupervisorFromDashboard(
   dashboard: unknown
 ): SupervisorDisplay | null {
@@ -182,6 +231,8 @@ export default function ViewEmployeeModal({
     employeeIdValue != null && String(employeeIdValue).trim() !== ""
       ? String(employeeIdValue).trim()
       : "";
+
+  const branchLabel = pickEmployeeBranchLabel(employee);
 
   const getEmployeePerformanceMetrics = (employeeData: any[]) => {
     if (!employeeData || employeeData.length === 0) {
@@ -705,9 +756,7 @@ export default function ViewEmployeeModal({
             </Card>
 
             {/* Branch Card */}
-            {(employee.branches?.branch_name ||
-              (Array.isArray(employee.branches) &&
-                employee.branches[0]?.branch_name)) && (
+            {branchLabel ? (
               <Card
                 className={`${
                   isAdminVariant
@@ -741,16 +790,13 @@ export default function ViewEmployeeModal({
                           isAdminVariant ? "text-slate-800" : "text-black"
                         }`}
                       >
-                        {employee.branches?.branch_name ||
-                          (Array.isArray(employee.branches) &&
-                            employee.branches[0]?.branch_name) ||
-                          "Not Assigned"}
+                        {branchLabel}
                       </p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-            )}
+            ) : null}
 
             {/* Date Hired Card */}
             {((employee as any).date_hired || (employee as any).dateHired || (employee as any).hireDate) && (
