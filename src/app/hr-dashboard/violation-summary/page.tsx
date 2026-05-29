@@ -200,36 +200,77 @@ function mapMemorandumViolationsResponse(raw: unknown): ViolationSummaryRow[] {
   return out;
 }
 
-function extractLastPageFromViolationResponse(raw: unknown): number {
-  if (!raw || typeof raw !== "object") return 1;
+function extractViolationPagination(
+  raw: unknown,
+  fallbackPerPage: number
+): { total: number; lastPage: number; perPage: number } {
+  if (!raw || typeof raw !== "object") {
+    return { total: 0, lastPage: 1, perPage: fallbackPerPage };
+  }
+
   const root = raw as Record<string, unknown>;
+  const payload =
+    root.data && typeof root.data === "object" && !Array.isArray(root.data)
+      ? (root.data as Record<string, unknown>)
+      : null;
   const meta =
     root.meta && typeof root.meta === "object" && !Array.isArray(root.meta)
       ? (root.meta as Record<string, unknown>)
       : null;
-  const lp = Number(
-    root.last_page ?? root.lastPage ?? meta?.last_page ?? meta?.lastPage ?? 1
-  );
-  return Number.isFinite(lp) && lp >= 1 ? lp : 1;
+  const memos =
+    root.memos && typeof root.memos === "object" && !Array.isArray(root.memos)
+      ? (root.memos as Record<string, unknown>)
+      : null;
+
+  const sources: Record<string, unknown>[] = [
+    root,
+    meta,
+    payload,
+    memos,
+  ].filter((s): s is Record<string, unknown> => s != null);
+
+  let total = 0;
+  let lastPage = 0;
+  let perPage = fallbackPerPage;
+
+  for (const source of sources) {
+    if (total === 0) {
+      const t = Number(
+        source.total ?? source.total_count ?? source.totalCount ?? 0
+      );
+      if (Number.isFinite(t) && t >= 0) total = t;
+    }
+    if (lastPage === 0) {
+      const lp = Number(source.last_page ?? source.lastPage ?? 0);
+      if (Number.isFinite(lp) && lp >= 1) lastPage = lp;
+    }
+    const pp = Number(source.per_page ?? source.perPage ?? 0);
+    if (Number.isFinite(pp) && pp >= 1) perPage = pp;
+  }
+
+  const rowCount = extractViolationRecords(raw).length;
+  if (total === 0 && rowCount > 0) {
+    total = rowCount;
+  }
+
+  if (lastPage === 0) {
+    lastPage =
+      total > 0 ? Math.max(1, Math.ceil(total / Math.max(1, perPage))) : 1;
+  }
+
+  return {
+    total,
+    lastPage: Math.max(1, lastPage),
+    perPage: Math.max(1, perPage),
+  };
+}
+
+function extractLastPageFromViolationResponse(raw: unknown): number {
+  return extractViolationPagination(raw, TABLE_PAGE_SIZE).lastPage;
 }
 
 function extractTotalFromViolationResponse(raw: unknown): number {
-  if (!raw || typeof raw !== "object") return 0;
-  const root = raw as Record<string, unknown>;
-  const meta =
-    root.meta && typeof root.meta === "object" && !Array.isArray(root.meta)
-      ? (root.meta as Record<string, unknown>)
-      : null;
-  const total = Number(
-    root.total ??
-      meta?.total ??
-      root.total_count ??
-      meta?.total_count ??
-      root.totalCount ??
-      meta?.totalCount ??
-      0
-  );
-  return Number.isFinite(total) && total >= 0 ? total : 0;
+  return extractViolationPagination(raw, TABLE_PAGE_SIZE).total;
 }
 
 /** Parse API `years` list, e.g. `[{ "years": 2026 }]`. */
@@ -401,6 +442,8 @@ export default function ViolationSummaryPage() {
       : rows.length > 0
         ? (serverLastPage - 1) * TABLE_PAGE_SIZE + rows.length
         : 0;
+  const showPagination =
+    !loading && rows.length > 0 && (totalPages > 1 || page > 1 || totalRows > TABLE_PAGE_SIZE);
 
   useEffect(() => {
     setPage((p) => (p > totalPages ? totalPages : p < 1 ? 1 : p));
@@ -436,11 +479,10 @@ export default function ViolationSummaryPage() {
           }
         }
         const next = mapMemorandumViolationsResponse(raw);
-        const lastPage = extractLastPageFromViolationResponse(raw);
-        const total = extractTotalFromViolationResponse(raw);
+        const pagination = extractViolationPagination(raw, TABLE_PAGE_SIZE);
         setRows(next);
-        setServerLastPage(lastPage);
-        setServerTotal(total);
+        setServerLastPage(pagination.lastPage);
+        setServerTotal(pagination.total);
       } catch (e) {
         console.error(e);
         setRows([]);
@@ -781,12 +823,12 @@ export default function ViolationSummaryPage() {
                 )}
               </TableBody>
             </Table>
-            {!loading && totalRows > 0 && totalPages > 1 ? (
+            {showPagination ? (
               <div className="border-t border-slate-100 bg-slate-50/50 px-1 py-1 sm:px-2">
                 <EvaluationsPagination
                   currentPage={page}
                   totalPages={totalPages}
-                  total={totalRows}
+                  total={Math.max(totalRows, page * TABLE_PAGE_SIZE)}
                   perPage={TABLE_PAGE_SIZE}
                   onPageChange={setPage}
                 />
