@@ -16,7 +16,7 @@ function EvaluatorLayout({ children }: { children: React.ReactNode }) {
       { id: "overview", label: "Overview", icon: "📊", path: "/evaluator" },
       {
         id: "feedback",
-        label: "All Evaluation ",
+        label: "All Evaluation w",
         icon: "🗂️",
         path: "/evaluator/evaluationRecords",
       },

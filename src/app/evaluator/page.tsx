@@ -21,10 +21,8 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  getQuarterFromEvaluationData,
-  getQuarterColor,
-} from "@/lib/quarterUtils";
+import { getQuarterColor } from "@/lib/quarterUtils";
+import { getReviewQuarterDisplay } from "@/components/evaluation/evaluationRecordsShared";
 import apiService from "@/lib/apiService";
 import {
   formatRatingDisplay,
@@ -98,7 +96,7 @@ function DashboardStatCard({
 }
 
 const EVALUATOR_TABLE_CLASS =
-  "min-w-[34rem] sm:min-w-[42rem] md:min-w-[52rem] lg:min-w-0 lg:w-full [&_th]:h-auto [&_th]:min-h-8 [&_th]:whitespace-nowrap [&_th]:px-2 [&_th]:py-2 [&_th]:align-middle [&_th]:text-[0.6rem] [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600 sm:[&_th]:px-2.5 sm:[&_th]:py-2.5 sm:[&_th]:text-[0.65rem] lg:[&_th]:px-3 lg:[&_th]:text-xs [&_td]:min-w-0 [&_td]:px-2 [&_td]:py-2 [&_td]:align-top [&_td]:text-[0.7rem] [&_td]:leading-snug sm:[&_td]:px-2.5 sm:[&_td]:py-2.5 sm:[&_td]:text-xs lg:[&_td]:px-3 lg:[&_td]:text-sm";
+  "min-w-[34rem] sm:min-w-[42rem] md:min-w-[52rem] lg:min-w-0 lg:w-full [&_th]:h-auto [&_th]:min-h-8 [&_th]:whitespace-nowrap [&_th]:px-2 [&_th]:py-2 [&_th]:align-middle [&_th]:text-[0.6rem] [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600 sm:[&_th]:px-2.5 sm:[&_th]:py-2.5 sm:[&_th]:text-[0.65rem] lg:[&_th]:px-3 lg:[&_th]:text-xs [&_td]:min-w-0 [&_td]:px-2 [&_td]:py-2.5 [&_td]:align-middle [&_td]:text-[0.7rem] [&_td]:leading-snug sm:[&_td]:px-2.5 sm:[&_td]:py-2.5 sm:[&_td]:text-xs lg:[&_td]:px-3 lg:[&_td]:text-sm";
 
 const EVALUATOR_ACTIONS_HEAD_CLASS =
   "w-[3.25rem] min-w-[3.25rem] p-1 text-center lg:sticky lg:right-0 lg:z-[4] lg:min-w-[6.5rem] lg:bg-white lg:text-left lg:shadow-[-6px_0_12px_-4px_rgba(15,23,42,0.12)]";
@@ -526,16 +524,16 @@ export default function OverviewTab() {
               <Table className={EVALUATOR_TABLE_CLASS} wrapperClassName="overflow-visible">
                 <TableHeader className="sticky top-0 z-10 border-b border-gray-200 bg-white/95 backdrop-blur-sm">
                   <TableRow className="border-0 hover:bg-transparent" key="overview-header">
-                    <TableHead className="min-w-[7.5rem] sm:min-w-[9rem]">
+                    <TableHead className="min-w-[7.5rem] text-left sm:min-w-[9rem]">
                       Employee
                     </TableHead>
-                    <TableHead className="hidden min-w-[4rem] sm:table-cell">
+                    <TableHead className="hidden min-w-[4rem] text-center sm:table-cell">
                       Rating
                     </TableHead>
-                    <TableHead className="hidden min-w-[5rem] sm:table-cell">
+                    <TableHead className="hidden min-w-[5rem] text-center sm:table-cell">
                       Date
                     </TableHead>
-                    <TableHead className="hidden min-w-[3.5rem] md:table-cell">
+                    <TableHead className="hidden min-w-[3.5rem] text-center md:table-cell">
                       Quarter
                     </TableHead>
                     <TableHead className={EVALUATOR_ACTIONS_HEAD_CLASS}>
@@ -612,16 +610,16 @@ export default function OverviewTab() {
                 <Table className={EVALUATOR_TABLE_CLASS} wrapperClassName="overflow-visible">
                   <TableHeader className="sticky top-0 z-10 border-b border-gray-200 bg-white/95 backdrop-blur-sm">
                     <TableRow className="border-0 hover:bg-transparent" key="overview-header">
-                      <TableHead className="min-w-[7.5rem] sm:min-w-[9rem]">
+                      <TableHead className="min-w-[7.5rem] text-left sm:min-w-[9rem]">
                         Employee
                       </TableHead>
-                      <TableHead className="hidden min-w-[4rem] sm:table-cell">
+                      <TableHead className="hidden min-w-[4rem] text-center sm:table-cell">
                         Rating
                       </TableHead>
-                      <TableHead className="hidden min-w-[5rem] sm:table-cell">
+                      <TableHead className="hidden min-w-[5rem] text-center sm:table-cell">
                         Date
                       </TableHead>
-                      <TableHead className="hidden min-w-[3.5rem] md:table-cell">
+                      <TableHead className="hidden min-w-[3.5rem] text-center md:table-cell">
                         Quarter
                       </TableHead>
                       <TableHead className={EVALUATOR_ACTIONS_HEAD_CLASS}>
@@ -715,11 +713,11 @@ export default function OverviewTab() {
                         } = ratingBand;
                         const reviewDate = formatListDate(review.created_at);
                         const statusLabels = formatStatusLabel(review.status);
-                        const quarterValue = getQuarterFromEvaluationData(review);
+                        const quarterDisplay = getReviewQuarterDisplay(review);
 
                         return (
                           <TableRow key={review.id} className={rowClassName}>
-                            <TableCell>
+                            <TableCell className="text-left align-middle">
                               <div className="min-w-0">
                                 <div className="mb-1 flex flex-wrap items-center gap-1">
                                   <span className="max-w-[10rem] truncate text-sm font-medium text-gray-900 sm:max-w-none">
@@ -775,10 +773,10 @@ export default function OverviewTab() {
                                   <Badge
                                     className={cn(
                                       "max-w-[5rem] truncate text-[0.6rem] sm:max-w-none sm:text-xs",
-                                      getQuarterColor(String(quarterValue))
+                                      getQuarterColor(quarterDisplay)
                                     )}
                                   >
-                                    {String(quarterValue)}
+                                    {quarterDisplay}
                                   </Badge>
                                   <span className="text-[0.65rem] text-gray-600 sm:hidden">
                                     {reviewDate.short}
@@ -790,10 +788,10 @@ export default function OverviewTab() {
                               </div>
                             </TableCell>
 
-                            <TableCell className="hidden sm:table-cell">
+                            <TableCell className="hidden text-center align-middle sm:table-cell">
                               <div
                                 className={cn(
-                                  "flex items-center justify-center gap-2",
+                                  "inline-flex items-center justify-center gap-2",
                                   textClassName
                                 )}
                               >
@@ -811,22 +809,34 @@ export default function OverviewTab() {
                               </div>
                             </TableCell>
 
-                            <TableCell className="hidden sm:table-cell">
-                              <div className="flex flex-col items-center">
-                                <span className="font-medium">{reviewDate.short}</span>
+                            <TableCell className="hidden text-center align-middle sm:table-cell">
+                              <div className="flex flex-col items-center justify-center gap-0.5">
+                                <span className="font-medium whitespace-nowrap">
+                                  {reviewDate.short}
+                                </span>
                                 <span className="text-xs text-gray-500">
                                   {getTimeAgo(String(review.created_at))}
                                 </span>
                               </div>
                             </TableCell>
 
-                            <TableCell className="hidden md:table-cell">
-                              <Badge className={getQuarterColor(String(quarterValue))}>
-                                {String(quarterValue)}
+                            <TableCell className="hidden text-center align-middle md:table-cell">
+                              <Badge
+                                className={cn(
+                                  "mx-auto max-w-[5.5rem] truncate text-[0.65rem] sm:max-w-none sm:text-xs",
+                                  getQuarterColor(quarterDisplay)
+                                )}
+                              >
+                                {quarterDisplay}
                               </Badge>
                             </TableCell>
 
-                            <TableCell className={evaluatorActionsCellClass(rowClassName)}>
+                            <TableCell
+                              className={cn(
+                                "align-middle",
+                                evaluatorActionsCellClass(rowClassName)
+                              )}
+                            >
                               <Button
                                 type="button"
                                 size="icon"
