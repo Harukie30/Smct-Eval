@@ -137,6 +137,67 @@ export function isReviewDeletable(review: EvaluationRecordReview): boolean {
   return status === "pending";
 }
 
+function getEvaluatorRoleName(review: EvaluationRecordReview): string {
+  const ev = review.evaluator;
+  if (!ev) return "";
+  const roles = ev.roles;
+  if (Array.isArray(roles) && roles.length > 0) {
+    const first = roles[0] as { name?: string } | string;
+    return String(
+      typeof first === "object" && first !== null ? first.name ?? "" : first
+    ).toLowerCase();
+  }
+  if (roles && typeof roles === "object" && "name" in roles) {
+    return String((roles as { name?: string }).name ?? "").toLowerCase();
+  }
+  if (ev.role) return String(ev.role).toLowerCase();
+  return "";
+}
+
+/** Whether the evaluator party has signed (list rows often omit nested roles). */
+export function hasEvaluatorSigned(
+  review: EvaluationRecordReview,
+  options?: { evaluatorOwnRecords?: boolean }
+): boolean {
+  if (options?.evaluatorOwnRecords && review.id) {
+    return true;
+  }
+
+  const extended = review as EvaluationRecordReview & {
+    evaluatorSignature?: string | null;
+    evaluator_signature?: string | null;
+  };
+  const sigField =
+    extended.evaluatorSignature ?? extended.evaluator_signature ?? "";
+  if (String(sigField).trim() !== "") return true;
+
+  const profileSig = review.evaluator?.signature;
+  if (profileSig && String(profileSig).trim() !== "") return true;
+
+  const roleName = getEvaluatorRoleName(review);
+  if (roleName === "evaluator" || roleName.includes("evaluator")) {
+    return true;
+  }
+
+  const status = String(review.status ?? "").toLowerCase();
+  if (
+    review.evaluator &&
+    review.id &&
+    (status === "pending" || status === "completed")
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+/** Whether HR signed as the evaluating party (HR-submitted reviews). */
+export function hasHrSigned(review: EvaluationRecordReview): boolean {
+  const roleName = getEvaluatorRoleName(review);
+  if (roleName === "hr" || roleName.includes("hr")) return true;
+  return false;
+}
+
 export function formatRatingDisplay(rating: number | null): string {
   if (rating === null) return "—";
   return rating % 1 === 0 ? String(rating) : rating.toFixed(2);

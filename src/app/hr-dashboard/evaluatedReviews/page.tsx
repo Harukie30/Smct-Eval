@@ -50,6 +50,11 @@ import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 import { toastMessages } from "@/lib/toastMessages";
 import { cn } from "@/lib/utils";
+import {
+  hasEvaluatorSigned,
+  hasHrSigned,
+} from "@/components/evaluation/evaluationRecordsShared";
+
 interface Review {
   id: number;
   employee: any;
@@ -1443,8 +1448,7 @@ export default function OverviewTab() {
                             )}
                           </TableCell>
                           <TableCell className="hidden text-gray-600 xl:table-cell">
-                            {review.evaluator?.roles?.[0]?.name ===
-                            "evaluator" ? (
+                            {hasEvaluatorSigned(review) ? (
                               <Badge className="bg-green-100 text-[0.65rem] text-green-800 sm:text-xs">
                                 ✓ Signed
                               </Badge>
@@ -1455,7 +1459,7 @@ export default function OverviewTab() {
                             )}
                           </TableCell>
                           <TableCell className="hidden text-gray-600 xl:table-cell">
-                            {review.evaluator?.roles?.[0]?.name === "hr" ? (
+                            {hasHrSigned(review) ? (
                               <Badge className="bg-green-100 text-[0.65rem] text-green-800 sm:text-xs">
                                 ✓ Signed
                               </Badge>

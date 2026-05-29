@@ -61,6 +61,7 @@ import {
   getReviewListRating,
   getReviewQuarterDisplay,
   getReviewRowClassName,
+  hasEvaluatorSigned,
   isReviewDeletable,
   ratingPillClass,
 } from "@/components/evaluation/evaluationRecordsShared";
@@ -835,8 +836,9 @@ export default function OverviewTab() {
                             )}
                           </TableCell>
                           <TableCell className="hidden text-gray-600 xl:table-cell">
-                            {review.evaluator?.roles?.[0]?.name ===
-                            "evaluator" ? (
+                            {hasEvaluatorSigned(review, {
+                              evaluatorOwnRecords: true,
+                            }) ? (
                               <Badge className="bg-green-100 text-[0.65rem] text-green-800 sm:text-xs">
                                 ✓ Signed
                               </Badge>
