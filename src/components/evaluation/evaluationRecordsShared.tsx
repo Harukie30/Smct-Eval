@@ -2,6 +2,7 @@
 
 import { Eye, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 export type EvaluationRecordReview = {
@@ -137,24 +138,190 @@ export function isReviewDeletable(review: EvaluationRecordReview): boolean {
   return status === "pending";
 }
 
-function getEvaluatorRoleName(review: EvaluationRecordReview): string {
-  const ev = review.evaluator;
-  if (!ev) return "";
-  const roles = ev.roles;
-  if (Array.isArray(roles) && roles.length > 0) {
-    const first = roles[0] as { name?: string } | string;
-    return String(
-      typeof first === "object" && first !== null ? first.name ?? "" : first
-    ).toLowerCase();
-  }
-  if (roles && typeof roles === "object" && "name" in roles) {
-    return String((roles as { name?: string }).name ?? "").toLowerCase();
-  }
-  if (ev.role) return String(ev.role).toLowerCase();
-  return "";
+function isHrRoleName(name: string): boolean {
+  const n = name.toLowerCase().trim();
+  if (!n) return false;
+  if (n === "evaluator" || n.endsWith("_evaluator")) return false;
+  if (n === "hr" || n === "human resources") return true;
+  if (n.startsWith("hr_") || n.endsWith("_hr")) return true;
+  return /\bhr\b/.test(n) && !n.includes("evaluator");
 }
 
-/** Whether the evaluator party has signed (list rows often omit nested roles). */
+function isEvaluatorRoleName(name: string): boolean {
+  const n = name.toLowerCase().trim();
+  return n === "evaluator" || n.endsWith("_evaluator") || n.includes("evaluator");
+}
+
+/** All role hints for the user who conducted the evaluation (list rows vary by API). */
+function collectConductingPartyRoleNames(
+  review: EvaluationRecordReview
+): string[] {
+  const ev = review.evaluator;
+  const names: string[] = [];
+  if (!ev || typeof ev !== "object") {
+    const top = review as EvaluationRecordReview & { evaluator_role?: string };
+    if (top.evaluator_role) names.push(String(top.evaluator_role).toLowerCase());
+    return [...new Set(names.filter(Boolean))];
+  }
+
+  const roles = ev.roles;
+  if (Array.isArray(roles)) {
+    for (const entry of roles) {
+      const label =
+        typeof entry === "object" && entry !== null && "name" in entry
+          ? (entry as { name?: string }).name
+          : entry;
+      if (label) names.push(String(label).toLowerCase());
+    }
+  } else if (roles && typeof roles === "object" && "name" in roles) {
+    names.push(String((roles as { name?: string }).name ?? "").toLowerCase());
+  }
+
+  for (const key of ["role", "role_name", "user_type", "type"] as const) {
+    const value = (ev as Record<string, unknown>)[key];
+    if (value) names.push(String(value).toLowerCase());
+  }
+
+  const top = review as EvaluationRecordReview & { evaluator_role?: string };
+  if (top.evaluator_role) names.push(String(top.evaluator_role).toLowerCase());
+
+  return [...new Set(names.filter(Boolean))];
+}
+
+function inferHrConductingFromProfile(
+  review: EvaluationRecordReview
+): boolean {
+  const ev = review.evaluator as
+    | (Record<string, unknown> & {
+        position?: string | { name?: string; position_name?: string };
+      })
+    | null
+    | undefined;
+  if (!ev) return false;
+
+  const positionRaw = ev.position;
+  const positionLabel =
+    typeof positionRaw === "string"
+      ? positionRaw
+      : positionRaw?.name ?? positionRaw?.position_name ?? "";
+  const p = String(positionLabel).toLowerCase().trim();
+  if (!p) return false;
+  return (
+    p.includes("hr manager") ||
+    p.includes("human resource") ||
+    p === "hr" ||
+    p.startsWith("hr ")
+  );
+}
+
+/** HR staff conducted this evaluation (sign shows under HR Sign, not Evaluator Sign). */
+export function isHrEvaluatingParty(review: EvaluationRecordReview): boolean {
+  const names = collectConductingPartyRoleNames(review);
+  if (names.length > 0) {
+    const hasHr = names.some(isHrRoleName);
+    const hasEvaluator = names.some(isEvaluatorRoleName);
+    if (hasHr && !hasEvaluator) return true;
+    if (hasHr && hasEvaluator) return true;
+    return false;
+  }
+  return inferHrConductingFromProfile(review);
+}
+
+/** Non-HR evaluator conducted this evaluation. */
+export function isEvaluatorEvaluatingParty(
+  review: EvaluationRecordReview
+): boolean {
+  if (isHrEvaluatingParty(review)) return false;
+  const names = collectConductingPartyRoleNames(review);
+  if (names.some(isEvaluatorRoleName)) return true;
+  return hasUserParty(review.evaluator);
+}
+
+type ReviewWithApprovals = EvaluationRecordReview & {
+  employeeApprovedAt?: string | null;
+  employee_approved_at?: string | null;
+  employeeSignature?: string | null;
+  employee_signature?: string | null;
+  evaluatorSignature?: string | null;
+  evaluator_signature?: string | null;
+  evaluatorApprovedAt?: string | null;
+  evaluator_approved_at?: string | null;
+  hrApprovedAt?: string | null;
+  hr_approved_at?: string | null;
+  hrSignature?: string | null;
+  hr_signature?: string | null;
+  hrVerifiedAt?: string | null;
+  hr_verified_at?: string | null;
+};
+
+function hasNonEmpty(value: unknown): boolean {
+  return value !== null && value !== undefined && String(value).trim() !== "";
+}
+
+function hasUserParty(
+  user: { id?: unknown; fname?: string; lname?: string; name?: string } | null | undefined
+): boolean {
+  if (!user || typeof user !== "object") return false;
+  if (user.id != null && String(user.id).trim() !== "") return true;
+  return (
+    [user.fname, user.lname, user.name].filter(Boolean).join(" ").trim().length > 0
+  );
+}
+
+/** Record has an employee subject (employee sign column applies). */
+export function hasEmployeeParty(review: EvaluationRecordReview): boolean {
+  return hasUserParty(review.employee);
+}
+
+/** Record has an evaluator who conducted the review (not HR-only evaluation). */
+export function hasEvaluatorParty(review: EvaluationRecordReview): boolean {
+  return isEvaluatorEvaluatingParty(review) && hasUserParty(review.evaluator);
+}
+
+/** HR conducted this evaluation (HR Sign column applies). */
+export function hasHrParty(review: EvaluationRecordReview): boolean {
+  return isHrEvaluatingParty(review) && hasUserParty(review.evaluator);
+}
+
+/** The user who conducted the evaluation signed at submission. */
+function hasConductingPartySigned(review: EvaluationRecordReview): boolean {
+  const extended = review as ReviewWithApprovals;
+  if (
+    hasNonEmpty(extended.evaluatorSignature) ||
+    hasNonEmpty(extended.evaluator_signature) ||
+    hasNonEmpty(extended.evaluatorApprovedAt) ||
+    hasNonEmpty(extended.evaluator_approved_at)
+  ) {
+    return true;
+  }
+  if (hasNonEmpty(review.evaluator?.signature)) return true;
+
+  const status = String(review.status ?? "").toLowerCase();
+  return Boolean(
+    review.evaluator &&
+      review.id &&
+      (status === "pending" || status === "completed")
+  );
+}
+
+/** Employee acknowledgment signature on the evaluation. */
+export function hasEmployeeSigned(review: EvaluationRecordReview): boolean {
+  const extended = review as ReviewWithApprovals;
+  if (
+    hasNonEmpty(extended.employeeApprovedAt) ||
+    hasNonEmpty(extended.employee_approved_at) ||
+    hasNonEmpty(extended.employeeSignature) ||
+    hasNonEmpty(extended.employee_signature)
+  ) {
+    return true;
+  }
+  return String(review.status ?? "").toLowerCase() === "completed";
+}
+
+/**
+ * Evaluator who conducted the evaluation signed at submission.
+ * Separate from HR verification — not shown when HR staff performed the evaluation.
+ */
 export function hasEvaluatorSigned(
   review: EvaluationRecordReview,
   options?: { evaluatorOwnRecords?: boolean }
@@ -162,40 +329,81 @@ export function hasEvaluatorSigned(
   if (options?.evaluatorOwnRecords && review.id) {
     return true;
   }
+  if (!isEvaluatorEvaluatingParty(review)) return false;
+  if (!hasUserParty(review.evaluator)) return false;
+  return hasConductingPartySigned(review);
+}
 
-  const extended = review as EvaluationRecordReview & {
-    evaluatorSignature?: string | null;
-    evaluator_signature?: string | null;
-  };
-  const sigField =
-    extended.evaluatorSignature ?? extended.evaluator_signature ?? "";
-  if (String(sigField).trim() !== "") return true;
-
-  const profileSig = review.evaluator?.signature;
-  if (profileSig && String(profileSig).trim() !== "") return true;
-
-  const roleName = getEvaluatorRoleName(review);
-  if (roleName === "evaluator" || roleName.includes("evaluator")) {
-    return true;
-  }
-
-  const status = String(review.status ?? "").toLowerCase();
+/** HR conducted and signed this evaluation (separate column from evaluator-conducted). */
+export function hasHrSigned(review: EvaluationRecordReview): boolean {
+  const extended = review as ReviewWithApprovals;
   if (
-    review.evaluator &&
-    review.id &&
-    (status === "pending" || status === "completed")
+    hasNonEmpty(extended.hrApprovedAt) ||
+    hasNonEmpty(extended.hr_approved_at) ||
+    hasNonEmpty(extended.hrSignature) ||
+    hasNonEmpty(extended.hr_signature) ||
+    hasNonEmpty(extended.hrVerifiedAt) ||
+    hasNonEmpty(extended.hr_verified_at)
   ) {
     return true;
   }
-
-  return false;
+  if (!isHrEvaluatingParty(review)) return false;
+  if (!hasUserParty(review.evaluator)) return false;
+  return hasConductingPartySigned(review);
 }
 
-/** Whether HR signed as the evaluating party (HR-submitted reviews). */
-export function hasHrSigned(review: EvaluationRecordReview): boolean {
-  const roleName = getEvaluatorRoleName(review);
-  if (roleName === "hr" || roleName.includes("hr")) return true;
-  return false;
+export function shouldShowEmployeeSignPending(
+  review: EvaluationRecordReview
+): boolean {
+  return (
+    hasEmployeeParty(review) &&
+    !hasEmployeeSigned(review) &&
+    String(review.status ?? "").toLowerCase() === "pending"
+  );
+}
+
+export function shouldShowEvaluatorSignPending(
+  review: EvaluationRecordReview
+): boolean {
+  return (
+    hasEvaluatorParty(review) &&
+    !hasEvaluatorSigned(review) &&
+    String(review.status ?? "").toLowerCase() === "pending"
+  );
+}
+
+export function shouldShowHrSignPending(
+  review: EvaluationRecordReview
+): boolean {
+  return (
+    hasHrParty(review) &&
+    !hasHrSigned(review) &&
+    String(review.status ?? "").toLowerCase() === "pending"
+  );
+}
+
+export function EvalRecordSignBadge({
+  signed,
+  pending = false,
+}: {
+  signed: boolean;
+  pending?: boolean;
+}) {
+  if (signed) {
+    return (
+      <Badge className="bg-green-100 text-[0.65rem] text-green-800 sm:text-xs">
+        ✓ Signed
+      </Badge>
+    );
+  }
+  if (pending) {
+    return (
+      <Badge className="bg-gray-100 text-[0.65rem] text-gray-600 sm:text-xs">
+        ⏳ Pending
+      </Badge>
+    );
+  }
+  return <span className="text-[0.65rem] text-gray-400 sm:text-xs">—</span>;
 }
 
 export function formatRatingDisplay(rating: number | null): string {
