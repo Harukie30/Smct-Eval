@@ -160,7 +160,7 @@ function getStaffRoleBadgeClass(role: string): string {
     normalized === "human resources" ||
     normalized === "human resource"
   ) {
-    return "border-violet-200 bg-violet-100 text-violet-800";
+    return "border-green-800 bg-green-800 text-green-50";
   }
   return "border-slate-200 bg-slate-100 text-slate-700";
 }
@@ -456,6 +456,12 @@ export default function CorrespondingStaffModal({
                 className="border-green-200 bg-green-100 px-1.5 py-0 text-[10px] font-medium capitalize text-green-800"
               >
                 Evaluator
+              </Badge>
+              <Badge
+                variant="outline"
+                className="border-green-800 bg-green-800 px-1.5 py-0 text-[10px] font-medium capitalize text-green-50"
+              >
+                HR
               </Badge>
             </span>
             <span className="hidden h-3 w-px shrink-0 bg-slate-300 sm:inline-block" aria-hidden />

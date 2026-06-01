@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import {
+  Info,
   Loader2,
   Plus,
   Search,
@@ -153,25 +154,25 @@ function sortCandidatesByName(a: CandidateEmployee, b: CandidateEmployee) {
 }
 
 function getRoleBadgeClass(role: string): string {
-  const normalized = role.toLowerCase();
+  const normalized = role.trim().toLowerCase();
   if (normalized === "employee") {
-    return "border-blue-200 bg-blue-50/90 text-blue-700";
+    return "border-blue-200 bg-blue-100 text-blue-800";
   }
   if (
     normalized === "evaluator" ||
     normalized === "evaluation" ||
     normalized.includes("evaluator")
   ) {
-    return "border-emerald-200 bg-emerald-50/90 text-emerald-700";
+    return "border-green-200 bg-green-100 text-green-800";
   }
   if (
     normalized === "hr" ||
     normalized === "human resources" ||
     normalized === "human resource"
   ) {
-    return "border-violet-200 bg-violet-50/90 text-violet-800";
+    return "border-green-800 bg-green-800 text-green-50";
   }
-  return "border-slate-200 bg-slate-50/90 text-slate-700";
+  return "border-slate-200 bg-slate-100 text-slate-700";
 }
 
 function normalizeAssignableStaffList(list: unknown[]): CandidateEmployee[] {
@@ -617,18 +618,50 @@ export default function AddEmployeeToEvaluatorModal({
           </DialogHeader>
 
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-gradient-to-b from-blue-50/25 to-indigo-50/20 px-4 py-3 sm:px-5">
-            <div className="relative mb-3 max-w-lg shrink-0">
-              <Search
-                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
-                aria-hidden
-              />
-              <Input
-                placeholder="Search by name, email, position, branch, or role…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                disabled={isAnySaving}
-                className="h-9 border-slate-200 bg-white pl-9 text-sm shadow-sm placeholder:text-slate-400 focus-visible:ring-slate-400/30"
-              />
+            <div className="mb-3 flex shrink-0 flex-col gap-3 sm:flex-row sm:items-stretch sm:gap-4">
+              <div className="relative min-w-0 w-full sm:w-2/3">
+                <Search
+                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                  aria-hidden
+                />
+                <Input
+                  placeholder="Search by name, email, position, branch, or role…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  disabled={isAnySaving}
+                  className="h-9 w-full border-slate-200 bg-white pl-9 text-sm shadow-sm placeholder:text-slate-400 focus-visible:ring-slate-400/30"
+                />
+              </div>
+
+              <div
+                className="flex w-full min-w-0 flex-col gap-2 rounded-lg border border-slate-200/90 bg-white/90 px-3 py-2.5 text-xs text-slate-600 shadow-sm sm:w-1/3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-2 sm:gap-y-2"
+                role="note"
+              >
+                <span className="inline-flex shrink-0 items-center gap-1.5 font-medium text-slate-700">
+                  <Info className="h-3.5 w-3.5 shrink-0 text-slate-500" aria-hidden />
+                  Role
+                </span>
+                <span className="flex flex-wrap items-center gap-1.5 sm:min-w-0 sm:flex-1 sm:justify-end sm:gap-2">
+                  <Badge
+                    variant="outline"
+                    className="border-blue-200 bg-blue-100 px-1.5 py-0 text-[10px] font-medium capitalize text-blue-800"
+                  >
+                    Employee
+                  </Badge>
+                  <Badge
+                    variant="outline"
+                    className="border-green-200 bg-green-100 px-1.5 py-0 text-[10px] font-medium capitalize text-green-800"
+                  >
+                    Evaluator
+                  </Badge>
+                  <Badge
+                    variant="outline"
+                    className="border-green-800 bg-green-800 px-1.5 py-0 text-[10px] font-medium capitalize text-green-50"
+                  >
+                    HR
+                  </Badge>
+                </span>
+              </div>
             </div>
 
             <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-2 gap-3 xl:grid-cols-2 xl:grid-rows-1 xl:gap-4">

@@ -1571,12 +1571,12 @@ export default function MemorandumViolationModal({
       >
         <DialogContent
           className={cn(
-            "max-h-[min(92vh,900px)] max-w-2xl gap-0 overflow-hidden p-0 shadow-2xl shadow-slate-900/15 sm:max-w-3xl",
+            "flex max-h-[min(92dvh,900px)] w-[min(100%,calc(100vw-1rem))] max-w-2xl flex-col gap-0 overflow-hidden p-0 shadow-2xl shadow-slate-900/15 sm:max-w-3xl",
             dialogAnimationClass
           )}
         >
           <div
-            className="relative overflow-hidden px-6 pt-7 pb-6 text-white sm:px-8 sm:pb-7"
+            className="relative shrink-0 overflow-hidden px-4 pb-5 pt-5 text-white sm:px-8 sm:pb-7 sm:pt-7"
             style={{
               backgroundImage: "url(/smct.png)",
               backgroundSize: "cover",
@@ -1584,62 +1584,66 @@ export default function MemorandumViolationModal({
             }}
           >
             <div className="absolute inset-0 bg-gradient-to-br from-amber-600/96 via-orange-600/93 to-amber-900/96" />
-            <div className="pointer-events-none absolute -right-20 -top-24 h-56 w-56 rounded-full bg-white/10 blur-3xl" aria-hidden />
-            <div className="relative flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-              <div className="flex min-w-0 gap-4">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/20 shadow-inner ring-1 ring-white/35 backdrop-blur-sm">
-                  <FileWarning className="h-7 w-7 text-white" strokeWidth={1.75} />
+            <div
+              className="pointer-events-none absolute -right-16 -top-20 h-40 w-40 rounded-full bg-white/10 blur-3xl sm:-right-20 sm:-top-24 sm:h-56 sm:w-56"
+              aria-hidden
+            />
+            <div className="relative flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-5">
+              <div className="flex min-w-0 gap-3 sm:gap-4">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/20 shadow-inner ring-1 ring-white/35 backdrop-blur-sm sm:h-14 sm:w-14 sm:rounded-2xl">
+                  <FileWarning
+                    className="h-5 w-5 text-white sm:h-7 sm:w-7"
+                    strokeWidth={1.75}
+                  />
                 </div>
-                <div className="min-w-0 flex-1 space-y-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-amber-100/95">
+                <div className="min-w-0 flex-1 space-y-1.5 sm:space-y-2">
+                  <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-amber-100/95 sm:text-[10px] sm:tracking-[0.22em]">
                     Memorandum violation
                   </p>
-                  <DialogTitle className="text-left text-2xl font-bold tracking-tight text-white drop-shadow-sm sm:text-[1.65rem] sm:leading-tight">
+                  <DialogTitle className="text-left text-xl font-bold tracking-tight text-white drop-shadow-sm sm:text-[1.65rem] sm:leading-tight">
                     Record details
                   </DialogTitle>
-                  <DialogDescription className="text-left text-sm leading-relaxed text-amber-50/98">
+                  <DialogDescription className="text-left text-xs leading-relaxed text-amber-50/98 sm:text-sm">
                     Title, violation date, offense, sanction, and supporting document
                     for this memorandum record.
                   </DialogDescription>
                 </div>
               </div>
-              {employee &&
-              `${String(employee.fname ?? "").trim()} ${String(employee.lname ?? "").trim()}`.trim() !==
-                "" ? (
-                <div className="w-full shrink-0 rounded-xl border border-white/25 bg-white/15 px-4 py-3 text-left shadow-sm backdrop-blur-md sm:max-w-[220px] sm:text-right">
+              {headerEmployeeName ? (
+                <div className="w-full min-w-0 shrink-0 rounded-xl border border-white/25 bg-white/15 px-3 py-2.5 text-left shadow-sm backdrop-blur-md sm:max-w-[220px] sm:px-4 sm:py-3 sm:text-right">
                   <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-100/90">
                     Employee
                   </p>
-                  <p className="mt-1 truncate text-sm font-semibold text-white">
-                    {`${String(employee.fname ?? "").trim()} ${String(employee.lname ?? "").trim()}`.trim()}
+                  <p className="mt-0.5 break-words text-sm font-semibold text-white sm:mt-1">
+                    {headerEmployeeName}
                   </p>
                 </div>
               ) : null}
             </div>
           </div>
 
-          <div className="max-h-[min(58vh,560px)] overflow-y-auto border-t border-slate-100 bg-gradient-to-b from-slate-50/95 to-white px-6 py-6 sm:px-8">
-            <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm ring-1 ring-slate-950/[0.04] sm:p-6">
-              <div className="grid gap-8 sm:grid-cols-2 sm:gap-10">
-                <div className="space-y-2 sm:pr-2">
+          <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain border-t border-slate-100 bg-gradient-to-b from-slate-50/95 to-white px-4 py-4 sm:px-8 sm:py-6">
+            <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm ring-1 ring-slate-950/[0.04] sm:rounded-2xl sm:p-6">
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-10">
+                <div className="min-w-0 space-y-2 sm:pr-2">
                   <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-50 text-amber-700 ring-1 ring-amber-100">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-700 ring-1 ring-amber-100">
                       <FileText className="h-3.5 w-3.5" aria-hidden />
                     </span>
                     Title
                   </div>
-                  <p className="text-lg font-semibold leading-snug text-slate-900">
+                  <p className="break-words text-base font-semibold leading-snug text-slate-900 sm:text-lg">
                     {viewingRow?.title ?? "—"}
                   </p>
                 </div>
-                <div className="space-y-2 border-t border-slate-100 pt-6 sm:border-l sm:border-t-0 sm:pl-8 sm:pt-0">
+                <div className="min-w-0 space-y-2 border-t border-slate-100 pt-6 sm:border-l sm:border-t-0 sm:pl-8 sm:pt-0">
                   <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-700 ring-1 ring-slate-200/90">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-700 ring-1 ring-slate-200/90">
                       <Calendar className="h-3.5 w-3.5" aria-hidden />
                     </span>
                     Violation date
                   </div>
-                  <p className="text-lg font-semibold tabular-nums text-slate-900">
+                  <p className="text-base font-semibold tabular-nums text-slate-900 sm:text-lg">
                     {viewingRow?.violation_date
                       ? (() => {
                           try {
@@ -1656,59 +1660,59 @@ export default function MemorandumViolationModal({
                 </div>
               </div>
 
-              <div className="mt-8 border-t border-slate-100 pt-8">
+              <div className="mt-6 border-t border-slate-100 pt-6 sm:mt-8 sm:pt-8">
                 <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-50 text-amber-700 ring-1 ring-amber-100">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-700 ring-1 ring-amber-100">
                     <FileText className="h-3.5 w-3.5" aria-hidden />
                   </span>
                   Offense
                 </div>
-                <div className="mt-3 rounded-xl border border-amber-100/90 bg-gradient-to-br from-amber-50/80 to-white px-4 py-4 ring-1 ring-amber-100/40">
-                  <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-800">
+                <div className="mt-3 rounded-lg border border-amber-100/90 bg-gradient-to-br from-amber-50/80 to-white px-3 py-3 ring-1 ring-amber-100/40 sm:rounded-xl sm:px-4 sm:py-4">
+                  <p className="break-words whitespace-pre-wrap text-sm leading-relaxed text-slate-800">
                     {viewingRow?.summary?.trim() || "No offense recorded."}
                   </p>
                 </div>
               </div>
 
-              <div className="mt-8 border-t border-slate-100 pt-8">
+              <div className="mt-6 border-t border-slate-100 pt-6 sm:mt-8 sm:pt-8">
                 <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-700 ring-1 ring-slate-200/90">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-700 ring-1 ring-slate-200/90">
                     <Scale className="h-3.5 w-3.5" aria-hidden />
                   </span>
                   Sanction
                 </div>
-                <div className="mt-3 rounded-xl border border-slate-200/90 bg-gradient-to-br from-slate-50/90 to-white px-4 py-4 ring-1 ring-slate-200/60">
-                  <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-800">
+                <div className="mt-3 rounded-lg border border-slate-200/90 bg-gradient-to-br from-slate-50/90 to-white px-3 py-3 ring-1 ring-slate-200/60 sm:rounded-xl sm:px-4 sm:py-4">
+                  <p className="break-words whitespace-pre-wrap text-sm leading-relaxed text-slate-800">
                     {viewingRow?.sanction?.trim() || "No sanction recorded."}
                   </p>
                 </div>
               </div>
 
               {viewingRow?.fileName || viewFileUrl ? (
-                <div className="mt-8 overflow-hidden rounded-xl border border-slate-200/90 bg-slate-50/40 shadow-inner ring-1 ring-slate-950/[0.03]">
-                  <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200/80 bg-gradient-to-r from-slate-50 to-white px-4 py-3.5 sm:px-5">
+                <div className="mt-6 overflow-hidden rounded-lg border border-slate-200/90 bg-slate-50/40 shadow-inner ring-1 ring-slate-950/[0.03] sm:mt-8 sm:rounded-xl">
+                  <div className="flex flex-col gap-3 border-b border-slate-200/80 bg-gradient-to-r from-slate-50 to-white px-3 py-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:px-5 sm:py-3.5">
                     <div className="min-w-0">
                       <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                         Supporting document
                       </p>
-                      <p className="mt-1 truncate text-sm font-semibold text-slate-900">
+                      <p className="mt-1 break-all text-sm font-semibold text-slate-900">
                         {viewingRow?.fileName || "Attachment"}
                       </p>
                     </div>
                     {viewFileUrl ? (
-                      <div className="flex shrink-0 flex-wrap gap-2">
+                      <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row">
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
-                          className="cursor-pointer border-amber-200 bg-white text-amber-900 hover:bg-amber-50"
+                          className="h-9 w-full cursor-pointer border-amber-200 bg-white text-amber-900 hover:bg-amber-50 sm:w-auto"
                           asChild
                         >
                           <a
                             href={viewFileUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2"
+                            className="inline-flex w-full items-center justify-center gap-2 sm:w-auto"
                           >
                             <ExternalLink className="h-4 w-4 shrink-0" />
                             Open
@@ -1718,13 +1722,13 @@ export default function MemorandumViolationModal({
                           type="button"
                           variant="secondary"
                           size="sm"
-                          className="cursor-pointer"
+                          className="h-9 w-full cursor-pointer sm:w-auto"
                           asChild
                         >
                           <a
                             href={viewFileUrl}
                             download={viewingRow?.fileName || undefined}
-                            className="inline-flex items-center gap-2"
+                            className="inline-flex w-full items-center justify-center gap-2 sm:w-auto"
                           >
                             <Download className="h-4 w-4 shrink-0" />
                             Download
@@ -1733,23 +1737,23 @@ export default function MemorandumViolationModal({
                       </div>
                     ) : null}
                   </div>
-                  <div className="bg-white px-4 py-5 sm:px-5">
+                  <div className="bg-white px-3 py-4 sm:px-5 sm:py-5">
                     {!viewFileUrl && viewingRow?.fileName ? (
                       <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50/90 px-4 py-3 text-sm text-slate-600">
                         Preview link unavailable for this attachment.
                       </p>
                     ) : null}
                     {viewFileUrl && viewAttachmentKind === "image" ? (
-                      <div className="overflow-hidden rounded-xl bg-slate-100/90 ring-1 ring-slate-200/70">
+                      <div className="overflow-hidden rounded-lg bg-slate-100/90 ring-1 ring-slate-200/70 sm:rounded-xl">
                         <img
                           src={viewFileUrl}
                           alt=""
-                          className="mx-auto max-h-[min(340px,52vh)] w-full object-contain"
+                          className="mx-auto max-h-[min(240px,40dvh)] w-full object-contain sm:max-h-[min(340px,52vh)]"
                         />
                       </div>
                     ) : null}
                     {viewFileUrl && viewAttachmentKind === "pdf" ? (
-                      <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-amber-200/95 bg-gradient-to-b from-amber-50/90 to-white px-6 py-10 text-center">
+                      <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-amber-200/95 bg-gradient-to-b from-amber-50/90 to-white px-4 py-8 text-center sm:gap-4 sm:rounded-xl sm:px-6 sm:py-10">
                         <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-md ring-1 ring-amber-100">
                           <FileType2 className="h-8 w-8 text-amber-700" />
                         </div>
@@ -1779,10 +1783,10 @@ export default function MemorandumViolationModal({
             </div>
           </div>
 
-          <DialogFooter className="flex flex-col-reverse gap-2 border-t border-slate-200/90 bg-slate-50/95 px-6 py-4 sm:flex-row sm:justify-end sm:px-8">
+          <DialogFooter className="flex shrink-0 flex-col-reverse gap-2 border-t border-slate-200/90 bg-slate-50/95 px-4 py-3 sm:flex-row sm:justify-end sm:px-8 sm:py-4">
             <Button
               type="button"
-              className="cursor-pointer min-w-[120px] bg-amber-600 text-white shadow-sm hover:bg-amber-700"
+              className="h-10 w-full cursor-pointer bg-amber-600 text-white shadow-sm hover:bg-amber-700 sm:min-w-[120px] sm:w-auto"
               onClick={() => setViewingRow(null)}
             >
               Close
