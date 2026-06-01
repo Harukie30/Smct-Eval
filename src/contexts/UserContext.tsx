@@ -50,11 +50,25 @@ interface UserContextType {
   isLoading: boolean;
   login: (username: string, password: string) => Promise<any>;
   logout: () => Promise<void>;
-  refreshUser: () => Promise<void>;
+  refreshUser: (options?: { force?: boolean }) => Promise<void>;
   setIsRefreshing: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
+
+function hasMeaningfulUserChanges(prev: User, next: User): boolean {
+  return (
+    prev.requestSignatureReset !== next.requestSignatureReset ||
+    prev.approvedSignatureReset !== next.approvedSignatureReset ||
+    prev.notification_counts !== next.notification_counts ||
+    prev.signature !== next.signature ||
+    prev.fname !== next.fname ||
+    prev.lname !== next.lname ||
+    prev.email !== next.email ||
+    prev.username !== next.username ||
+    prev.contact !== next.contact
+  );
+}
 
 export const useUser = () => {
   const context = useContext(UserContext);
@@ -76,11 +90,16 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Memoize refreshUser to prevent unnecessary re-renders
-  const refreshUser = useCallback(async () => {
+  const refreshUser = useCallback(async (options?: { force?: boolean }) => {
     try {
       const res = await apiService.authUser();
       const userData = res?.data || res;
-      setUser(userData);
+      setUser((prev) => {
+        if (!options?.force && prev && !hasMeaningfulUserChanges(prev, userData)) {
+          return prev;
+        }
+        return userData;
+      });
     } catch (error: any) {
       const status = error?.status || error?.response?.status;
       // If 401, user is not authenticated - clear user state
@@ -133,25 +152,23 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   // Handle explicit refresh requests
   useEffect(() => {
     if (isRefreshing) {
-      refreshUser().finally(() => {
+      refreshUser({ force: true }).finally(() => {
         setIsRefreshing(false);
       });
     }
-  }, [isRefreshing]); // Only run when isRefreshing changes
+  }, [isRefreshing, refreshUser]);
 
-  // Poll for signature reset approval status (only when there's a pending request)
-  // This runs globally once, not per component instance
+  // Poll for signature reset approval (only while a request is pending)
   useEffect(() => {
-    // Only poll if user is logged in and has a pending signature reset request
-    if (user && user.requestSignatureReset !== 0) {
-      // Poll every 15 seconds (reduced frequency to avoid excessive API calls)
-      const intervalId = setInterval(() => {
-        refreshUser();
-      }, 15000); // Poll every 15 seconds instead of 5
+    const pending = Number(user?.requestSignatureReset ?? 0);
+    if (!user || pending === 0) return;
 
-      return () => clearInterval(intervalId);
-    }
-  }, [user?.requestSignatureReset, refreshUser]); // Include refreshUser in dependencies
+    const intervalId = setInterval(() => {
+      refreshUser();
+    }, 60_000);
+
+    return () => clearInterval(intervalId);
+  }, [user?.requestSignatureReset, refreshUser]);
 
   // ⬇ Login using Sanctum
   const login = async (username: string, password: string) => {
@@ -159,7 +176,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       setIsLoading(true);
 
       const res = await apiService.login(username, password);
-      await refreshUser();
+      await refreshUser({ force: true });
       return res;
     } catch (err: any) {
       const isServerUnreachable =
@@ -190,7 +207,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         }
       });
       
-      await refreshUser();
+      await refreshUser({ force: true });
       router.push("/");
     } catch (e) {
       console.error("Logout failed:", e);

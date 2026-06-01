@@ -260,7 +260,7 @@ export default function ProfileModal({
       // Refresh user profile to get updated data (only once, after successful save)
       // Use a small delay to ensure the API has processed the update
       setTimeout(() => {
-        refreshUser();
+        refreshUser({ force: true });
       }, 100);
       
       // Reset initialization flag so form reloads with new data next time
@@ -325,7 +325,7 @@ export default function ProfileModal({
       // Refresh user after a small delay to get updated requestSignatureReset status
       // This is needed for the SignaturePad polling to work correctly
       setTimeout(() => {
-        refreshUser();
+        refreshUser({ force: true });
       }, 100);
     } catch (error: any) {
       console.error("Error requesting signature reset:", error);

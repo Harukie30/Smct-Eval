@@ -33,19 +33,22 @@ const ConnectionContext = createContext<ConnectionContextValue | undefined>(
   undefined
 );
 
-const HEARTBEAT_MS = 20_000;
 const RETRY_DELAY_MS = 3_000;
 const MAX_RETRIES = 8;
 const RESTORED_DISPLAY_MS = 1_800;
 const PING_TIMEOUT_MS = 8_000;
 
+/** Verify server reachability only during reconnect retries (not on a timer). */
 async function pingServer(): Promise<boolean> {
+  if (typeof navigator !== "undefined" && !navigator.onLine) {
+    return false;
+  }
   try {
     await api.get("/profile", { timeout: PING_TIMEOUT_MS });
     return true;
   } catch (error) {
     if (isNetworkFailure(error)) return false;
-    // Authenticated session errors (401, etc.) still mean the server is reachable.
+    // HTTP 401/403/500 still means the server responded.
     return true;
   }
 }
@@ -212,36 +215,6 @@ export function ConnectionProvider({ children }: { children: ReactNode }) {
     });
 
     return unsubscribe;
-  }, [beginReconnecting, isAuthenticated, isLoading]);
-
-  useEffect(() => {
-    if (!isAuthenticated || isLoading) return;
-
-    let cancelled = false;
-
-    const runHeartbeat = async () => {
-      if (cancelled || document.hidden) return;
-      if (statusRef.current === "reconnecting" || statusRef.current === "offline") {
-        return;
-      }
-      if (!navigator.onLine) {
-        beginReconnecting();
-        return;
-      }
-
-      const ok = await pingServer();
-      if (!cancelled && !ok) {
-        beginReconnecting();
-      }
-    };
-
-    void runHeartbeat();
-    const intervalId = setInterval(runHeartbeat, HEARTBEAT_MS);
-
-    return () => {
-      cancelled = true;
-      clearInterval(intervalId);
-    };
   }, [beginReconnecting, isAuthenticated, isLoading]);
 
   useEffect(() => {
