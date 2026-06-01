@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import EvaluationsPagination from "@/components/paginationComponent";
+import { parseApiTimestampMs } from "@/lib/parseApiTimestamp";
 import { cn } from "@/lib/utils";
 
 export type CorrespondingStaffRow = {
@@ -44,9 +45,11 @@ export type CorrespondingStaffEvaluator = {
 const STAFF_MODAL_PER_PAGE = 10;
 const STAFF_MODAL_PAGE_LOAD_MS = 2500;
 const STAFF_QUARTER_HIGHLIGHT_STORAGE_KEY = "smct-hr-staff-quarter-highlight-until";
+const STAFF_QUARTER_SNAPSHOT_STORAGE_KEY = "smct-hr-staff-quarter-snapshot";
 const STAFF_QUARTER_HIGHLIGHT_DURATION_MS = 24 * 60 * 60 * 1000;
 
 type QuarterHighlightExpiryStore = Record<string, number>;
+type QuarterSnapshotStore = Record<string, string>;
 
 function readQuarterHighlightStore(): QuarterHighlightExpiryStore {
   if (typeof window === "undefined") return {};
@@ -87,6 +90,43 @@ function writePrunedQuarterHighlightStore(store: QuarterHighlightExpiryStore) {
   } catch {
     /* ignore quota */
   }
+}
+
+function readQuarterSnapshotStore(): QuarterSnapshotStore {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(STAFF_QUARTER_SNAPSHOT_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    return parsed as QuarterSnapshotStore;
+  } catch {
+    return {};
+  }
+}
+
+function writeQuarterSnapshotStore(store: QuarterSnapshotStore) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(
+      STAFF_QUARTER_SNAPSHOT_STORAGE_KEY,
+      JSON.stringify(store)
+    );
+  } catch {
+    /* ignore quota */
+  }
+}
+
+function isEvaluationDateToday(iso: string | null): boolean {
+  const ms = parseApiTimestampMs(iso);
+  if (ms == null) return false;
+  const d = new Date(ms);
+  const now = new Date();
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  );
 }
 
 function extendQuarterHighlightsForStaffIds(staffIds: string[]) {
@@ -139,7 +179,6 @@ export default function CorrespondingStaffModal({
   const [staffCurrentPage, setStaffCurrentPage] = useState(1);
   const [staffPageLoading, setStaffPageLoading] = useState(false);
   const staffPageMinLoadTimeoutRef = useRef<number | null>(null);
-  const prevStaffQuarterByIdRef = useRef<Map<string, string>>(new Map());
   const lastStaffLoadEvaluatorIdRef = useRef<string | null>(null);
   const prevStaffSearchRef = useRef<string | null>(null);
   const [quarterHighlightStorageTick, setQuarterHighlightStorageTick] = useState(0);
@@ -178,7 +217,6 @@ export default function CorrespondingStaffModal({
       if (!nextOpen) {
         stopStaffPageSkeleton();
         prevStaffSearchRef.current = null;
-        prevStaffQuarterByIdRef.current.clear();
         lastStaffLoadEvaluatorIdRef.current = null;
         setStaffSearch("");
         setStaffCurrentPage(1);
@@ -191,7 +229,6 @@ export default function CorrespondingStaffModal({
   useEffect(() => {
     if (!open) return;
     if (evaluator?.id && lastStaffLoadEvaluatorIdRef.current !== evaluator.id) {
-      prevStaffQuarterByIdRef.current.clear();
       lastStaffLoadEvaluatorIdRef.current = evaluator.id;
       setStaffSearch("");
       setStaffCurrentPage(1);
@@ -201,27 +238,28 @@ export default function CorrespondingStaffModal({
   useEffect(() => {
     if (!open || loadingStaff || staffRows.length === 0) return;
 
-    const prev = prevStaffQuarterByIdRef.current;
-    const changed: string[] = [];
+    const snapshotStore = readQuarterSnapshotStore();
+    const toHighlight: string[] = [];
 
     for (const staff of staffRows) {
       const id = String(staff.id);
       const curr = staffQuarterHighlightSnapshot(staff);
-      const old = prev.get(id);
+      const old = snapshotStore[id];
+
       if (old !== undefined && old !== curr) {
-        changed.push(id);
+        toHighlight.push(id);
+      } else if (isEvaluationDateToday(staff.lastQuarterEvaluatedAt)) {
+        toHighlight.push(id);
       }
-      prev.set(id, curr);
+
+      snapshotStore[id] = curr;
     }
 
-    const alive = new Set(staffRows.map((s) => String(s.id)));
-    for (const key of [...prev.keys()]) {
-      if (!alive.has(key)) prev.delete(key);
-    }
+    writeQuarterSnapshotStore(snapshotStore);
 
-    if (changed.length === 0) return;
+    if (toHighlight.length === 0) return;
 
-    extendQuarterHighlightsForStaffIds(changed);
+    extendQuarterHighlightsForStaffIds(toHighlight);
     setQuarterHighlightStorageTick((t) => t + 1);
   }, [staffRows, loadingStaff, open]);
 
@@ -278,6 +316,7 @@ export default function CorrespondingStaffModal({
       const id = String(s.id);
       const exp = store[id];
       if (typeof exp === "number" && exp > now) activeIds.add(id);
+      if (isEvaluationDateToday(s.lastQuarterEvaluatedAt)) activeIds.add(id);
     }
     let visibleCount = 0;
     for (const s of filteredStaffRows) {
@@ -388,7 +427,7 @@ export default function CorrespondingStaffModal({
                 className="inline-block h-3 w-5 shrink-0 rounded-sm bg-amber-100 ring-1 ring-amber-200/90"
                 aria-hidden
               />
-              <span>Amber indicates the quarter value changed after refresh.</span>
+              <span>Amber marks evaluations updated today or a changed quarter after refresh.</span>
             </span>
             {staffQuarterHighlightState.visibleCount > 0 ? (
               <>

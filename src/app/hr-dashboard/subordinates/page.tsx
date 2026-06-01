@@ -15,6 +15,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { toastMessages } from "@/lib/toastMessages";
 import { apiService } from "@/lib/apiService";
+import { pickApiTimestamp } from "@/lib/parseApiTimestamp";
 import { Eye, RefreshCw, Users2 } from "lucide-react";
 import EvaluationsPagination from "@/components/paginationComponent";
 import AddEmployeeToEvaluatorModal, {
@@ -184,14 +185,33 @@ function pickLastQuarterEvaluatedAt(raw: Record<string, unknown>): string | null
     raw.last_evaluation && typeof raw.last_evaluation === "object"
       ? (raw.last_evaluation as Record<string, unknown>)
       : null;
-  const v =
-    empLast?.created_at ??
-    empLast?.createdAt ??
-    nested?.created_at ??
-    nested?.createdAt;
-  if (v == null) return null;
-  const s = String(v).trim();
-  return s === "" || s.toLowerCase() === "null" ? null : s;
+
+  const timestampKeys = [
+    "created_at",
+    "createdAt",
+    "updated_at",
+    "updatedAt",
+    "submitted_at",
+    "submittedAt",
+    "evaluated_at",
+    "evaluatedAt",
+    "completed_at",
+    "completedAt",
+  ] as const;
+
+  return (
+    pickApiTimestamp(empLast, timestampKeys) ??
+    pickApiTimestamp(nested, timestampKeys) ??
+    pickApiTimestamp(raw, [
+      "last_quarter_evaluated_at",
+      "lastQuarterEvaluatedAt",
+      "last_evaluated_at",
+      "lastEvaluatedAt",
+      "last_evaluation_at",
+      "lastEvaluationAt",
+      ...timestampKeys,
+    ])
+  );
 }
 
 function pickLastQuarterEvaluated(raw: Record<string, unknown>): string | null {
