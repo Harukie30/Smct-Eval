@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Info, Users2, X } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -140,6 +141,28 @@ function extendQuarterHighlightsForStaffIds(staffIds: string[]) {
     pruned[id] = Math.max(typeof prev === "number" ? prev : 0, until);
   }
   writePrunedQuarterHighlightStore(pruned);
+}
+
+function getStaffRoleBadgeClass(role: string): string {
+  const normalized = role.trim().toLowerCase();
+  if (normalized === "employee") {
+    return "border-blue-200 bg-blue-100 text-blue-800";
+  }
+  if (
+    normalized === "evaluator" ||
+    normalized === "evaluation" ||
+    normalized.includes("evaluator")
+  ) {
+    return "border-green-200 bg-green-100 text-green-800";
+  }
+  if (
+    normalized === "hr" ||
+    normalized === "human resources" ||
+    normalized === "human resource"
+  ) {
+    return "border-violet-200 bg-violet-100 text-violet-800";
+  }
+  return "border-slate-200 bg-slate-100 text-slate-700";
 }
 
 function formatEvaluationYearOnly(iso: string | null): string | null {
@@ -419,6 +442,24 @@ export default function CorrespondingStaffModal({
           >
             <span className="inline-flex items-center gap-1.5 font-medium text-slate-700">
               <Info className="h-3.5 w-3.5 shrink-0 text-slate-500" aria-hidden />
+              Role
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <Badge
+                variant="outline"
+                className="border-blue-200 bg-blue-100 px-1.5 py-0 text-[10px] font-medium capitalize text-blue-800"
+              >
+                Employee
+              </Badge>
+              <Badge
+                variant="outline"
+                className="border-green-200 bg-green-100 px-1.5 py-0 text-[10px] font-medium capitalize text-green-800"
+              >
+                Evaluator
+              </Badge>
+            </span>
+            <span className="hidden h-3 w-px shrink-0 bg-slate-300 sm:inline-block" aria-hidden />
+            <span className="inline-flex items-center gap-1.5 font-medium text-slate-700">
               Last quarter column
             </span>
             <span className="hidden h-3 w-px shrink-0 bg-slate-300 sm:inline-block" aria-hidden />
@@ -529,7 +570,15 @@ export default function CorrespondingStaffModal({
                         {staff.branch}
                       </TableCell>
                       <TableCell className="max-w-[7rem] min-w-0 break-words sm:max-w-[9rem]">
-                        {staff.role}
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "max-w-full truncate font-medium capitalize",
+                            getStaffRoleBadgeClass(staff.role)
+                          )}
+                        >
+                          {staff.role}
+                        </Badge>
                       </TableCell>
                       <TableCell
                         className={cn(
