@@ -840,8 +840,8 @@ export default function OverviewTab() {
                           <TableCell className={evalTableActionsCellClass(rowClassName)}>
                             <EvalRecordRowActions
                               review={review}
-                              onView={() => handleViewEvaluation(review)}
-                              onDelete={() => openDeleteModal(review)}
+                              onViewAction={() => handleViewEvaluation(review)}
+                              onDeleteAction={() => openDeleteModal(review)}
                               deleting={deletingReviewId === review.id}
                             />
                           </TableCell>

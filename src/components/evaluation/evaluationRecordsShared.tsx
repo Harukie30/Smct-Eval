@@ -1,10 +1,16 @@
 "use client";
 
-import type { ComponentProps } from "react";
+import {
+  Children,
+  cloneElement,
+  isValidElement,
+  type ComponentProps,
+  type ReactElement,
+} from "react";
 import { Eye, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { TableRow } from "@/components/ui/table";
+import { TableCell, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import {
   isQuarterLateByStaticPeriod,
@@ -527,8 +533,8 @@ type EvalRecordTableRowProps = ComponentProps<typeof TableRow> & {
 };
 
 /**
- * Table row for evaluation records. Late rows use a native `title` tooltip (wrapping
- * `<tr>` in Radix Tooltip breaks valid table markup and hover styling).
+ * Table row for evaluation records. Late rows show a native `title` on each cell
+ * (browsers ignore `title` on `<tr>`; Radix Tooltip around `<tr>` breaks table markup).
  */
 export function EvalRecordTableRow({
   review,
@@ -538,28 +544,41 @@ export function EvalRecordTableRow({
   ...props
 }: EvalRecordTableRowProps) {
   const late = isReviewQuarterLate(review);
+  const lateTooltip = late ? (title ?? QUARTER_LATE_HOVER_LABEL) : undefined;
+
+  const rowChildren =
+    lateTooltip != null
+      ? Children.map(children, (child) => {
+          if (
+            !isValidElement<ComponentProps<typeof TableCell>>(
+              child as ReactElement
+            )
+          ) {
+            return child;
+          }
+          const cell = child as ReactElement<ComponentProps<typeof TableCell>>;
+          return cloneElement(cell, {
+            title: cell.props.title ?? lateTooltip,
+          });
+        })
+      : children;
 
   return (
-    <TableRow
-      className={className}
-      title={late ? (title ?? QUARTER_LATE_HOVER_LABEL) : title}
-      aria-label={late ? QUARTER_LATE_HOVER_LABEL : undefined}
-      {...props}
-    >
-      {children}
+    <TableRow className={className} {...props}>
+      {rowChildren}
     </TableRow>
   );
 }
 
 export function EvalRecordRowActions({
   review,
-  onView,
-  onDelete,
+  onViewAction,
+  onDeleteAction,
   deleting,
 }: {
   review: EvaluationRecordReview;
-  onView: () => void;
-  onDelete: () => void;
+  onViewAction: () => void;
+  onDeleteAction: () => void;
   deleting?: boolean;
 }) {
   const canDelete = isReviewDeletable(review);
@@ -570,7 +589,7 @@ export function EvalRecordRowActions({
         type="button"
         variant="outline"
         size="icon"
-        onClick={onView}
+        onClick={onViewAction}
         aria-label="View evaluation"
         className="h-8 w-8 shrink-0 cursor-pointer border-blue-700 bg-blue-600 text-white hover:bg-blue-700 hover:text-white lg:h-8 lg:w-auto lg:px-2 lg:transition-all lg:duration-200 lg:hover:-translate-y-0.5 lg:hover:shadow-md lg:active:translate-y-0"
       >
@@ -582,7 +601,7 @@ export function EvalRecordRowActions({
           type="button"
           variant="outline"
           size="icon"
-          onClick={onDelete}
+          onClick={onDeleteAction}
           disabled={deleting}
           aria-label="Delete evaluation"
           title="Delete this evaluation record"

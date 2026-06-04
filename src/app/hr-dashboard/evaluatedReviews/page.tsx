@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import clientDataService, { apiService } from "@/lib/apiService";
 import EvaluationsPagination from "@/components/paginationComponent";
 import { useState, useEffect, useRef, useMemo } from "react";
-import { ChevronDown, Eye, Loader2, Search, Trash2 } from "lucide-react";
+import { ChevronDown, Loader2, Search } from "lucide-react";
 
 import {
   Card,
@@ -60,7 +60,9 @@ import {
   shouldShowHrSignPending,
   getReviewQuarterBadgeClass,
   getReviewQuarterDisplay,
+  EvalRecordRowActions,
   EvalRecordTableRow,
+  type EvaluationRecordReview,
   getReviewRowClassName,
   QUARTER_LATE_LEGEND_LABEL,
 } from "@/components/evaluation/evaluationRecordsShared";
@@ -165,48 +167,6 @@ function evalTableActionsCellClass(rowClassName: string) {
 const EVAL_TABLE_ACTIONS_HEAD_CLASS = cn(
   "w-[3.25rem] min-w-[3.25rem] p-1 text-center sm:min-w-[4.5rem] sm:p-2 lg:sticky lg:right-0 lg:z-[4] lg:min-w-[7rem] lg:bg-white lg:text-left lg:shadow-[-6px_0_12px_-4px_rgba(15,23,42,0.12)]"
 );
-
-function EvalRecordRowActions({
-  review,
-  onView,
-  onDelete,
-}: {
-  review: Review;
-  onView: () => void;
-  onDelete: () => void;
-}) {
-  const canDelete = isReviewDeletable(review);
-
-  return (
-    <div className="flex flex-col items-center justify-center gap-1 sm:flex-row sm:justify-end lg:flex-wrap lg:justify-start lg:gap-1.5">
-      <Button
-        type="button"
-        variant="outline"
-        size="icon"
-        onClick={onView}
-        aria-label="View evaluation"
-        className="h-8 w-8 shrink-0 cursor-pointer border-blue-700 bg-blue-600 text-white hover:bg-blue-700 hover:text-white lg:h-8 lg:w-auto lg:px-2 lg:transition-all lg:duration-200 lg:hover:-translate-y-0.5 lg:hover:shadow-md lg:active:translate-y-0"
-      >
-        <Eye className="h-4 w-4 lg:hidden" />
-        <span className="hidden lg:inline">☰ View</span>
-      </Button>
-      {canDelete ? (
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          onClick={onDelete}
-          aria-label="Delete evaluation"
-          title="Delete this evaluation record"
-          className="h-8 w-8 shrink-0 cursor-pointer border-red-200 bg-red-100 text-red-700 hover:bg-red-500 hover:text-white lg:h-8 lg:w-auto lg:px-2 lg:transition-all lg:duration-200 lg:hover:-translate-y-0.5 lg:hover:shadow-md lg:active:translate-y-0"
-        >
-          <Trash2 className="h-4 w-4 lg:hidden" />
-          <span className="hidden lg:inline">❌ Delete</span>
-        </Button>
-      ) : null}
-    </div>
-  );
-}
 
 function formatReviewListDate(createdAt: string): { short: string; full: string } {
   const d = new Date(createdAt);
@@ -1433,9 +1393,9 @@ export default function OverviewTab() {
 
                           <TableCell className={evalTableActionsCellClass(rowClassName)}>
                             <EvalRecordRowActions
-                              review={review}
-                              onView={() => handleViewEvaluation(review)}
-                              onDelete={() => openDeleteModal(review)}
+                              review={review as EvaluationRecordReview}
+                              onViewAction={() => handleViewEvaluation(review)}
+                              onDeleteAction={() => openDeleteModal(review)}
                             />
                           </TableCell>
                         </EvalRecordTableRow>
