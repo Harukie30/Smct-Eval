@@ -60,9 +60,9 @@ import {
   shouldShowHrSignPending,
   getReviewQuarterBadgeClass,
   getReviewQuarterDisplay,
+  EvalRecordTableRow,
   getReviewRowClassName,
   QUARTER_LATE_LEGEND_LABEL,
-  QUARTER_LATE_TOOLTIP,
 } from "@/components/evaluation/evaluationRecordsShared";
 
 interface Review {
@@ -149,12 +149,12 @@ function evalTableActionsCellClass(rowClassName: string) {
     "w-[3.25rem] min-w-[3.25rem] max-w-[3.25rem] p-1 sm:w-auto sm:min-w-[4.5rem] sm:max-w-none sm:p-2",
     "lg:sticky lg:right-0 lg:z-[3] lg:min-w-[7rem] lg:w-auto lg:shadow-[-6px_0_12px_-4px_rgba(15,23,42,0.12)]",
     rowClassName.includes("bg-green-50") && "lg:bg-green-50",
-    rowClassName.includes("bg-red-50") && "lg:bg-red-50",
+    rowClassName.includes("bg-red-200") && "lg:bg-red-200",
     rowClassName.includes("bg-yellow-50") && "lg:bg-yellow-50",
     rowClassName.includes("bg-blue-50") && "lg:bg-blue-50",
     rowClassName.includes("bg-orange-50") && "lg:bg-orange-50",
     !rowClassName.includes("bg-green-50") &&
-      !rowClassName.includes("bg-red-50") &&
+      !rowClassName.includes("bg-red-200") &&
       !rowClassName.includes("bg-yellow-50") &&
       !rowClassName.includes("bg-blue-50") &&
       !rowClassName.includes("bg-orange-50") &&
@@ -1140,8 +1140,8 @@ export default function OverviewTab() {
                 </Badge>
               </div>
               <div className="flex items-center gap-1">
-                <div className="h-2 w-2 rounded border-l-2 border-l-red-500 bg-red-50" />
-                <Badge className="bg-red-100 text-red-800 text-xs ring-1 ring-red-300/80">
+                <div className="h-2 w-2 rounded border-l-2 border-l-red-600 bg-red-200" />
+                <Badge className="border border-red-500 bg-red-500 text-xs text-white">
                   {QUARTER_LATE_LEGEND_LABEL}
                 </Badge>
               </div>
@@ -1333,7 +1333,13 @@ export default function OverviewTab() {
                       const statusLabels = formatReviewStatusLabel(review.status);
 
                       return (
-                        <TableRow key={review.id} className={rowClassName}>
+                        <EvalRecordTableRow
+                          key={review.id}
+                          review={
+                            review as Parameters<typeof getReviewRowClassName>[0]
+                          }
+                          className={rowClassName}
+                        >
                           <TableCell>
                             <span className="block max-w-[9rem] truncate font-medium text-gray-900 sm:max-w-[11rem] lg:max-w-none">
                               {[review.employee?.fname, review.employee?.lname]
@@ -1364,11 +1370,6 @@ export default function OverviewTab() {
                                     "max-w-[5.5rem] truncate text-[0.65rem] sm:max-w-none sm:text-xs",
                                     getReviewQuarterBadgeClass(review)
                                   )}
-                                  title={
-                                    /Q[1-4]/i.test(displayValue)
-                                      ? `Late: submitted after the input month (whole month after the quarter). ${QUARTER_LATE_TOOLTIP}`
-                                      : undefined
-                                  }
                                 >
                                   {displayValue}
                                 </Badge>
@@ -1437,7 +1438,7 @@ export default function OverviewTab() {
                               onDelete={() => openDeleteModal(review)}
                             />
                           </TableCell>
-                        </TableRow>
+                        </EvalRecordTableRow>
                       );
                     })
                   )}

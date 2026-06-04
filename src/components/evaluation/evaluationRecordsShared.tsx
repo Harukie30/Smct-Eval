@@ -1,8 +1,10 @@
 "use client";
 
+import type { ComponentProps } from "react";
 import { Eye, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import {
   isQuarterLateByStaticPeriod,
@@ -61,12 +63,12 @@ export function evalTableActionsCellClass(rowClassName: string) {
     "w-[3.25rem] min-w-[3.25rem] max-w-[3.25rem] p-1 sm:w-auto sm:min-w-[4.5rem] sm:max-w-none sm:p-2",
     "lg:sticky lg:right-0 lg:z-[3] lg:min-w-[7rem] lg:w-auto lg:shadow-[-6px_0_12px_-4px_rgba(15,23,42,0.12)]",
     rowClassName.includes("bg-green-50") && "lg:bg-green-50",
-    rowClassName.includes("bg-red-50") && "lg:bg-red-50",
+    rowClassName.includes("bg-red-200") && "lg:bg-red-200",
     rowClassName.includes("bg-yellow-50") && "lg:bg-yellow-50",
     rowClassName.includes("bg-blue-50") && "lg:bg-blue-50",
     rowClassName.includes("bg-orange-50") && "lg:bg-orange-50",
     !rowClassName.includes("bg-green-50") &&
-      !rowClassName.includes("bg-red-50") &&
+      !rowClassName.includes("bg-red-200") &&
       !rowClassName.includes("bg-yellow-50") &&
       !rowClassName.includes("bg-blue-50") &&
       !rowClassName.includes("bg-orange-50") &&
@@ -426,9 +428,10 @@ export function getQuarterColor(quarter: string): string {
 }
 
 export const QUARTER_LATE_BADGE_CLASS =
-  "bg-red-100 text-red-800 ring-1 ring-red-300/80";
+  "border border-red-500 bg-red-500 text-white shadow-sm ring-1 ring-red-600/40";
 
-export const QUARTER_LATE_LEGEND_LABEL = "Late (past input month)";
+export const QUARTER_LATE_LEGEND_LABEL = "Late Submission";
+export const QUARTER_LATE_HOVER_LABEL = "Late submit";
 export const QUARTER_LATE_TOOLTIP = QUARTER_EVALUATION_SCHEDULE_HINT;
 
 export function isReviewQuarterLate(review: EvaluationRecordReview): boolean {
@@ -442,7 +445,7 @@ export function isReviewQuarterLate(review: EvaluationRecordReview): boolean {
 
 /** Row accent when quarter was submitted after the input month (distinct from yellow “New”). */
 export const QUARTER_LATE_ROW_CLASS =
-  "bg-red-50/90 hover:bg-red-100/90 border-l-4 border-l-red-500";
+  "bg-red-200 hover:!bg-red-300 border-l-4 border-l-red-600 ring-1 ring-inset ring-red-400/60 cursor-help";
 
 export function getReviewQuarterBadgeClass(
   review: EvaluationRecordReview
@@ -517,6 +520,35 @@ export function getReviewRowClassName(review: EvaluationRecordReview): string {
     return "bg-orange-50 hover:bg-orange-100 border-l-4 border-l-orange-500 transition-colors";
   }
   return "hover:bg-gray-100 transition-colors";
+}
+
+type EvalRecordTableRowProps = ComponentProps<typeof TableRow> & {
+  review: EvaluationRecordReview;
+};
+
+/**
+ * Table row for evaluation records. Late rows use a native `title` tooltip (wrapping
+ * `<tr>` in Radix Tooltip breaks valid table markup and hover styling).
+ */
+export function EvalRecordTableRow({
+  review,
+  className,
+  children,
+  title,
+  ...props
+}: EvalRecordTableRowProps) {
+  const late = isReviewQuarterLate(review);
+
+  return (
+    <TableRow
+      className={className}
+      title={late ? (title ?? QUARTER_LATE_HOVER_LABEL) : title}
+      aria-label={late ? QUARTER_LATE_HOVER_LABEL : undefined}
+      {...props}
+    >
+      {children}
+    </TableRow>
+  );
 }
 
 export function EvalRecordRowActions({
