@@ -666,7 +666,7 @@ export default function HRSubordinatesPage() {
 
       <AddEmployeeToEvaluatorModal
         open={isAddEmployeeModalOpen}
-        onOpenChange={setIsAddEmployeeModalOpen}
+        onOpenChangeAction={setIsAddEmployeeModalOpen}
         evaluator={
           selectedEvaluator
             ? ({

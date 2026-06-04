@@ -174,6 +174,122 @@ export function buildPerformanceTrendChartData(
   );
 }
 
+export type CalendarQuarter = "Q1" | "Q2" | "Q3" | "Q4";
+
+/** Last calendar day of each static evaluation quarter (JS month is 0-indexed). */
+export const QUARTER_PERIOD_END: Record<
+  CalendarQuarter,
+  { month: number; day: number }
+> = {
+  Q1: { month: 2, day: 31 },
+  Q2: { month: 5, day: 30 },
+  Q3: { month: 8, day: 30 },
+  Q4: { month: 11, day: 31 },
+};
+
+/**
+ * When evaluations are due / late (calendar quarters):
+ * - Q1 Jan–Mar → input in April → late from May
+ * - Q2 Apr–Jun → input in July → late from August
+ * - Q3 Jul–Sep → input in October → late from November
+ * - Q4 Oct–Dec → input in January (next year) → late from February (next year)
+ */
+export const QUARTER_EVALUATION_SCHEDULE_HINT =
+  "Q1: Jan–Mar, due April, late May+ · Q2: Apr–Jun, due Jul, late Aug+ · Q3: Jul–Sep, due Oct, late Nov+ · Q4: Oct–Dec, due Jan, late Feb+";
+
+/** Maps API/list values like `1`, `Q1`, `Q1 2025` to a schedule label (`Q1`, …). */
+export function normalizeQuarterLabelForSchedule(label: string): string {
+  const t = String(label).trim();
+  if (!t) return t;
+  const qMatch = t.match(/^Q([1-4])\b/i);
+  if (qMatch) {
+    const yearMatch = t.match(/(20\d{2})/);
+    return yearMatch ? `Q${qMatch[1]} ${yearMatch[1]}` : `Q${qMatch[1]}`;
+  }
+  const n = parseInt(t, 10);
+  if (Number.isFinite(n) && n >= 1 && n <= 4) {
+    const yearMatch = t.match(/(20\d{2})/);
+    return yearMatch ? `Q${n} ${yearMatch[1]}` : `Q${n}`;
+  }
+  return t;
+}
+
+export function parseCalendarQuarterFromLabel(
+  label: string,
+  yearFallback?: number
+): { quarter: CalendarQuarter; year: number } | null {
+  const normalized = normalizeQuarterLabelForSchedule(label);
+  const match = normalized.match(/Q([1-4])/i);
+  if (!match) return null;
+  const quarter = `Q${match[1]}` as CalendarQuarter;
+  const yearMatch = String(label).match(/(20\d{2})/);
+  const year = yearMatch
+    ? parseInt(yearMatch[1], 10)
+    : yearFallback;
+  if (year == null || !Number.isFinite(year)) return null;
+  return { quarter, year };
+}
+
+export function getStaticQuarterPeriodEndDate(
+  quarter: CalendarQuarter,
+  year: number
+): Date {
+  const { month, day } = QUARTER_PERIOD_END[quarter];
+  return new Date(year, month, day, 23, 59, 59, 999);
+}
+
+/** Last moment of the month after the quarter (allowed input window). */
+export function getQuarterInputWindowEndDate(
+  quarter: CalendarQuarter,
+  year: number
+): Date {
+  const endMonth = QUARTER_PERIOD_END[quarter].month;
+  let inputMonth = endMonth + 1;
+  let inputYear = year;
+  while (inputMonth > 11) {
+    inputMonth -= 12;
+    inputYear += 1;
+  }
+  return new Date(inputYear, inputMonth + 1, 0, 23, 59, 59, 999);
+}
+
+/** First day of the month after the input window — submissions on/after this are late. */
+export function getQuarterLateStartDate(
+  quarter: CalendarQuarter,
+  year: number
+): Date {
+  const endMonth = QUARTER_PERIOD_END[quarter].month;
+  let lateMonth = endMonth + 2;
+  let lateYear = year;
+  while (lateMonth > 11) {
+    lateMonth -= 12;
+    lateYear += 1;
+  }
+  return new Date(lateYear, lateMonth, 1, 0, 0, 0, 0);
+}
+
+/**
+ * True when `referenceDate` is on or after the late start for that quarter/year
+ * (e.g. Q1 2025 → late from 1 May 2025).
+ */
+export function isQuarterLateByStaticPeriod(
+  quarterLabel: string,
+  referenceDateIso: string,
+  options?: { yearFallback?: number }
+): boolean {
+  const ref = new Date(referenceDateIso);
+  if (Number.isNaN(ref.getTime())) return false;
+
+  const parsed = parseCalendarQuarterFromLabel(
+    quarterLabel,
+    options?.yearFallback ?? ref.getFullYear()
+  );
+  if (!parsed) return false;
+
+  const lateStart = getQuarterLateStartDate(parsed.quarter, parsed.year);
+  return ref.getTime() >= lateStart.getTime();
+}
+
 /**
  * Get quarter color for UI display
  */

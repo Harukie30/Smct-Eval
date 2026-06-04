@@ -25,6 +25,12 @@ export const apiService = {
     return response.data;
   },
 
+  requestPasswordReset: async (email: string): Promise<any> => {
+    await sanctum_csrf();
+    const response = await api.post("/forgot-password", { email });
+    return response.data;
+  },
+
   logout: async (): Promise<any> => {
     const response = await api.post("/logout");
     return response.data;

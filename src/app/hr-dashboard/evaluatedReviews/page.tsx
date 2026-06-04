@@ -58,6 +58,11 @@ import {
   shouldShowEmployeeSignPending,
   shouldShowEvaluatorSignPending,
   shouldShowHrSignPending,
+  getReviewQuarterBadgeClass,
+  getReviewQuarterDisplay,
+  getReviewRowClassName,
+  QUARTER_LATE_LEGEND_LABEL,
+  QUARTER_LATE_TOOLTIP,
 } from "@/components/evaluation/evaluationRecordsShared";
 
 interface Review {
@@ -144,10 +149,12 @@ function evalTableActionsCellClass(rowClassName: string) {
     "w-[3.25rem] min-w-[3.25rem] max-w-[3.25rem] p-1 sm:w-auto sm:min-w-[4.5rem] sm:max-w-none sm:p-2",
     "lg:sticky lg:right-0 lg:z-[3] lg:min-w-[7rem] lg:w-auto lg:shadow-[-6px_0_12px_-4px_rgba(15,23,42,0.12)]",
     rowClassName.includes("bg-green-50") && "lg:bg-green-50",
+    rowClassName.includes("bg-red-50") && "lg:bg-red-50",
     rowClassName.includes("bg-yellow-50") && "lg:bg-yellow-50",
     rowClassName.includes("bg-blue-50") && "lg:bg-blue-50",
     rowClassName.includes("bg-orange-50") && "lg:bg-orange-50",
     !rowClassName.includes("bg-green-50") &&
+      !rowClassName.includes("bg-red-50") &&
       !rowClassName.includes("bg-yellow-50") &&
       !rowClassName.includes("bg-blue-50") &&
       !rowClassName.includes("bg-orange-50") &&
@@ -687,13 +694,6 @@ export default function OverviewTab() {
     }
   };
 
-  const getQuarterColor = (quarter: string): string => {
-    if (quarter.includes("Q1")) return "bg-blue-100 text-blue-800";
-    if (quarter.includes("Q2")) return "bg-green-100 text-green-800";
-    if (quarter.includes("Q3")) return "bg-yellow-100 text-yellow-800";
-    return "bg-purple-100 text-purple-800";
-  };
-
   const formatRatingDisplay = (rating: number | null): string => {
     if (rating === null) return "—";
     return rating % 1 === 0 ? String(rating) : rating.toFixed(2);
@@ -1139,6 +1139,21 @@ export default function OverviewTab() {
                   Completed
                 </Badge>
               </div>
+              <div className="flex items-center gap-1">
+                <div className="h-2 w-2 rounded border-l-2 border-l-red-500 bg-red-50" />
+                <Badge className="bg-red-100 text-red-800 text-xs ring-1 ring-red-300/80">
+                  {QUARTER_LATE_LEGEND_LABEL}
+                </Badge>
+              </div>
+              <span className="mr-1 mt-1 w-full text-xs font-medium text-gray-700 sm:mr-2 sm:mt-0 sm:w-auto sm:text-sm">
+                Quarter:
+              </span>
+              <div className="flex flex-wrap items-center gap-1">
+                <Badge className="bg-blue-100 text-blue-800 text-xs">Q1</Badge>
+                <Badge className="bg-green-100 text-green-800 text-xs">Q2</Badge>
+                <Badge className="bg-yellow-100 text-yellow-800 text-xs">Q3</Badge>
+                <Badge className="bg-purple-100 text-purple-800 text-xs">Q4</Badge>
+              </div>
               <span className="mr-1 mt-1 w-full text-xs font-medium text-gray-700 sm:mr-2 sm:mt-0 sm:w-auto sm:text-sm">
                 Rating:
               </span>
@@ -1311,31 +1326,9 @@ export default function OverviewTab() {
                     </TableRow>
                   ) : (
                     evaluations?.map((review) => {
-                      const submittedDate = new Date(review.created_at);
-                      const now = new Date();
-                      const hoursDiff =
-                        (now.getTime() - submittedDate.getTime()) /
-                        (1000 * 60 * 60);
-                      const isNew = hoursDiff <= 24;
-                      const isRecent = hoursDiff > 24 && hoursDiff <= 168; // 7 days
-                      const isCompleted = review.status === "completed";
-                      const isPending = review.status === "pending";
-
-                      // Determine row background color
-                      let rowClassName = "hover:bg-gray-100 transition-colors";
-                      if (isCompleted) {
-                        rowClassName =
-                          "bg-green-50 hover:bg-green-100 border-l-4 border-l-green-500 transition-colors";
-                      } else if (isNew) {
-                        rowClassName =
-                          "bg-yellow-50 hover:bg-yellow-100 border-l-4 border-l-yellow-500 transition-colors";
-                      } else if (isRecent) {
-                        rowClassName =
-                          "bg-blue-50 hover:bg-blue-100 border-l-4 border-l-blue-500 transition-colors";
-                      } else if (isPending) {
-                        rowClassName =
-                          "bg-orange-50 hover:bg-orange-100 border-l-4 border-l-orange-500 transition-colors";
-                      }
+                      const rowClassName = getReviewRowClassName(
+                        review as Parameters<typeof getReviewRowClassName>[0]
+                      );
                       const reviewDate = formatReviewListDate(review.created_at);
                       const statusLabels = formatReviewStatusLabel(review.status);
 
@@ -1364,37 +1357,18 @@ export default function OverviewTab() {
                           </TableCell>
                           <TableCell>
                             {(() => {
-                              // Check if "Others" is selected
-                              const isOthersSelected = 
-                                review.reviewTypeOthersImprovement || 
-                                (review.reviewTypeOthersCustom && 
-                                 review.reviewTypeOthersCustom.trim() !== "");
-                              
-                              // Determine the display value
-                              let displayValue: string = "Others";
-                              if (review.reviewTypeRegular) {
-                                displayValue = String(review.reviewTypeRegular);
-                              } else if (
-                                review.reviewTypeProbationary != null &&
-                                review.reviewTypeProbationary !== "" &&
-                                review.reviewTypeProbationary !== "null"
-                              ) {
-                                displayValue = "M" + String(review.reviewTypeProbationary);
-                              } else if (isOthersSelected) {
-                                // If custom value exists, use it; otherwise use "Others"
-                                if (review.reviewTypeOthersCustom && review.reviewTypeOthersCustom.trim() !== "") {
-                                  displayValue = review.reviewTypeOthersCustom.trim();
-                                } else {
-                                  displayValue = "Others";
-                                }
-                              }
-                              
+                              const displayValue = getReviewQuarterDisplay(review);
                               return (
                                 <Badge
                                   className={cn(
                                     "max-w-[5.5rem] truncate text-[0.65rem] sm:max-w-none sm:text-xs",
-                                    getQuarterColor(displayValue)
+                                    getReviewQuarterBadgeClass(review)
                                   )}
+                                  title={
+                                    /Q[1-4]/i.test(displayValue)
+                                      ? `Late: submitted after the input month (whole month after the quarter). ${QUARTER_LATE_TOOLTIP}`
+                                      : undefined
+                                  }
                                 >
                                   {displayValue}
                                 </Badge>

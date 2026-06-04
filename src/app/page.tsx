@@ -1182,7 +1182,7 @@ function LandingLoginPage() {
       <ForgotPasswordModal
         isOpen={showForgotPasswordModal}
         onCloseAction={() => setShowForgotPasswordModal(false)}
-        onContactDevsAction={() => setShowContactDevsModal(true)}
+        initialEmail={username}
       />
 
       {/* Contact Developers Modal */}

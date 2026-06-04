@@ -1260,14 +1260,14 @@ export default function MemorandumViolationModal({
                       *
                     </span>
                   </Label>
-                  <Input
+                  <Textarea
                     id="add-violation-offense"
                     placeholder="e.g. Unauthorized absence"
                     value={addSummary}
                     onChange={(e) => setAddSummary(e.target.value)}
                     disabled={submittingAdd}
-                    className="h-9 w-full min-w-0 bg-white text-sm sm:h-11 sm:text-base"
-                    autoComplete="off"
+                    className="min-h-[3.5rem] w-full min-w-0 resize-y bg-white text-sm sm:min-h-[5.5rem]"
+                    rows={3}
                     aria-required
                   />
                 </div>
@@ -1290,14 +1290,14 @@ export default function MemorandumViolationModal({
                     Sanction{" "}
                     <span className="font-normal text-gray-500">(optional)</span>
                   </Label>
-                  <Textarea
+                  <Input
                     id="add-violation-sanction"
                     placeholder="e.g. Written warning…"
                     value={addSanction}
                     onChange={(e) => setAddSanction(e.target.value)}
                     disabled={submittingAdd}
-                    className="min-h-[3.5rem] w-full min-w-0 resize-y bg-white text-sm sm:min-h-[5.5rem]"
-                    rows={3}
+                    className="h-9 w-full min-w-0 bg-white text-sm sm:h-11 sm:text-base"
+                    autoComplete="off"
                   />
                 </div>
               </li>
@@ -1484,14 +1484,14 @@ export default function MemorandumViolationModal({
                       *
                     </span>
                   </Label>
-                  <Input
+                  <Textarea
                     id="edit-violation-offense"
                     placeholder="e.g. Unauthorized absence"
                     value={editSummaryDraft}
                     onChange={(e) => setEditSummaryDraft(e.target.value)}
                     disabled={savingSummaryEdit}
-                    className="h-9 w-full min-w-0 bg-white text-sm sm:h-11 sm:text-base"
-                    autoComplete="off"
+                    className="min-h-[3.5rem] w-full min-w-0 resize-y bg-white text-sm sm:min-h-[5.5rem]"
+                    rows={3}
                     aria-required
                   />
                 </div>
@@ -1514,14 +1514,14 @@ export default function MemorandumViolationModal({
                     Sanction{" "}
                     <span className="font-normal text-gray-500">(optional)</span>
                   </Label>
-                  <Textarea
+                  <Input
                     id="edit-violation-sanction"
                     placeholder="e.g. Written warning…"
                     value={editSanctionDraft}
                     onChange={(e) => setEditSanctionDraft(e.target.value)}
                     disabled={savingSummaryEdit}
-                    className="min-h-[3.5rem] w-full min-w-0 resize-y bg-white text-sm sm:min-h-[5.5rem]"
-                    rows={3}
+                    className="h-9 w-full min-w-0 bg-white text-sm sm:h-11 sm:text-base"
+                    autoComplete="off"
                   />
                 </div>
               </li>

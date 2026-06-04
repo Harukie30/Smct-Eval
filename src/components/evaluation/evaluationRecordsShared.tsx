@@ -4,6 +4,11 @@ import { Eye, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import {
+  isQuarterLateByStaticPeriod,
+  normalizeQuarterLabelForSchedule,
+  QUARTER_EVALUATION_SCHEDULE_HINT,
+} from "@/lib/quarterUtils";
 
 export type EvaluationRecordReview = {
   id: number;
@@ -56,10 +61,12 @@ export function evalTableActionsCellClass(rowClassName: string) {
     "w-[3.25rem] min-w-[3.25rem] max-w-[3.25rem] p-1 sm:w-auto sm:min-w-[4.5rem] sm:max-w-none sm:p-2",
     "lg:sticky lg:right-0 lg:z-[3] lg:min-w-[7rem] lg:w-auto lg:shadow-[-6px_0_12px_-4px_rgba(15,23,42,0.12)]",
     rowClassName.includes("bg-green-50") && "lg:bg-green-50",
+    rowClassName.includes("bg-red-50") && "lg:bg-red-50",
     rowClassName.includes("bg-yellow-50") && "lg:bg-yellow-50",
     rowClassName.includes("bg-blue-50") && "lg:bg-blue-50",
     rowClassName.includes("bg-orange-50") && "lg:bg-orange-50",
     !rowClassName.includes("bg-green-50") &&
+      !rowClassName.includes("bg-red-50") &&
       !rowClassName.includes("bg-yellow-50") &&
       !rowClassName.includes("bg-blue-50") &&
       !rowClassName.includes("bg-orange-50") &&
@@ -418,6 +425,33 @@ export function getQuarterColor(quarter: string): string {
   return "bg-purple-100 text-purple-800";
 }
 
+export const QUARTER_LATE_BADGE_CLASS =
+  "bg-red-100 text-red-800 ring-1 ring-red-300/80";
+
+export const QUARTER_LATE_LEGEND_LABEL = "Late (past input month)";
+export const QUARTER_LATE_TOOLTIP = QUARTER_EVALUATION_SCHEDULE_HINT;
+
+export function isReviewQuarterLate(review: EvaluationRecordReview): boolean {
+  const display = normalizeQuarterLabelForSchedule(getReviewQuarterDisplay(review));
+  if (!/Q[1-4]/i.test(display)) return false;
+  const yearFallback = new Date(review.created_at).getFullYear();
+  return isQuarterLateByStaticPeriod(display, review.created_at, {
+    yearFallback,
+  });
+}
+
+/** Row accent when quarter was submitted after the input month (distinct from yellow “New”). */
+export const QUARTER_LATE_ROW_CLASS =
+  "bg-red-50/90 hover:bg-red-100/90 border-l-4 border-l-red-500";
+
+export function getReviewQuarterBadgeClass(
+  review: EvaluationRecordReview
+): string {
+  const display = getReviewQuarterDisplay(review);
+  if (isReviewQuarterLate(review)) return QUARTER_LATE_BADGE_CLASS;
+  return getQuarterColor(display);
+}
+
 export function getReviewQuarterDisplay(review: EvaluationRecordReview): string {
   const isOthersSelected =
     Boolean(review.reviewTypeOthersImprovement) ||
@@ -431,7 +465,9 @@ export function getReviewQuarterDisplay(review: EvaluationRecordReview): string 
     String(review.reviewTypeRegular).trim() !== "" &&
     review.reviewTypeRegular !== 0
   ) {
-    return String(review.reviewTypeRegular).trim();
+    return normalizeQuarterLabelForSchedule(
+      String(review.reviewTypeRegular).trim()
+    );
   }
 
   if (
@@ -462,6 +498,11 @@ export function getReviewRowClassName(review: EvaluationRecordReview): string {
   const isRecent = hoursDiff > 24 && hoursDiff <= 168;
   const isCompleted = review.status === "completed";
   const isPending = review.status === "pending";
+  const isQuarterLate = isReviewQuarterLate(review);
+
+  if (isQuarterLate) {
+    return `${QUARTER_LATE_ROW_CLASS} transition-colors`;
+  }
 
   if (isCompleted) {
     return "bg-green-50 hover:bg-green-100 border-l-4 border-l-green-500 transition-colors";

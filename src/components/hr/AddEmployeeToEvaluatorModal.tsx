@@ -59,7 +59,7 @@ type CandidateEmployee = {
 
 interface AddEmployeeToEvaluatorModalProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onOpenChangeAction: (open: boolean) => void;
   evaluator: AssignEvaluatorTarget | null;
   onAssigned?: () => void;
 }
@@ -195,7 +195,7 @@ function normalizeAssignableStaffList(list: unknown[]): CandidateEmployee[] {
 
 export default function AddEmployeeToEvaluatorModal({
   open,
-  onOpenChange,
+  onOpenChangeAction,
   evaluator,
   onAssigned,
 }: AddEmployeeToEvaluatorModalProps) {
@@ -515,7 +515,7 @@ export default function AddEmployeeToEvaluatorModal({
 
   return (
     <>
-      <Dialog open={open} onOpenChangeAction={onOpenChange}>
+      <Dialog open={open} onOpenChangeAction={onOpenChangeAction}>
         <DialogContent
           className="relative flex h-[min(92vh,880px)] max-h-[min(92vh,880px)] max-w-[95rem] flex-col gap-0 overflow-hidden border-slate-200/80 p-0 shadow-2xl sm:rounded-xl"
           style={{
@@ -618,8 +618,8 @@ export default function AddEmployeeToEvaluatorModal({
           </DialogHeader>
 
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-gradient-to-b from-blue-50/25 to-indigo-50/20 px-4 py-3 sm:px-5">
-            <div className="mb-3 flex shrink-0 flex-col gap-3 sm:flex-row sm:items-stretch sm:gap-4">
-              <div className="relative min-w-0 w-full sm:w-2/3">
+            <div className="mb-3 grid shrink-0 grid-cols-1 gap-3 md:grid-cols-3 md:items-stretch md:gap-4">
+              <div className="relative min-w-0 md:col-span-2">
                 <Search
                   className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
                   aria-hidden
@@ -634,14 +634,14 @@ export default function AddEmployeeToEvaluatorModal({
               </div>
 
               <div
-                className="flex w-full min-w-0 flex-col gap-2 rounded-lg border border-slate-200/90 bg-white/90 px-3 py-2.5 text-xs text-slate-600 shadow-sm sm:w-1/3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-2 sm:gap-y-2"
+                className="flex min-w-0 flex-col gap-2 rounded-lg border border-slate-200/90 bg-white/90 px-3 py-2.5 text-xs text-slate-600 shadow-sm md:col-span-1 md:justify-center"
                 role="note"
               >
                 <span className="inline-flex shrink-0 items-center gap-1.5 font-medium text-slate-700">
                   <Info className="h-3.5 w-3.5 shrink-0 text-slate-500" aria-hidden />
                   Role
                 </span>
-                <span className="flex flex-wrap items-center gap-1.5 sm:min-w-0 sm:flex-1 sm:justify-end sm:gap-2">
+                <span className="flex min-w-0 flex-wrap items-center gap-1.5">
                   <Badge
                     variant="outline"
                     className="border-blue-200 bg-blue-100 px-1.5 py-0 text-[10px] font-medium capitalize text-blue-800"
@@ -934,9 +934,9 @@ export default function AddEmployeeToEvaluatorModal({
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={() => onOpenChangeAction(false)}
               disabled={isAnySaving}
-              className="min-w-[100px] border-slate-200 text-white bg-red-600 hover:bg-red-700 cursor-pointer shadow-sm hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+              className="min-w-[100px] w-full cursor-pointer border-slate-200 bg-red-600 text-white shadow-sm hover:bg-red-700 hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 sm:w-auto"
             >
               Close
             </Button>
@@ -947,7 +947,7 @@ export default function AddEmployeeToEvaluatorModal({
                 void handleSaveUnassign();
               }}
               disabled={isAnySaving || loadingAssigned || pendingUnassignIds.size === 0}
-              className="min-w-[120px] border-amber-200 text-white bg-amber-600 hover:bg-amber-700 cursor-pointer shadow-sm hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+              className="min-w-[120px] w-full cursor-pointer border-amber-200 bg-amber-600 text-white shadow-sm hover:bg-amber-700 hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 sm:w-auto"
             >
               {savingUnassign ? "Saving..." : "Unassign"}
             </Button>
@@ -955,7 +955,7 @@ export default function AddEmployeeToEvaluatorModal({
               type="button"
               onClick={handleAssign}
               disabled={isAnySaving || loadingPool || selectedIds.size === 0}
-              className="min-w-[140px] bg-blue-600 text-white shadow-sm hover:bg-blue-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+              className="min-w-[140px] w-full cursor-pointer bg-blue-600 text-white shadow-sm hover:bg-blue-700 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 sm:w-auto"
             >
               {savingAssign ? (
                 <>
