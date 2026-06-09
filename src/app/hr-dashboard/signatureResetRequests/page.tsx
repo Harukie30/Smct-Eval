@@ -55,9 +55,12 @@ function signatureActionsCellClass() {
   );
 }
 
+type DepartmentOption = { label: string; value: string };
+
 function formatRequestDate(dateString: string): { short: string; full: string } {
   if (!dateString) return { short: "N/A", full: "N/A" };
   const d = new Date(dateString);
+  if (Number.isNaN(d.getTime())) return { short: "N/A", full: "N/A" };
   return {
     short: d.toLocaleDateString("en-US", {
       month: "short",
@@ -72,6 +75,61 @@ function formatRequestDate(dateString: string): { short: string; full: string } 
       minute: "2-digit",
     }),
   };
+}
+
+/** API returns user rows (flat), not nested `user` + `requested_at`. */
+function getSignatureResetRequestedAt(request: Record<string, unknown>): string {
+  const candidates = [
+    request.requested_at,
+    request.signature_reset_requested_at,
+    request.requestedAt,
+    request.updated_at,
+    request.updatedAt,
+  ];
+  for (const value of candidates) {
+    if (value != null && String(value).trim() !== "") {
+      return String(value);
+    }
+  }
+  return "";
+}
+
+function getRequestDepartmentDisplay(
+  request: Record<string, unknown>,
+  departmentOptions: DepartmentOption[],
+  departmentListLoading: boolean
+): string {
+  const departments = request.departments as Record<string, unknown> | undefined;
+  const nested =
+    departments?.department_name ||
+    departments?.label ||
+    departments?.name;
+  if (nested != null && String(nested).trim() !== "") {
+    return String(nested);
+  }
+
+  const direct = request.department;
+  if (direct != null && String(direct).trim() !== "") {
+    return String(direct);
+  }
+
+  const deptId = request.department_id ?? request.departmentId;
+  if (deptId != null && String(deptId).trim() !== "") {
+    if (departmentListLoading) return "Loading\u2026";
+    const match = departmentOptions.find(
+      (d) => String(d.value) === String(deptId)
+    );
+    return match?.label?.trim() || String(deptId);
+  }
+
+  return "N/A";
+}
+
+function getRequestUserLabel(request: Record<string, unknown>): string {
+  const user = request.user as Record<string, unknown> | undefined;
+  const fname = String(request.fname ?? user?.fname ?? "").trim();
+  const lname = String(request.lname ?? user?.lname ?? "").trim();
+  return [fname, lname].filter(Boolean).join(" ").trim() || "Unknown";
 }
 
 function SignatureResetRowActions({
@@ -92,7 +150,7 @@ function SignatureResetRowActions({
         className="h-8 w-8 shrink-0 border-green-300 bg-green-600 text-white hover:bg-green-700 hover:text-white lg:h-9 lg:w-auto lg:px-3 lg:transition-all lg:duration-200 lg:hover:-translate-y-0.5 lg:hover:shadow-md lg:active:translate-y-0"
       >
         <Check className="h-4 w-4 lg:mr-1" />
-        <span className="hidden lg:inline">Accept Request</span>
+        <span className="hidden lg:inline cursor-pointer">Accept Request</span>
       </Button>
       <Button
         type="button"
@@ -103,7 +161,7 @@ function SignatureResetRowActions({
         className="h-8 w-8 shrink-0 border-red-300 bg-red-600 text-white hover:bg-red-700 hover:text-white lg:h-9 lg:w-auto lg:px-3 lg:transition-all lg:duration-200 lg:hover:-translate-y-0.5 lg:hover:shadow-md lg:active:translate-y-0"
       >
         <X className="h-4 w-4 lg:mr-1" />
-        <span className="hidden lg:inline">Reject Request</span>
+        <span className="hidden lg:inline cursor-pointer">Reject Request</span>
       </Button>
     </div>
   );
@@ -172,6 +230,10 @@ export default function SignatureResetRequestsTab() {
 
   const { branchOptions, isLoading: branchListLoading } =
     useBranchesForEvaluation();
+  const [departmentOptions, setDepartmentOptions] = useState<DepartmentOption[]>(
+    []
+  );
+  const [departmentListLoading, setDepartmentListLoading] = useState(true);
 
   // Modal states
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
@@ -190,6 +252,27 @@ export default function SignatureResetRequestsTab() {
   const prevSearchDebouncedRef = useRef<string | null>(null);
   const prevStatusDebouncedRef = useRef<string | null>(null);
   const prevPageRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const departments = await apiService.getDepartments();
+        if (!cancelled) {
+          setDepartmentOptions(departments);
+        }
+      } catch (err) {
+        console.error("Error loading departments for signature reset list:", err);
+      } finally {
+        if (!cancelled) {
+          setDepartmentListLoading(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Date filter options for combobox
   const statusOptions = [
@@ -256,11 +339,11 @@ export default function SignatureResetRequestsTab() {
       if (searchValue) {
         const searchLower = searchValue.toLowerCase();
         filteredRequests = filteredRequests.filter((request) => {
-          const fullName = `${request.user?.fname || ""} ${
-            request.user?.lname || ""
-          }`.toLowerCase();
-          const email = request.user?.email?.toLowerCase() || "";
-          const username = request.user?.username?.toLowerCase() || "";
+          const row = request as unknown as Record<string, unknown>;
+          const user = row.user as Record<string, unknown> | undefined;
+          const fullName = getRequestUserLabel(row).toLowerCase();
+          const email = String(row.email ?? user?.email ?? "").toLowerCase();
+          const username = String(row.username ?? user?.username ?? "").toLowerCase();
           return (
             fullName.includes(searchLower) ||
             email.includes(searchLower) ||
@@ -283,8 +366,11 @@ export default function SignatureResetRequestsTab() {
         oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
         filteredRequests = filteredRequests.filter((request) => {
-          if (!request.requested_at) return false;
-          const requestDate = new Date(request.requested_at);
+          const requestedAt = getSignatureResetRequestedAt(
+            request as unknown as Record<string, unknown>
+          );
+          if (!requestedAt) return false;
+          const requestDate = new Date(requestedAt);
           const requestDateOnly = new Date(
             requestDate.getFullYear(),
             requestDate.getMonth(),
@@ -477,20 +563,6 @@ export default function SignatureResetRequestsTab() {
       hour: "2-digit",
       minute: "2-digit",
     });
-  };
-
-  // Helper function to get branch code from branch data
-  const getBranchCode = (branch: any): string => {
-    if (!branch) return "N/A";
-
-    // Reuse the shared mapping to support:
-    // - API payloads that include `branch_code` directly
-    // - API payloads that provide only an id/value (resolved using branchOptions)
-    return getEmployeeBranchCodeDisplay(
-      { branch } as any,
-      branchOptions,
-      branchListLoading
-    );
   };
 
   return (
@@ -727,26 +799,35 @@ export default function SignatureResetRequestsTab() {
                   </TableRow>
                 ) : (
                   requests.map((request: any) => {
-                    const requestedAt = formatRequestDate(request.requested_at);
+                    const row = request as Record<string, unknown>;
+                    const requestedAt = formatRequestDate(
+                      getSignatureResetRequestedAt(row)
+                    );
+                    const branchDisplay = getEmployeeBranchCodeDisplay(
+                      request,
+                      branchOptions,
+                      branchListLoading
+                    );
+                    const departmentDisplay = getRequestDepartmentDisplay(
+                      row,
+                      departmentOptions,
+                      departmentListLoading
+                    );
                     return (
                     <TableRow key={request.id}>
                       <TableCell>
                         <div className="min-w-0">
                           <div className="truncate font-medium text-gray-900">
-                            {request.fname} {request.lname}
+                            {getRequestUserLabel(row)}
                           </div>
                           <div className="truncate text-[0.65rem] text-gray-500 sm:text-xs">
-                            @{request.username}
+                            @{String(request.username ?? "—")}
                           </div>
                           <div className="mt-1 truncate text-[0.65rem] text-gray-600 md:hidden">
                             {request.email}
                           </div>
                           <div className="mt-0.5 text-[0.65rem] text-gray-500 sm:hidden">
-                            {request.branches?.length > 0
-                              ? request.branches
-                                  .map((b: any) => getBranchCode(b))
-                                  .join(", ")
-                              : "—"}
+                            {branchDisplay}
                           </div>
                         </div>
                       </TableCell>
@@ -760,18 +841,12 @@ export default function SignatureResetRequestsTab() {
                       </TableCell>
                       <TableCell className="hidden lg:table-cell">
                         <span className="block max-w-[8rem] truncate">
-                          {request.departments?.department_name ||
-                            request.department ||
-                            "N/A"}
+                          {departmentDisplay}
                         </span>
                       </TableCell>
                       <TableCell className="hidden sm:table-cell">
                         <span className="block max-w-[5rem] truncate sm:max-w-none">
-                          {request.branches?.length > 0
-                            ? request.branches
-                                .map((b: any) => getBranchCode(b))
-                                .join(", ")
-                            : "N/A"}
+                          {branchDisplay}
                         </span>
                       </TableCell>
                       <TableCell className="hidden whitespace-nowrap text-gray-600 sm:table-cell">
@@ -821,7 +896,11 @@ export default function SignatureResetRequestsTab() {
             <DialogDescription>
               Are you sure you want to approve the signature reset request for{" "}
               <strong>
-                {selectedRequest?.user?.fname} {selectedRequest?.user?.lname}
+                {selectedRequest
+                  ? getRequestUserLabel(
+                      selectedRequest as unknown as Record<string, unknown>
+                    )
+                  : "this user"}
               </strong>
               ? This will allow them to clear their signature.
             </DialogDescription>
@@ -869,7 +948,11 @@ export default function SignatureResetRequestsTab() {
             <DialogDescription>
               Are you sure you want to reject the signature reset request for{" "}
               <strong>
-                {selectedRequest?.user?.fname} {selectedRequest?.user?.lname}
+                {selectedRequest
+                  ? getRequestUserLabel(
+                      selectedRequest as unknown as Record<string, unknown>
+                    )
+                  : "this user"}
               </strong>
               ? This action cannot be undone.
             </DialogDescription>
