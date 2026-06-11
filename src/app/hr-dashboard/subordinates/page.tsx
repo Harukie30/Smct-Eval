@@ -16,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toastMessages } from "@/lib/toastMessages";
 import { apiService } from "@/lib/apiService";
 import { pickApiTimestamp } from "@/lib/parseApiTimestamp";
-import { Eye, RefreshCw, Users2 } from "lucide-react";
+import { Eye, RefreshCw, Users2, X } from "lucide-react";
 import EvaluationsPagination from "@/components/paginationComponent";
 import AddEmployeeToEvaluatorModal, {
   AssignEvaluatorTarget,
@@ -520,12 +520,24 @@ export default function HRSubordinatesPage() {
           <div
             className={`space-y-4 ${loading || refreshing ? "pointer-events-none opacity-40" : ""}`}
           >
-            <Input
-              placeholder="Search evaluator by name, email, position, or role..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full sm:max-w-md"
-            />
+            <div className="relative w-full sm:max-w-md">
+              <Input
+                placeholder="Search evaluator by name, email, position, or role..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className={search ? "w-full pr-10" : "w-full"}
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-red-400 transition-colors hover:text-red-600"
+                  aria-label="Clear search"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              )}
+            </div>
 
             <Button
               type="button"
