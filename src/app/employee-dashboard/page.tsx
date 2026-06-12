@@ -558,7 +558,7 @@ export default function OverviewTab() {
                     <TableHead className="w-1/6 text-right pr-4">
                       Rating
                     </TableHead>
-                    <TableHead className="w-1/6 pl-6">Date</TableHead>
+                    <TableHead className="w-1/6 text-center">Date</TableHead>
                     <TableHead className="w-1/6 px-4 text-center">
                       Quarter
                     </TableHead>
@@ -582,8 +582,8 @@ export default function OverviewTab() {
                         <TableCell className="w-1/6 text-right pr-4">
                         <Skeleton className="h-4 w-12" />
                       </TableCell>
-                      <TableCell className="w-1/6 pl-6">
-                        <div className="flex flex-col gap-1">
+                      <TableCell className="w-1/6 text-center">
+                        <div className="flex flex-col items-center gap-1">
                           <Skeleton className="h-4 w-20" />
                           <Skeleton className="h-3 w-16" />
                         </div>
@@ -662,7 +662,7 @@ export default function OverviewTab() {
                       <TableHead className="w-1/6 text-right pr-4">
                         Rating
                       </TableHead>
-                      <TableHead className="w-1/6 pl-6">Date</TableHead>
+                      <TableHead className="w-1/6 text-center">Date</TableHead>
                       <TableHead className="w-1/6 px-4 text-center">
                         Quarter
                       </TableHead>
@@ -759,8 +759,8 @@ export default function OverviewTab() {
                               </span>
                             </div>
                           </TableCell>
-                          <TableCell className="w-1/6 pl-6">
-                            <div className="flex flex-col">
+                          <TableCell className="w-1/6 text-center">
+                            <div className="flex flex-col items-center">
                               <span className="font-medium">
                                 {new Date(
                                   submission.created_at
