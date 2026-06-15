@@ -23,6 +23,10 @@ import { getQuarterColor } from "@/lib/quarterUtils";
 import apiService from "@/lib/apiService";
 import { EvaluationPayload } from "@/components/evaluation/types";
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
+import {
+  EvaluationApiErrorDialog,
+  getViewEvaluationErrorMessage,
+} from "@/components/evaluation/evaluationRecordsShared";
 import EvaluationsPagination from "@/components/paginationComponent";
 import { cn } from "@/lib/utils";
 import { Eye } from "lucide-react";
@@ -192,6 +196,10 @@ export default function OverviewTab() {
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   //modal
   const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
+  const [evaluationActionError, setEvaluationActionError] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
   //refresh state
   const [isRefreshing, setIsRefreshing] = useState(true);
   const [refreshNonce, setRefreshNonce] = useState(0);
@@ -281,10 +289,17 @@ export default function OverviewTab() {
         setSelectedSubmission(fullSubmission);
         setIsViewResultsModalOpen(true);
       } else {
-        console.error("Submission not found for ID:", submission.id);
+        setEvaluationActionError({
+          title: "Unable to Open Evaluation",
+          message:
+            "Evaluation record was not found. Please refresh to view the latest updates.",
+        });
       }
     } catch (error) {
-      console.error("Error fetching submission details:", error);
+      setEvaluationActionError({
+        title: "Unable to Open Evaluation",
+        message: getViewEvaluationErrorMessage(error),
+      });
     }
   };
 
@@ -738,6 +753,16 @@ export default function OverviewTab() {
           </CardContent>
         </Card>
       </div>
+
+      <EvaluationApiErrorDialog
+        open={evaluationActionError != null}
+        title={evaluationActionError?.title ?? ""}
+        message={evaluationActionError?.message ?? null}
+        onCloseAction={() => {
+          setEvaluationActionError(null);
+          setRefreshNonce((n) => n + 1);
+        }}
+      />
     </>
   );
 }

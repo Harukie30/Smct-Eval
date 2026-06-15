@@ -7,6 +7,36 @@ const USER_LIST_SORT_PARAMS = {
   direction: "asc",
 } as const;
 import { EvaluationPayload } from "../components/evaluation/types";
+
+function isAxiosNotFound(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "response" in error &&
+    (error as { response?: { status?: number } }).response?.status === 404
+  );
+}
+
+function toApiErrorMessage(error: unknown, fallback: string): string {
+  if (typeof error === "object" && error !== null && "response" in error) {
+    const data = (error as { response?: { data?: unknown } }).response?.data;
+    if (typeof data === "string" && data.trim() !== "") {
+      return data.trim();
+    }
+    if (data && typeof data === "object") {
+      const record = data as Record<string, unknown>;
+      const message = record.message ?? record.error;
+      if (typeof message === "string" && message.trim() !== "") {
+        return message.trim();
+      }
+    }
+  }
+  if (error instanceof Error && error.message.trim() !== "") {
+    return error.message.trim();
+  }
+  return fallback;
+}
+
 // Helper function to get CSRF cookie from Sanctum
 export const sanctum_csrf = async () => {
   try {
@@ -241,9 +271,20 @@ export const apiService = {
     return response.data.evaluations;
   },
 
-  getSubmissionById: async (id: number | string): Promise<any> => {
-    const response = await api.get(`/submissions/${id}`);
-    return response.data.user_eval;
+  getSubmissionById: async (id: number | string): Promise<any | null> => {
+    try {
+      const response = await api.get(`/submissions/${id}`);
+      return response.data.user_eval ?? null;
+    } catch (error) {
+      // 404 is expected when a list row points at a deleted/missing evaluation.
+      // Return null so callers show the dialog without Next.js surfacing an Axios throw.
+      if (isAxiosNotFound(error)) {
+        return null;
+      }
+      throw new Error(
+        toApiErrorMessage(error, "Failed to load evaluation details.")
+      );
+    }
   },
 
   getQuarters: async (id: number | string): Promise<any> => {

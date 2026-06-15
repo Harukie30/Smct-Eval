@@ -40,6 +40,10 @@ import {
 import { apiService } from "@/lib/apiService";
 import EvaluationsPagination from "@/components/paginationComponent";
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
+import {
+  EvaluationApiErrorDialog,
+  getViewEvaluationErrorMessage,
+} from "@/components/evaluation/evaluationRecordsShared";
 
 interface Review {
   id: number;
@@ -72,6 +76,10 @@ export default function PerformanceReviews() {
 
   const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
+  const [evaluationActionError, setEvaluationActionError] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
   const submissionsInFlightKeyRef = useRef<string | null>(null);
   const submissionsInFlightPromiseRef = useRef<Promise<void> | null>(null);
 
@@ -178,10 +186,17 @@ export default function PerformanceReviews() {
         setSelectedSubmission(submission);
         setIsViewResultsModalOpen(true);
       } else {
-        console.error("Submission not found for review ID:", review.id);
+        setEvaluationActionError({
+          title: "Unable to Open Evaluation",
+          message:
+            "Evaluation record was not found. Please refresh to view the latest updates.",
+        });
       }
     } catch (error) {
-      console.error("Error fetching submission details:", error);
+      setEvaluationActionError({
+        title: "Unable to Open Evaluation",
+        message: getViewEvaluationErrorMessage(error),
+      });
     }
   };
 
@@ -924,6 +939,16 @@ export default function PerformanceReviews() {
           </Card>
         </div>
       )}
+
+      <EvaluationApiErrorDialog
+        open={evaluationActionError != null}
+        title={evaluationActionError?.title ?? ""}
+        message={evaluationActionError?.message ?? null}
+        onCloseAction={() => {
+          setEvaluationActionError(null);
+          void loadSubmissions();
+        }}
+      />
     </div>
   );
 }

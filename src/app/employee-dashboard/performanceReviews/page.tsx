@@ -42,6 +42,11 @@ import EvaluationsPagination from "@/components/paginationComponent";
 import NotFoundEmptyState from "@/components/NotFoundEmptyState";
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
 import {
+  EvaluationApiErrorDialog,
+  getEvaluationApiErrorMessage,
+  getViewEvaluationErrorMessage,
+} from "@/components/evaluation/evaluationRecordsShared";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -87,6 +92,10 @@ export default function PerformanceReviews() {
 
   const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
+  const [evaluationActionError, setEvaluationActionError] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
 
   // Load submissions data from API
   const loadSubmissions = async () => {
@@ -246,12 +255,19 @@ export default function PerformanceReviews() {
 
       if (submission) {
         setSelectedSubmission(submission);
-        setIsViewResultsModalOpen(true); 
+        setIsViewResultsModalOpen(true);
       } else {
-        console.error("Submission not found for review ID:", review.id);
+        setEvaluationActionError({
+          title: "Unable to Open Evaluation",
+          message:
+            "Evaluation record was not found. Please refresh to view the latest updates.",
+        });
       }
     } catch (error) {
-      console.error("Error fetching submission details:", error);
+      setEvaluationActionError({
+        title: "Unable to Open Evaluation",
+        message: getViewEvaluationErrorMessage(error),
+      });
     }
   };
 
@@ -264,10 +280,20 @@ export default function PerformanceReviews() {
         setSelectedSubmission(submission);
         setIsViewResultsModalOpen(true);
       } else {
-        console.error("Submission not found for ID:", id);
+        setEvaluationActionError({
+          title: "Unable to Open Evaluation",
+          message:
+            "Evaluation record was not found. Please refresh to view the latest updates.",
+        });
       }
     } catch (error) {
-      console.error("Error approving submission:", error);
+      setEvaluationActionError({
+        title: "Unable to Approve Evaluation",
+        message: getEvaluationApiErrorMessage(
+          error,
+          "Failed to approve evaluation. Please try again."
+        ),
+      });
     }
   };
 
@@ -1028,6 +1054,16 @@ export default function PerformanceReviews() {
           </Card>
         </div>
       )}
+
+      <EvaluationApiErrorDialog
+        open={evaluationActionError != null}
+        title={evaluationActionError?.title ?? ""}
+        message={evaluationActionError?.message ?? null}
+        onCloseAction={() => {
+          setEvaluationActionError(null);
+          void loadSubmissions();
+        }}
+      />
     </div>
   );
 }

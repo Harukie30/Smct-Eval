@@ -10,6 +10,13 @@ import {
 import { Eye, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import {
@@ -151,6 +158,116 @@ export function formatReviewStatusLabel(status: string): {
 export function isReviewDeletable(review: EvaluationRecordReview): boolean {
   const status = String(review.status ?? "").toLowerCase();
   return status === "pending";
+}
+
+export function getEvaluationApiErrorMessage(
+  error: unknown,
+  fallback: string
+): string {
+  if (error && typeof error === "object" && "response" in error) {
+    const response = (
+      error as { response?: { data?: unknown; status?: number } }
+    ).response;
+    const data = response?.data;
+
+    if (typeof data === "string" && data.trim() !== "") {
+      return data.trim();
+    }
+
+    if (data && typeof data === "object") {
+      const record = data as Record<string, unknown>;
+      const message = record.message ?? record.error;
+      if (typeof message === "string" && message.trim() !== "") {
+        return message.trim();
+      }
+    }
+
+    if (response?.status === 404) {
+      return "Evaluation record was not found. Please refresh to view the latest updates.";
+    }
+  }
+
+  if (error instanceof Error && error.message.trim() !== "") {
+    const msg = error.message.trim();
+    if (msg !== "Request failed with status code 404") {
+      return msg;
+    }
+    return "Evaluation record was not found. Please refresh to view the latest updates.";
+  }
+
+  return fallback;
+}
+
+export function getDeleteEvaluationErrorMessage(error: unknown): string {
+  return getEvaluationApiErrorMessage(
+    error,
+    "Failed to delete evaluation. Please try again."
+  );
+}
+
+export function getViewEvaluationErrorMessage(error: unknown): string {
+  return getEvaluationApiErrorMessage(
+    error,
+    "Failed to load evaluation details. Please try again."
+  );
+}
+
+export function EvaluationApiErrorDialog({
+  open,
+  title,
+  message,
+  onCloseAction,
+  dialogClassName,
+}: {
+  open: boolean;
+  title: string;
+  message: string | null;
+  onCloseAction: () => void;
+  dialogClassName?: string;
+}) {
+  if (!open || !message) {
+    return null;
+  }
+
+  return (
+    <Dialog
+      open
+      onOpenChangeAction={(next) => {
+        if (!next) {
+          onCloseAction();
+        }
+      }}
+    >
+      <DialogContent
+        portalClassName="z-[200]"
+        className={cn("max-w-md p-6", dialogClassName)}
+      >
+        <DialogHeader className="rounded-lg bg-amber-50 pb-4">
+          <DialogTitle className="text-center text-amber-900">{title}</DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col items-center gap-4 px-1 py-2">
+          <img
+            src="/error2.gif"
+            alt=""
+            className="max-h-36 w-auto object-contain"
+            draggable={false}
+          />
+          <p className="text-center text-sm leading-relaxed text-gray-700">
+            {message}
+          </p>
+        </div>
+        <DialogFooter className="pt-4">
+          <Button
+            type="button"
+            onClick={onCloseAction}
+            className="cursor-pointer bg-blue-600 text-white hover:bg-blue-700 hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+          >
+            OK
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 function isHrRoleName(name: string): boolean {

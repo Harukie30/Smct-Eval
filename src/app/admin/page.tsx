@@ -16,6 +16,10 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import clientDataService from "@/lib/apiService";
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
+import {
+  EvaluationApiErrorDialog,
+  getViewEvaluationErrorMessage,
+} from "@/components/evaluation/evaluationRecordsShared";
 import EvaluationsPagination from "@/components/paginationComponent";
 
 interface Review {
@@ -49,6 +53,10 @@ export default function OverviewTab() {
   const [isPageLoading, setIsPageLoading] = useState(false);
   const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
+  const [evaluationActionError, setEvaluationActionError] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
   const [currentPage, setCurrentPage] = useState(1);
@@ -188,10 +196,17 @@ export default function OverviewTab() {
         setSelectedSubmission(submission);
         setIsViewResultsModalOpen(true);
       } else {
-        console.error("Submission not found for review ID:", review.id);
+        setEvaluationActionError({
+          title: "Unable to Open Evaluation",
+          message:
+            "Evaluation record was not found. Please refresh to view the latest updates.",
+        });
       }
     } catch (error) {
-      console.error("Error fetching submission details:", error);
+      setEvaluationActionError({
+        title: "Unable to Open Evaluation",
+        message: getViewEvaluationErrorMessage(error),
+      });
     }
   };
 
@@ -669,6 +684,16 @@ export default function OverviewTab() {
           }}
           submission={selectedSubmission}
           showApprovalButton={false}
+        />
+
+        <EvaluationApiErrorDialog
+          open={evaluationActionError != null}
+          title={evaluationActionError?.title ?? ""}
+          message={evaluationActionError?.message ?? null}
+          onCloseAction={() => {
+            setEvaluationActionError(null);
+            void loadEvaluations(debouncedSearchTerm);
+          }}
         />
       </div>
     </div>

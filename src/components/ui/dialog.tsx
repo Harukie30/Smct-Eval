@@ -27,9 +27,10 @@ export function Dialog({ open, onOpenChangeAction, children }: DialogProps) {
 
 type DialogContentProps = React.HTMLAttributes<HTMLDivElement> & {
   className?: string
+  portalClassName?: string
 }
 
-export function DialogContent({ className, children, ...props }: DialogContentProps) {
+export function DialogContent({ className, portalClassName, children, ...props }: DialogContentProps) {
   const ctx = React.useContext(DialogContext)
   const [isAnimating, setIsAnimating] = React.useState(false)
   const [shouldRender, setShouldRender] = React.useState(false)
@@ -79,7 +80,7 @@ export function DialogContent({ className, children, ...props }: DialogContentPr
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 overflow-hidden overscroll-none"
+      className={cn("fixed inset-0 z-50 overflow-hidden overscroll-none", portalClassName)}
     >
       {/* Backdrop with fade animation and blur effect */}
       <div

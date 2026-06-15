@@ -30,6 +30,11 @@ import EvaluationsPagination from "@/components/paginationComponent";
 import NotFoundEmptyState from "@/components/NotFoundEmptyState";
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
 import {
+  EvaluationApiErrorDialog,
+  getEvaluationApiErrorMessage,
+  getViewEvaluationErrorMessage,
+} from "@/components/evaluation/evaluationRecordsShared";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -63,6 +68,10 @@ export default function OverviewTab() {
   const [perPage, setPerPage] = useState(0);
   const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
   const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
+  const [evaluationActionError, setEvaluationActionError] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
 
   const [myEvaluations, setMyEvaluations] = useState<any>([]);
   const [totalEvaluations, setTotalEvaluations] = useState<any>(0);
@@ -270,10 +279,17 @@ export default function OverviewTab() {
         setSelectedSubmission(submission);
         setIsViewResultsModalOpen(true);
       } else {
-        console.error("Submission not found for review ID:", review.id);
+        setEvaluationActionError({
+          title: "Unable to Open Evaluation",
+          message:
+            "Evaluation record was not found. Please refresh to view the latest updates.",
+        });
       }
     } catch (error) {
-      console.error("Error fetching submission details:", error);
+      setEvaluationActionError({
+        title: "Unable to Open Evaluation",
+        message: getViewEvaluationErrorMessage(error),
+      });
     }
   };
 
@@ -286,10 +302,20 @@ export default function OverviewTab() {
         setSelectedSubmission(submission);
         setIsViewResultsModalOpen(true);
       } else {
-        console.error("Submission not found for ID:", id);
+        setEvaluationActionError({
+          title: "Unable to Open Evaluation",
+          message:
+            "Evaluation record was not found. Please refresh to view the latest updates.",
+        });
       }
     } catch (error) {
-      console.error("Error approving submission:", error);
+      setEvaluationActionError({
+        title: "Unable to Approve Evaluation",
+        message: getEvaluationApiErrorMessage(
+          error,
+          "Failed to approve evaluation. Please try again."
+        ),
+      });
     }
   };
 
@@ -966,6 +992,16 @@ export default function OverviewTab() {
           )}
         </CardContent>
       </Card>
+
+      <EvaluationApiErrorDialog
+        open={evaluationActionError != null}
+        title={evaluationActionError?.title ?? ""}
+        message={evaluationActionError?.message ?? null}
+        onCloseAction={() => {
+          setEvaluationActionError(null);
+          void handleClose();
+        }}
+      />
     </>
   );
 }

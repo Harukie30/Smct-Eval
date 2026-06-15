@@ -52,6 +52,7 @@ import {
   EVAL_TABLE_ACTIONS_HEAD_CLASS,
   EvalRecordRowActions,
   EvalRecordSignBadge,
+  EvaluationApiErrorDialog,
   RATING_DISPLAY_BANDS,
   hasEmployeeSigned,
   shouldShowEmployeeSignPending,
@@ -66,6 +67,8 @@ import {
   getReviewRowClassName,
   hasEvaluatorSigned,
   isReviewDeletable,
+  getDeleteEvaluationErrorMessage,
+  getViewEvaluationErrorMessage,
   ratingPillClass,
 } from "@/components/evaluation/evaluationRecordsShared";
 
@@ -100,6 +103,10 @@ export default function OverviewTab() {
   const [perPage, setPerPage] = useState(0);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [reviewToDelete, setReviewToDelete] = useState<Review | null>(null);
+  const [evaluationActionError, setEvaluationActionError] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
   const [deletingReviewId, setDeletingReviewId] = useState<number | null>(null);
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
   const [years, setYears] = useState<any[]>([]);
@@ -302,10 +309,17 @@ export default function OverviewTab() {
         setSelectedSubmission(submission);
         setIsViewResultsModalOpen(true);
       } else {
-        console.error("Submission not found for review ID:", review.id);
+        setEvaluationActionError({
+          title: "Unable to Open Evaluation",
+          message:
+            "Evaluation record was not found. Please refresh to view the latest updates.",
+        });
       }
     } catch (error) {
-      console.error("Error fetching submission details:", error);
+      setEvaluationActionError({
+        title: "Unable to Open Evaluation",
+        message: getViewEvaluationErrorMessage(error),
+      });
     }
   };
 
@@ -319,12 +333,17 @@ export default function OverviewTab() {
       toastMessages.evaluation.deleted(
         submission.employee?.fname + " " + submission.employee?.lname
       );
-    } catch (error) {
-      console.error("Error deleting submission:", error);
-    } finally {
-      setDeletingReviewId(null);
       setReviewToDelete(null);
       setIsDeleteModalOpen(false);
+    } catch (error) {
+      setEvaluationActionError({
+        title: "Unable to Delete Evaluation",
+        message: getDeleteEvaluationErrorMessage(error),
+      });
+      setReviewToDelete(null);
+      setIsDeleteModalOpen(false);
+    } finally {
+      setDeletingReviewId(null);
     }
   };
 
@@ -993,6 +1012,17 @@ export default function OverviewTab() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <EvaluationApiErrorDialog
+          open={evaluationActionError != null}
+          title={evaluationActionError?.title ?? ""}
+          message={evaluationActionError?.message ?? null}
+          dialogClassName={dialogAnimationClass}
+          onCloseAction={() => {
+            setEvaluationActionError(null);
+            void handleRefresh();
+          }}
+        />
 
         {/* View Results Modal */}
         <ViewResultsModal
