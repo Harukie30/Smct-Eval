@@ -603,6 +603,18 @@ export default function ProfileModal({
                       }
                     }}
                   />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+                    onClick={() => setShowConfirmPassword(true)}
+                    disabled={!formData?.new_password?.trim() || showConfirmPassword}
+                  >
+                    {showConfirmPassword
+                      ? "Confirm Password Visible"
+                      : "Confirm Password"}
+                  </Button>
                   {errors.new_password && (
                     <p className="text-sm text-red-500">
                       {errors.new_password}
