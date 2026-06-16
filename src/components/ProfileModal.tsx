@@ -55,6 +55,7 @@ export default function ProfileModal({
   const { success } = useToast();
   const { refreshUser } = useAuth();
   const [open, setOpen] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSignatureDrawing, setIsSignatureDrawing] = useState(false);
   const signaturePadRef = useRef<SignaturePadRef>(null);
   const accountSettingsRef = useRef<HTMLDivElement>(null);
@@ -85,6 +86,7 @@ export default function ProfileModal({
     if (!isOpen) {
       initializedProfileIdRef.current = null;
       initialValuesRef.current = null;
+      setShowConfirmPassword(false);
     }
   }, [isOpen, profile?.id, profile?.username, profile?.email]);
 
@@ -130,8 +132,10 @@ export default function ProfileModal({
     }
 
     // Validate that new password and confirm password match
-    if (formData?.new_password && formData?.confirm_password) {
-      if (formData.new_password !== formData.confirm_password) {
+    if (formData?.new_password) {
+      if (!formData.confirm_password || formData.confirm_password.trim() === "") {
+        newErrors.confirm_password = "Please confirm your new password";
+      } else if (formData.new_password !== formData.confirm_password) {
         newErrors.confirm_password = "Passwords do not match";
       }
     }
@@ -177,6 +181,9 @@ export default function ProfileModal({
 
     if (!validateForm()) {
       console.log("Validation failed, not submitting");
+      if (formData?.new_password?.trim()) {
+        setShowConfirmPassword(true);
+      }
       return;
     }
 
@@ -256,6 +263,7 @@ export default function ProfileModal({
         new_password: "",
         confirm_password: "",
       }));
+      setShowConfirmPassword(false);
 
       // Refresh user profile to get updated data (only once, after successful save)
       // Use a small delay to ensure the API has processed the update
@@ -308,6 +316,7 @@ export default function ProfileModal({
     // The profile prop will already have the latest data
     setErrors({});
     setIsSignatureDrawing(false);
+    setShowConfirmPassword(false);
     // Reset initialization flag so form reloads with fresh data next time
     initializedProfileIdRef.current = null;
     onClose();
@@ -569,12 +578,30 @@ export default function ProfileModal({
                     id="new_password"
                     type="password"
                     placeholder="******"
-                    onChange={(e) =>
+                    value={formData?.new_password || ""}
+                    onChange={(e) => {
+                      const value = e.target.value;
                       setFormData({
                         ...formData,
-                        new_password: e.target.value,
-                      })
-                    }
+                        new_password: value,
+                        ...(value.trim() === "" ? { confirm_password: "" } : {}),
+                      });
+                      if (value.trim() === "") {
+                        setShowConfirmPassword(false);
+                      }
+                      if (errors.new_password) {
+                        setErrors((prev) => {
+                          const next = { ...prev };
+                          delete next.new_password;
+                          return next;
+                        });
+                      }
+                    }}
+                    onBlur={() => {
+                      if (formData?.new_password?.trim()) {
+                        setShowConfirmPassword(true);
+                      }
+                    }}
                   />
                   {errors.new_password && (
                     <p className="text-sm text-red-500">
@@ -582,26 +609,43 @@ export default function ProfileModal({
                     </p>
                   )}
                 </div>
-                <div className="space-y-1.5">
-                  <Label className="text-sm font-medium">
-                    Confirm Password
-                  </Label>
-                  <Input
-                    id="confirm_password"
-                    type="password"
-                    placeholder="******"
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        confirm_password: e.target.value,
-                      })
-                    }
-                  />
-                  {errors.confirm_password && (
-                    <p className="text-sm text-red-500">
-                      {errors.confirm_password}
-                    </p>
+                <div
+                  className={cn(
+                    "grid transition-[grid-template-rows] duration-300 ease-in-out",
+                    showConfirmPassword ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
                   )}
+                >
+                  <div className="min-h-0 overflow-hidden">
+                    <div className="space-y-1.5">
+                      <Label className="text-sm font-medium">
+                        Confirm Password
+                      </Label>
+                      <Input
+                        id="confirm_password"
+                        type="password"
+                        placeholder="******"
+                        value={formData?.confirm_password || ""}
+                        onChange={(e) => {
+                          setFormData({
+                            ...formData,
+                            confirm_password: e.target.value,
+                          });
+                          if (errors.confirm_password) {
+                            setErrors((prev) => {
+                              const next = { ...prev };
+                              delete next.confirm_password;
+                              return next;
+                            });
+                          }
+                        }}
+                      />
+                      {errors.confirm_password && (
+                        <p className="text-sm text-red-500">
+                          {errors.confirm_password}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
               </div>
