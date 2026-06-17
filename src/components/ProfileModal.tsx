@@ -612,7 +612,7 @@ export default function ProfileModal({
                     disabled={!formData?.new_password?.trim() || showConfirmPassword}
                   >
                     {showConfirmPassword
-                      ? "Confirm Password Visible"
+                      ? "Confirm Password Active"
                       : "Confirm Password"}
                   </Button>
                   {errors.new_password && (

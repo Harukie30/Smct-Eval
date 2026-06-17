@@ -49,6 +49,7 @@ interface UserContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (username: string, password: string) => Promise<any>;
+  loginWithPasswordResetOtp: (email: string, otp: string) => Promise<any>;
   logout: () => Promise<void>;
   refreshUser: (options?: { force?: boolean }) => Promise<void>;
   setIsRefreshing: React.Dispatch<React.SetStateAction<boolean>>;
@@ -192,6 +193,30 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     }
   };
 
+  // ⬇ OTP verify during forgot-password — backend logs user in (same session as login)
+  const loginWithPasswordResetOtp = async (email: string, otp: string) => {
+    try {
+      setIsLoading(true);
+
+      const res = await apiService.verifyPasswordResetOtp(email, otp);
+      await refreshUser({ force: true });
+      return res;
+    } catch (err: any) {
+      const isServerUnreachable =
+        err?.code === "ERR_NETWORK" ||
+        err?.message === "Network Error" ||
+        !err?.response;
+      return {
+        error:
+          err.response?.data?.message ||
+          (isServerUnreachable ? "Server not found" : "Something went wrong"),
+        isServerUnreachable: !!isServerUnreachable,
+      };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // ⬇ Logout using Sanctum
   const logout = async () => {
     toastMessages.generic.info("Logging out...", "See you soon!");
@@ -221,6 +246,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     isAuthenticated: !!user,
     isLoading,
     login,
+    loginWithPasswordResetOtp,
     logout,
     refreshUser,
     setIsRefreshing,

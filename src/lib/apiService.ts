@@ -55,8 +55,31 @@ export const apiService = {
     return response.data;
   },
 
-  requestPasswordReset: async (email: string): Promise<any> => {
-    const response = await api.post("/forgot-password", { email });
+  sendPasswordResetOtp: async (email: string): Promise<any> => {
+    const response = await api.post("/forgot-password/send-otp", { email });
+    return response.data;
+  },
+
+  verifyPasswordResetOtp: async (email: string, otp: string): Promise<any> => {
+    await sanctum_csrf();
+    const response = await api.post("/forgot-password/verify-otp", {
+      email,
+      otp,
+    });
+    return response.data;
+  },
+
+  requestPasswordReset: async (
+    email: string,
+    payload?: { verificationToken?: string; otp?: string }
+  ): Promise<any> => {
+    const response = await api.post("/forgot-password", {
+      email,
+      ...(payload?.verificationToken
+        ? { verification_token: payload.verificationToken }
+        : {}),
+      ...(payload?.otp ? { otp: payload.otp } : {}),
+    });
     return response.data;
   },
 
