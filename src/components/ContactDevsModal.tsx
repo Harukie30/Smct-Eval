@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
 import Link from "next/link";
 import { MessageCircle, Users } from "lucide-react";
 
@@ -71,17 +70,6 @@ export default function ContactDevsModal({
   onCloseAction,
 }: ContactDevsModalProps) {
   const dialogAnimationClass = useDialogAnimation({ duration: 0.35 });
-
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "unset";
-    }
-    return () => {
-      document.body.style.overflow = "unset";
-    };
-  }, [isOpen]);
 
   return (
     <Dialog open={isOpen} onOpenChangeAction={onCloseAction}>

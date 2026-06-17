@@ -48,6 +48,8 @@ function LandingLoginPage() {
     useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [showContactDevsModal, setShowContactDevsModal] = useState(false);
+  const [showRegistrationHelpModal, setShowRegistrationHelpModal] =
+    useState(false);
   const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
   const [showLoginGuideModal, setShowLoginGuideModal] = useState(false);
   const [showLoginGuideModalFromLink, setShowLoginGuideModalFromLink] = useState(false);
@@ -541,12 +543,13 @@ function LandingLoginPage() {
                   <div className="text-center pt-4">
                     <p className="text-sm text-gray-600">
                       Don't have an account?{" "}
-                      <Link
-                        href="/register"
+                      <button
+                        type="button"
+                        onClick={() => setShowRegistrationHelpModal(true)}
                         className="text-blue-600 hover:underline font-medium cursor-pointer"
                       >
-                        Create one here
-                      </Link>
+                        Contact Devs
+                      </button>
                     </p>
                   </div>
 
@@ -1190,6 +1193,65 @@ function LandingLoginPage() {
         isOpen={showContactDevsModal}
         onCloseAction={() => setShowContactDevsModal(false)}
       />
+
+      {/* Registration help modal (HR/Devs) */}
+      <Dialog
+        open={showRegistrationHelpModal}
+        onOpenChangeAction={setShowRegistrationHelpModal}
+      >
+        <DialogContent className="w-[92vw] max-w-md overflow-hidden p-0">
+          <div className="border-b border-blue-100 bg-gradient-to-br from-blue-600/10 via-indigo-500/10 to-cyan-400/10 px-6 py-5">
+            <DialogHeader className="border-none px-0 py-0">
+              <div className="flex items-start gap-3">
+                <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-blue-100 bg-white shadow-sm">
+                  <img
+                    src="/phone-contact.gif"
+                    alt="Contact support"
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+                <div className="min-w-0">
+                  <DialogTitle className="text-lg font-semibold text-slate-900">
+                    Registration is managed by HR/Devs
+                  </DialogTitle>
+                  <DialogDescription className="mt-1 text-sm leading-relaxed text-slate-600">
+                    To create your account, please contact HR or the Dev team
+                    and share your full name, role, and department.
+                  </DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
+          </div>
+
+          <div className="space-y-3 px-6 py-5">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+              Fastest path: click <span className="font-semibold">Contact Devs</span> below to open chat.
+            </div>
+
+            <Button
+              type="button"
+              className="w-full cursor-pointer bg-blue-600 text-white hover:bg-blue-700 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+              onClick={() => {
+                setShowRegistrationHelpModal(false);
+                setTimeout(() => {
+                  setShowContactDevsModal(true);
+                }, 0);
+              }}
+            >
+              Contact Devs
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full cursor-pointer border-slate-200 bg-white"
+              onClick={() => setShowRegistrationHelpModal(false)}
+            >
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* How It Works Modal */}
       <HowItWorksModal

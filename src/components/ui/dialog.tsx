@@ -4,6 +4,41 @@ import * as React from "react"
 import { createPortal } from "react-dom"
 import { cn } from "@/lib/utils"
 
+let bodyScrollLockCount = 0
+let savedBodyOverflow = ""
+let savedBodyPaddingRight = ""
+
+function lockBodyScroll() {
+  if (typeof document === "undefined") return
+  const html = document.documentElement
+  const body = document.body
+
+  if (bodyScrollLockCount === 0) {
+    savedBodyOverflow = body.style.overflow
+    savedBodyPaddingRight = body.style.paddingRight
+
+    const scrollbarWidth = Math.max(0, window.innerWidth - html.clientWidth)
+    body.style.overflow = "hidden"
+    if (scrollbarWidth > 0) {
+      body.style.paddingRight = `${scrollbarWidth}px`
+    }
+  }
+
+  bodyScrollLockCount += 1
+}
+
+function unlockBodyScroll() {
+  if (typeof document === "undefined" || bodyScrollLockCount === 0) return
+  const body = document.body
+
+  bodyScrollLockCount -= 1
+
+  if (bodyScrollLockCount === 0) {
+    body.style.overflow = savedBodyOverflow
+    body.style.paddingRight = savedBodyPaddingRight
+  }
+}
+
 type DialogContextValue = {
   open: boolean
   onOpenChangeAction: (open: boolean) => void
@@ -37,18 +72,9 @@ export function DialogContent({ className, portalClassName, children, ...props }
 
   React.useEffect(() => {
     if (!shouldRender || typeof document === "undefined") return
-    const html = document.documentElement
-    const body = document.body
-    const prevOverflow = body.style.overflow
-    const prevPaddingRight = body.style.paddingRight
-    const scrollbarWidth = Math.max(0, window.innerWidth - html.clientWidth)
-    body.style.overflow = "hidden"
-    if (scrollbarWidth > 0) {
-      body.style.paddingRight = `${scrollbarWidth}px`
-    }
+    lockBodyScroll()
     return () => {
-      body.style.overflow = prevOverflow
-      body.style.paddingRight = prevPaddingRight
+      unlockBodyScroll()
     }
   }, [shouldRender])
 
