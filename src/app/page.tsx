@@ -548,7 +548,7 @@ function LandingLoginPage() {
                         onClick={() => setShowRegistrationHelpModal(true)}
                         className="text-blue-600 hover:underline font-medium cursor-pointer"
                       >
-                        Contact Devs
+                        Contact HR
                       </button>
                     </p>
                   </div>
@@ -1212,11 +1212,11 @@ function LandingLoginPage() {
                 </div>
                 <div className="min-w-0">
                   <DialogTitle className="text-lg font-semibold text-slate-900">
-                    Registration is managed by HR/Devs
+                    Registration is managed by HR
                   </DialogTitle>
                   <DialogDescription className="mt-1 text-sm leading-relaxed text-slate-600">
-                    To create your account, please contact HR or the Dev team
-                    and share your full name, role, and department.
+                    To create your account, please contact HR and share your
+                    full name, role, and department.
                   </DialogDescription>
                 </div>
               </div>
@@ -1225,26 +1225,12 @@ function LandingLoginPage() {
 
           <div className="space-y-3 px-6 py-5">
             <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-              Fastest path: click <span className="font-semibold">Contact Devs</span> below to open chat.
+              Please coordinate with HR for account creation and access approval.
             </div>
 
             <Button
               type="button"
               className="w-full cursor-pointer bg-blue-600 text-white hover:bg-blue-700 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
-              onClick={() => {
-                setShowRegistrationHelpModal(false);
-                setTimeout(() => {
-                  setShowContactDevsModal(true);
-                }, 0);
-              }}
-            >
-              Contact Devs
-            </Button>
-
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full cursor-pointer border-slate-200 bg-white"
               onClick={() => setShowRegistrationHelpModal(false)}
             >
               Close
