@@ -1627,8 +1627,8 @@ export default function ViewResultsModalAreaManager({
         setIsApproving(false);
       }, 1500);
     } catch (error) {
-      console.error("❌ Error approving evaluation:", error);
-      setApprovalError("Failed to approve evaluation. Please try again.");
+      console.error("❌ Error signing evaluation:", error);
+      setApprovalError("Failed to sign evaluation. Please try again.");
       setShowApprovalDialog(false);
       setShowSuccessAnimation(false);
       setIsApproving(false);
@@ -3929,7 +3929,7 @@ export default function ViewResultsModalAreaManager({
                                         Approving...
                                       </>
                                     ) : (
-                                      "✓ Approve Evaluation"
+                                      "✓ Sign Evaluation"
                                     )}
                                   </Button>
                                 </div>

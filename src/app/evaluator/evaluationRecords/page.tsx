@@ -40,6 +40,9 @@ import {
 } from "@/components/ui/select";
 
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
+import EvaluationEditRouter from "@/components/evaluation/EvaluationEditRouter";
+import ViewEvaluationMobileWarningModal from "@/components/evaluation/ViewEvaluationMobileWarningModal";
+import { useMobileViewport } from "@/hooks/useMobileViewport";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 import { toastMessages } from "@/lib/toastMessages";
 import { Loader2 } from "lucide-react";
@@ -67,6 +70,7 @@ import {
   getReviewRowClassName,
   hasEvaluatorSigned,
   isReviewDeletable,
+  isReviewEditable,
   getDeleteEvaluationErrorMessage,
   getViewEvaluationErrorMessage,
   ratingPillClass,
@@ -75,6 +79,7 @@ import {
 type Review = EvaluationRecordReview;
 
 export default function OverviewTab() {
+  const isMobileViewport = useMobileViewport();
   const { branchOptions, isLoading: branchListLoading } =
     useBranchesForEvaluation();
 
@@ -96,6 +101,12 @@ export default function OverviewTab() {
 
   const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
+  const [isEditEvaluationModalOpen, setIsEditEvaluationModalOpen] =
+    useState(false);
+  const [selectedSubmissionForEdit, setSelectedSubmissionForEdit] =
+    useState<any>(null);
+  const [isLoadingEditEvaluation, setIsLoadingEditEvaluation] = useState(false);
+  const [bypassEditMobileWarning, setBypassEditMobileWarning] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(5);
   const [overviewTotal, setOverviewTotal] = useState(0);
@@ -320,6 +331,40 @@ export default function OverviewTab() {
         title: "Unable to Open Evaluation",
         message: getViewEvaluationErrorMessage(error),
       });
+    }
+  };
+
+  const closeEditEvaluationModal = async () => {
+    setIsEditEvaluationModalOpen(false);
+    setSelectedSubmissionForEdit(null);
+    setBypassEditMobileWarning(false);
+    await handleRefresh();
+  };
+
+  const handleEditEvaluation = async (review: Review) => {
+    if (!isReviewEditable(review)) return;
+
+    setIsLoadingEditEvaluation(true);
+    try {
+      const submission = await clientDataService.getSubmissionById(review.id);
+
+      if (submission) {
+        setSelectedSubmissionForEdit(submission);
+        setIsEditEvaluationModalOpen(true);
+      } else {
+        setEvaluationActionError({
+          title: "Unable to Edit Evaluation",
+          message:
+            "Evaluation record was not found. Please refresh to view the latest updates.",
+        });
+      }
+    } catch (error) {
+      setEvaluationActionError({
+        title: "Unable to Edit Evaluation",
+        message: getViewEvaluationErrorMessage(error),
+      });
+    } finally {
+      setIsLoadingEditEvaluation(false);
     }
   };
 
@@ -860,6 +905,7 @@ export default function OverviewTab() {
                             <EvalRecordRowActions
                               review={review}
                               onViewAction={() => handleViewEvaluation(review)}
+                              onEditAction={() => handleEditEvaluation(review)}
                               onDeleteAction={() => openDeleteModal(review)}
                               deleting={deletingReviewId === review.id}
                             />
@@ -1034,6 +1080,39 @@ export default function OverviewTab() {
           submission={selectedSubmission}
           showApprovalButton={false}
         />
+
+        {isEditEvaluationModalOpen &&
+        isMobileViewport &&
+        !bypassEditMobileWarning ? (
+          <ViewEvaluationMobileWarningModal
+            isOpen={isEditEvaluationModalOpen}
+            onCloseAction={closeEditEvaluationModal}
+            onViewAnywayAction={() => setBypassEditMobileWarning(true)}
+          />
+        ) : (
+          <Dialog
+            open={isEditEvaluationModalOpen}
+            onOpenChangeAction={(open) => {
+              if (!open) {
+                void closeEditEvaluationModal();
+              }
+            }}
+          >
+            <DialogContent className="max-w-7xl max-h-[101vh] overflow-hidden p-0 evaluation-container">
+              {isLoadingEditEvaluation ? (
+                <div className="flex min-h-[12rem] items-center justify-center p-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                </div>
+              ) : selectedSubmissionForEdit ? (
+                <EvaluationEditRouter
+                  submission={selectedSubmissionForEdit}
+                  onCloseAction={closeEditEvaluationModal}
+                  onCancelAction={closeEditEvaluationModal}
+                />
+              ) : null}
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
     </div>
   );

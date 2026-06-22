@@ -1478,8 +1478,8 @@ export default function ViewResultsModal({
         setIsApproving(false);
       }, 1500);
     } catch (error) {
-      console.error("❌ Error approving evaluation:", error);
-      setApprovalError("Failed to approve evaluation. Please try again.");
+      console.error("❌ Error signing evaluation:", error);
+      setApprovalError("Failed to sign evaluation. Please try again.");
       setShowApprovalDialog(false);
       setShowSuccessAnimation(false);
       setIsApproving(false);
@@ -4004,7 +4004,7 @@ export default function ViewResultsModal({
                                         Approving...
                                       </>
                                     ) : (
-                                      "✓ Approve Evaluation"
+                                      "✓ Sign Evaluation"
                                     )}
                                   </Button>
                                 </div>

@@ -7,7 +7,7 @@ import {
   type ComponentProps,
   type ReactElement,
 } from "react";
-import { Eye, Trash2 } from "lucide-react";
+import { Eye, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -24,6 +24,7 @@ import {
   normalizeQuarterLabelForSchedule,
   QUARTER_EVALUATION_SCHEDULE_HINT,
 } from "@/lib/quarterUtils";
+import { isEmployeeHeadOffice } from "@/components/evaluation/employeeBranchLabel";
 
 export type EvaluationRecordReview = {
   id: number;
@@ -158,6 +159,12 @@ export function formatReviewStatusLabel(status: string): {
 export function isReviewDeletable(review: EvaluationRecordReview): boolean {
   const status = String(review.status ?? "").toLowerCase();
   return status === "pending";
+}
+
+export function isReviewEditable(review: EvaluationRecordReview): boolean {
+  const status = String(review.status ?? "").toLowerCase();
+  if (status !== "rejected") return false;
+  return isEmployeeHeadOffice(review.employee);
 }
 
 export function getEvaluationApiErrorMessage(
@@ -690,15 +697,18 @@ export function EvalRecordTableRow({
 export function EvalRecordRowActions({
   review,
   onViewAction,
+  onEditAction,
   onDeleteAction,
   deleting,
 }: {
   review: EvaluationRecordReview;
   onViewAction: () => void;
+  onEditAction?: () => void;
   onDeleteAction: () => void;
   deleting?: boolean;
 }) {
   const canDelete = isReviewDeletable(review);
+  const canEdit = isReviewEditable(review) && onEditAction != null;
 
   return (
     <div className="flex flex-col items-center justify-center gap-1 sm:flex-row sm:justify-end lg:flex-wrap lg:justify-start lg:gap-1.5">
@@ -713,6 +723,20 @@ export function EvalRecordRowActions({
         <Eye className="h-4 w-4 lg:hidden" />
         <span className="hidden lg:inline">☰ View</span>
       </Button>
+      {canEdit ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          onClick={onEditAction}
+          aria-label="Edit evaluation"
+          title="Edit this rejected HO evaluation"
+          className="h-8 w-8 shrink-0 cursor-pointer border-amber-200 bg-amber-100 text-amber-800 hover:bg-amber-500 hover:text-white lg:h-8 lg:w-auto lg:px-2 lg:transition-all lg:duration-200 lg:hover:-translate-y-0.5 lg:hover:shadow-md lg:active:translate-y-0"
+        >
+          <Pencil className="h-4 w-4 lg:hidden" />
+          <span className="hidden lg:inline">✏️ Edit</span>
+        </Button>
+      ) : null}
       {canDelete ? (
         <Button
           type="button"

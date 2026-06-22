@@ -26,8 +26,13 @@ import { createEvaluationNotification } from "@/lib/notificationUtils";
 import { User, useAuth } from "../../contexts/UserContext";
 import { areaManagerEvaluationSteps } from "./configs/areaManagerEvaluationConfig";
 import { useBranchesForEvaluation } from "@/hooks/useBranchesForEvaluation";
+import {
+  EvaluationFormEditOptions,
+  useApplyInitialFormData,
+} from "./evaluationFormEdit";
+import { submitEvaluationWithOptionalEdit } from "@/lib/evaluationEditSubmit";
 
-interface AreaManagerEvaluationFormProps {
+interface AreaManagerEvaluationFormProps extends EvaluationFormEditOptions {
   employee?: User | null;
   onCloseAction?: () => void;
   onCancelAction?: () => void;
@@ -37,6 +42,8 @@ export default function AreaManagerEvaluationForm({
   employee,
   onCloseAction,
   onCancelAction,
+  editSubmissionId,
+  initialFormData,
 }: AreaManagerEvaluationFormProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [welcomeAnimationKey, setWelcomeAnimationKey] = useState(0);
@@ -157,6 +164,8 @@ export default function AreaManagerEvaluationForm({
     managerialSkillsExplanation6: "",
     created_at: "",
   });
+
+  useApplyInitialFormData(setForm, editSubmissionId, initialFormData);
 
   const updateDataAction = useCallback((updates: Partial<EvaluationPayload>) => {
     setForm((prev: EvaluationPayload) => ({
@@ -501,10 +510,19 @@ export default function AreaManagerEvaluationForm({
           managerial_skills,
         };
 
-        await apiService.postBranchBasicAreaManager(employeeId, submissionPayload);
+        await submitEvaluationWithOptionalEdit(
+          editSubmissionId,
+          submissionPayload,
+          async () => {
+            await apiService.postBranchBasicAreaManager(
+              employeeId,
+              submissionPayload
+            );
+          }
+        );
         
         // Store in localStorage as backup
-        if (employee) {
+        if (!editSubmissionId && employee) {
           await storeEvaluationResult({
             employeeId: employeeId,
             employeeEmail: employee.email || "",

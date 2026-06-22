@@ -437,15 +437,7 @@ export default function ForgotPasswordModal({
         <DialogFooter className="shrink-0 flex-col-reverse gap-2 border-t border-slate-200/90 bg-slate-50/95 px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
           {step === "email" ? (
             <>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={submitting}
-                className="h-10 w-full cursor-pointer border-slate-200 bg-white sm:w-auto"
-                onClick={handleClose}
-              >
-                Cancel
-              </Button>
+              
               <Button
                 type="submit"
                 form="forgot-password-email-form"
@@ -464,15 +456,7 @@ export default function ForgotPasswordModal({
             </>
           ) : (
             <>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={submitting}
-                className="h-10 w-full cursor-pointer border-slate-200 bg-white sm:w-auto"
-                onClick={handleClose}
-              >
-                Cancel
-              </Button>
+              
               <Button
                 type="submit"
                 form="forgot-password-otp-form"

@@ -3,8 +3,9 @@
 import BranchRankNfileEvaluationForm from "./BranchRankNfileEvaluationForm";
 import BranchManagerEvaluationForm from "./BranchManagerEvaluationForm";
 import { User } from "../../contexts/UserContext";
+import { EvaluationFormEditOptions } from "./evaluationFormEdit";
 
-interface BranchEvaluationFormProps {
+interface BranchEvaluationFormProps extends EvaluationFormEditOptions {
   branch?: {
     id: number;
     name: string;
@@ -70,6 +71,8 @@ export default function BranchEvaluationForm({
   onCloseAction,
   onCancelAction,
   evaluationType = 'default',
+  editSubmissionId,
+  initialFormData,
 }: BranchEvaluationFormProps) {
   // Check if employee is Branch (not HO)
   const isBranch = !isEmployeeHO(employee);
@@ -89,6 +92,8 @@ export default function BranchEvaluationForm({
         employee={employee}
         onCloseAction={onCloseAction}
         onCancelAction={onCancelAction}
+        editSubmissionId={editSubmissionId}
+        initialFormData={initialFormData}
       />
     );
   }
@@ -100,6 +105,8 @@ export default function BranchEvaluationForm({
       onCloseAction={onCloseAction}
       onCancelAction={onCancelAction}
       evaluationType={evaluationType}
+      editSubmissionId={editSubmissionId}
+      initialFormData={initialFormData}
     />
   );
 }

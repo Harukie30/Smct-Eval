@@ -27,11 +27,16 @@ import { User, useAuth } from "../../contexts/UserContext";
 import { branchEvaluationSteps, branchRankNfileSteps } from "./configs";
 import { isEmployeeHeadOffice } from "./employeeBranchLabel";
 import { useBranchesForEvaluation } from "@/hooks/useBranchesForEvaluation";
+import {
+  EvaluationFormEditOptions,
+  useApplyInitialFormData,
+} from "./evaluationFormEdit";
+import { submitEvaluationWithOptionalEdit } from "@/lib/evaluationEditSubmit";
 
 // Default steps use branch evaluation configuration
 const defaultSteps: EvaluationStepConfig[] = branchEvaluationSteps;
 
-interface EvaluationFormProps {
+interface EvaluationFormProps extends EvaluationFormEditOptions {
   employee?: User | null;
   onCloseAction?: () => void;
   onCancelAction?: () => void;
@@ -43,6 +48,8 @@ export default function EvaluationForm({
   employee,
   onCloseAction,
   onCancelAction,
+  editSubmissionId,
+  initialFormData,
   steps: customSteps,
   evaluationType = 'default',
 }: EvaluationFormProps) {
@@ -285,6 +292,8 @@ export default function EvaluationForm({
     created_at: "",
   });
   const [isCancelling, setIsCancelling] = useState(false);
+
+  useApplyInitialFormData(setForm, editSubmissionId, initialFormData);
 
   const updateDataAction = (updates: Partial<EvaluationPayload>) => {
     setForm((prev: EvaluationPayload) => ({
@@ -831,23 +840,25 @@ export default function EvaluationForm({
           console.warn('⚠️ Frontend: qualityOfWorkScore12 is missing or zero');
         }
 
-        if (isHO) {
-          if (evaluationType === 'rankNfile') {
-            await apiService.postHoRankNFile(empID, form);
-          } else if (evaluationType === 'basic') {
-            await apiService.postHoBasic(empID, form);
+        await submitEvaluationWithOptionalEdit(editSubmissionId, form, async () => {
+          if (isHO) {
+            if (evaluationType === 'rankNfile') {
+              await apiService.postHoRankNFile(empID, form);
+            } else if (evaluationType === 'basic') {
+              await apiService.postHoBasic(empID, form);
+            } else {
+              await apiService.createSubmission(empID, form);
+            }
           } else {
-            await apiService.createSubmission(empID, form);
+            if (evaluationType === 'rankNfile') {
+              await apiService.postBranchRankNFile(empID, form);
+            } else if (evaluationType === 'basic') {
+              await apiService.postBranchBasic(empID, form);
+            } else {
+              await apiService.postBranchBasic(empID, form);
+            }
           }
-        } else {
-          if (evaluationType === 'rankNfile') {
-            await apiService.postBranchRankNFile(empID, form);
-          } else if (evaluationType === 'basic') {
-            await apiService.postBranchBasic(empID, form);
-          } else {
-            await apiService.postBranchBasic(empID, form);
-          }
-        }
+        });
       }
       setShowSuccessDialog(true);
     } catch (clientError) {

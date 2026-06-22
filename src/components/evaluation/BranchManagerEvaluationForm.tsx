@@ -26,8 +26,13 @@ import { createEvaluationNotification } from "@/lib/notificationUtils";
 import { User, useAuth } from "../../contexts/UserContext";
 import { branchEvaluationSteps } from "./configs/branchEvaluationConfig";
 import { useBranchesForEvaluation } from "@/hooks/useBranchesForEvaluation";
+import {
+  EvaluationFormEditOptions,
+  useApplyInitialFormData,
+} from "./evaluationFormEdit";
+import { submitEvaluationWithOptionalEdit } from "@/lib/evaluationEditSubmit";
 
-interface BranchManagerEvaluationFormProps {
+interface BranchManagerEvaluationFormProps extends EvaluationFormEditOptions {
   employee?: User | null;
   onCloseAction?: () => void;
   onCancelAction?: () => void;
@@ -39,6 +44,8 @@ export default function BranchManagerEvaluationForm({
   onCloseAction,
   onCancelAction,
   evaluationType = 'default',
+  editSubmissionId,
+  initialFormData,
 }: BranchManagerEvaluationFormProps) {
   const [currentStep, setCurrentStep] = useState(0); // 0 = welcome step, 1-N = actual steps
   const [welcomeAnimationKey, setWelcomeAnimationKey] = useState(0);
@@ -167,6 +174,8 @@ export default function BranchManagerEvaluationForm({
     managerialSkillsExplanation6: "",
     created_at: "",
   });
+
+  useApplyInitialFormData(setForm, editSubmissionId, initialFormData);
 
   const updateDataAction = useCallback((updates: Partial<EvaluationPayload>) => {
     setForm((prev: EvaluationPayload) => ({
@@ -500,17 +509,19 @@ export default function BranchManagerEvaluationForm({
         const evaluatorId = typeof user?.id === 'string' ? parseInt(user.id, 10) : (user?.id || 0);
         
         // Branch Manager/Supervisor uses appropriate endpoint based on evaluationType
-        if (evaluationType === 'rankNfile') {
-          await apiService.postBranchRankNFile(employeeId, form);
-        } else if (evaluationType === 'basic') {
-          await apiService.postBranchBasic(employeeId, form);
-        } else {
-          // Default evaluation for branch - use BranchBasic endpoint
-          await apiService.postBranchBasic(employeeId, form);
-        }
+        await submitEvaluationWithOptionalEdit(editSubmissionId, form, async () => {
+          if (evaluationType === 'rankNfile') {
+            await apiService.postBranchRankNFile(employeeId, form);
+          } else if (evaluationType === 'basic') {
+            await apiService.postBranchBasic(employeeId, form);
+          } else {
+            // Default evaluation for branch - use BranchBasic endpoint
+            await apiService.postBranchBasic(employeeId, form);
+          }
+        });
         
         // Store in localStorage as backup
-        if (employee) {
+        if (!editSubmissionId && employee) {
           await storeEvaluationResult({
             employeeId: employeeId,
             employeeEmail: employee.email || "",
