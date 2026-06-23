@@ -467,6 +467,13 @@ export default function Step2({ data, updateDataAction, employee, evaluationType
                   </td>
                 </tr>
 
+                <tr>
+                  <td colSpan={6} className="border border-gray-300 px-4 py-3 text-center text-sm text-gray-500 italic">
+                    {/* if the evaluation is Not Applicable then leave it blank */}
+                    <p>If the evaluation is Not Applicable then leave it blank beyond this row</p>
+                  </td>
+                </tr>
+
                 {/* Row 5: Job Targets - Hidden/Disabled for HO evaluators */}
                 {!isHO && (
                   <tr>
