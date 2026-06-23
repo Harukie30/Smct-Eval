@@ -270,34 +270,15 @@ export default function ViewResultsModalRouter({
       .trim();
     
     // BranchRankNFile / BranchRankNfile / branch_rank_n_file → ViewResultsModalBranchRankNfile
-    // BUT: If employee is HO, route to HO RankNFile (ViewResultsModalDefault) instead
     if (
       evalTypeNormalized === "BRANCHRANKNFILE" || 
       evalTypeNormalized.includes("BRANCHRANKNFILE") ||
       (evalTypeNormalized.includes("BRANCH") && evalTypeNormalized.includes("RANK") && evalTypeNormalized.includes("FILE"))
     ) {
-      // If employee is HO but evaluationType says Branch, treat as HO RankNFile
-      if (isHOEmp) {
-        selectedComponent = 'ViewResultsModalDefault (HO RankNFile - corrected from BranchRankNFile)';
-        if (process.env.NODE_ENV === 'development') {
-          console.log('✅ Routing to:', selectedComponent);
-        }
-    return (
-          <ViewResultsModalDefault
-        isOpen={isOpen}
-        onCloseAction={onCloseAction}
-        submission={submission}
-        onApprove={onApprove}
-        isApproved={isApproved}
-        approvalData={approvalData}
-        currentUserName={currentUserName}
-        currentUserSignature={currentUserSignature}
-        showApprovalButton={showApprovalButton}
-      />
-    );
-  }
-      // Only route to BranchRankNfile if employee is actually a branch employee
-      if (isBranchEmp) {
+      selectedComponent = "ViewResultsModalBranchRankNfile (Branch RankNFile)";
+      if (process.env.NODE_ENV === "development") {
+        console.log("✅ Routing to:", selectedComponent);
+      }
       return (
         <ViewResultsModalBranchRankNfile
           isOpen={isOpen}
@@ -312,35 +293,31 @@ export default function ViewResultsModalRouter({
         />
       );
     }
-    }
     
-    // HoBasic / HoBasic / ho_basic → ViewResultsModalBasic
+    // HoBasic / ho_basic → ViewResultsModalBasic
     if (
       evalTypeNormalized === "HOBASIC" || 
       evalTypeNormalized.includes("HOBASIC") || 
       (evalTypeNormalized.includes("BASIC") && evalTypeNormalized.includes("HO")) ||
       (evalTypeNormalized === "BASIC" && isHOEmp)
     ) {
-      // Only route to Basic if it's HO
-      if (isHOEmp) {
-        selectedComponent = 'ViewResultsModalBasic (HO Basic)';
-        if (process.env.NODE_ENV === 'development') {
-          console.log('✅ Routing to:', selectedComponent);
-        }
-        return (
-          <ViewResultsModalBasic
-            isOpen={isOpen}
-            onCloseAction={onCloseAction}
-            submission={submission}
-            onApprove={onApprove}
-            isApproved={isApproved}
-            approvalData={approvalData}
-            currentUserName={currentUserName}
-            currentUserSignature={currentUserSignature}
-            showApprovalButton={showApprovalButton}
-          />
-        );
+      selectedComponent = "ViewResultsModalBasic (HO Basic)";
+      if (process.env.NODE_ENV === "development") {
+        console.log("✅ Routing to:", selectedComponent);
       }
+      return (
+        <ViewResultsModalBasic
+          isOpen={isOpen}
+          onCloseAction={onCloseAction}
+          submission={submission}
+          onApprove={onApprove}
+          isApproved={isApproved}
+          approvalData={approvalData}
+          currentUserName={currentUserName}
+          currentUserSignature={currentUserSignature}
+          showApprovalButton={showApprovalButton}
+        />
+      );
     }
     
     // HoRankNFile / HoRankNfile / ho_rank_n_file → ViewResultsModalDefault (HO rankNfile)
@@ -349,32 +326,29 @@ export default function ViewResultsModalRouter({
       evalTypeNormalized.includes("HORANKNFILE") ||
       (evalTypeNormalized.includes("HO") && evalTypeNormalized.includes("RANK") && evalTypeNormalized.includes("FILE"))
     ) {
-      if (isHOEmp) {
-        selectedComponent = 'ViewResultsModalDefault (HO RankNFile)';
-        if (process.env.NODE_ENV === 'development') {
-          console.log('✅ Routing to:', selectedComponent);
-        }
-        return (
-          <ViewResultsModalDefault
-            isOpen={isOpen}
-            onCloseAction={onCloseAction}
-            submission={submission}
-            onApprove={onApprove}
-            isApproved={isApproved}
-            approvalData={approvalData}
-            currentUserName={currentUserName}
-            currentUserSignature={currentUserSignature}
-            showApprovalButton={showApprovalButton}
-          />
-        );
+      selectedComponent = "ViewResultsModalDefault (HO RankNFile)";
+      if (process.env.NODE_ENV === "development") {
+        console.log("✅ Routing to:", selectedComponent);
       }
+      return (
+        <ViewResultsModalDefault
+          isOpen={isOpen}
+          onCloseAction={onCloseAction}
+          submission={submission}
+          onApprove={onApprove}
+          isApproved={isApproved}
+          approvalData={approvalData}
+          currentUserName={currentUserName}
+          currentUserSignature={currentUserSignature}
+          showApprovalButton={showApprovalButton}
+        />
+      );
     }
     
     // AreaManager / BranchAreaManager → ViewResultsModalAreaManager (AVP evaluating Area Manager, no Customer Service)
     if (
       (evalTypeNormalized === "AREAMANAGER" || evalTypeNormalized.includes("AREAMANAGER") ||
-       evalTypeNormalized === "BRANCHAREAMANAGER" || evalTypeNormalized.includes("BRANCHAREAMANAGER")) &&
-      isEmployeeAreaMgr
+       evalTypeNormalized === "BRANCHAREAMANAGER" || evalTypeNormalized.includes("BRANCHAREAMANAGER"))
     ) {
       selectedComponent = 'ViewResultsModalAreaManager (Area Manager)';
       if (process.env.NODE_ENV === 'development') {
@@ -425,122 +399,53 @@ export default function ViewResultsModalRouter({
     }
     
     // BranchBasic / branch_basic → ViewResultsModalBranchManager (branch manager evaluations)
-    // BUT: If employee is HO, route to HO Basic (ViewResultsModalBasic) instead
-    // BUT: If employee is Area Manager and no Customer Service data, route to ViewResultsModalAreaManager
     if (
       evalTypeNormalized === "BRANCHBASIC" || 
       evalTypeNormalized.includes("BRANCHBASIC") ||
       (evalTypeNormalized.includes("BRANCH") && evalTypeNormalized.includes("BASIC"))
     ) {
-      // If employee is HO but evaluationType says BranchBasic, treat as HO Basic
-      if (isHOEmp) {
-        selectedComponent = 'ViewResultsModalBasic (HO Basic - corrected from BranchBasic)';
-        if (process.env.NODE_ENV === 'development') {
-          console.log('✅ Routing to:', selectedComponent);
-        }
-        return (
-          <ViewResultsModalBasic
-            isOpen={isOpen}
-            onCloseAction={onCloseAction}
-            submission={submission}
-            onApprove={onApprove}
-            isApproved={isApproved}
-            approvalData={approvalData}
-            currentUserName={currentUserName}
-            currentUserSignature={currentUserSignature}
-            showApprovalButton={showApprovalButton}
-          />
-        );
+      selectedComponent = "ViewResultsModalBranchManager (Branch Basic)";
+      if (process.env.NODE_ENV === "development") {
+        console.log("✅ Routing to:", selectedComponent);
       }
-      // Only route to BranchManager if employee is actually a branch employee
-      if (isBranchEmp) {
-        // Area Manager evaluation: employee is Area Manager and has no Customer Service data → use Area Manager view
-        if (isEmployeeAreaMgr && !hasCustomerService) {
-          selectedComponent = 'ViewResultsModalAreaManager (Branch Basic - Area Manager)';
-          if (process.env.NODE_ENV === 'development') {
-            console.log('✅ Routing to:', selectedComponent);
-          }
-          return (
-            <ViewResultsModalAreaManager
-              isOpen={isOpen}
-              onCloseAction={onCloseAction}
-              submission={submission}
-              onApprove={onApprove}
-              isApproved={isApproved}
-              approvalData={approvalData}
-              currentUserName={currentUserName}
-              currentUserSignature={currentUserSignature}
-              showApprovalButton={showApprovalButton}
-            />
-          );
-        }
-        selectedComponent = 'ViewResultsModalBranchManager (Branch Basic)';
-        if (process.env.NODE_ENV === 'development') {
-          console.log('✅ Routing to:', selectedComponent);
-        }
-        return (
-          <ViewResultsModalBranchManager
-            isOpen={isOpen}
-            onCloseAction={onCloseAction}
-            submission={submission}
-            onApprove={onApprove}
-            isApproved={isApproved}
-            approvalData={approvalData}
-            currentUserName={currentUserName}
-            currentUserSignature={currentUserSignature}
-            showApprovalButton={showApprovalButton}
-          />
-        );
-      }
+      return (
+        <ViewResultsModalBranchManager
+          isOpen={isOpen}
+          onCloseAction={onCloseAction}
+          submission={submission}
+          onApprove={onApprove}
+          isApproved={isApproved}
+          approvalData={approvalData}
+          currentUserName={currentUserName}
+          currentUserSignature={currentUserSignature}
+          showApprovalButton={showApprovalButton}
+        />
+      );
     }
     
     // BranchDefault / branch_default → ViewResultsModalBranchRankNfile (branch rank and file evaluations)
-    // BUT: If employee is HO, route to HO RankNFile (ViewResultsModalDefault) instead
     if (
       evalTypeNormalized === "BRANCHDEFAULT" || 
       evalTypeNormalized.includes("BRANCHDEFAULT") ||
       (evalTypeNormalized.includes("BRANCH") && evalTypeNormalized.includes("DEFAULT"))
     ) {
-      // If employee is HO but evaluationType says BranchDefault, treat as HO RankNFile
-      if (isHOEmp) {
-        selectedComponent = 'ViewResultsModalDefault (HO RankNFile - corrected from BranchDefault)';
-        if (process.env.NODE_ENV === 'development') {
-          console.log('✅ Routing to:', selectedComponent);
-        }
-        return (
-          <ViewResultsModalDefault
-            isOpen={isOpen}
-            onCloseAction={onCloseAction}
-            submission={submission}
-            onApprove={onApprove}
-            isApproved={isApproved}
-            approvalData={approvalData}
-            currentUserName={currentUserName}
-            currentUserSignature={currentUserSignature}
-            showApprovalButton={showApprovalButton}
-          />
-        );
+      selectedComponent = "ViewResultsModalBranchRankNfile (Branch Default)";
+      if (process.env.NODE_ENV === "development") {
+        console.log("✅ Routing to:", selectedComponent);
       }
-      // Only route to BranchRankNfile if employee is actually a branch employee
-      if (isBranchEmp) {
-        selectedComponent = 'ViewResultsModalBranchRankNfile (Branch Default)';
-        if (process.env.NODE_ENV === 'development') {
-          console.log('✅ Routing to:', selectedComponent);
-        }
-        return (
-          <ViewResultsModalBranchRankNfile
-            isOpen={isOpen}
-            onCloseAction={onCloseAction}
-            submission={submission}
-            onApprove={onApprove}
-            isApproved={isApproved}
-            approvalData={approvalData}
-            currentUserName={currentUserName}
-            currentUserSignature={currentUserSignature}
-            showApprovalButton={showApprovalButton}
-          />
-        );
-      }
+      return (
+        <ViewResultsModalBranchRankNfile
+          isOpen={isOpen}
+          onCloseAction={onCloseAction}
+          submission={submission}
+          onApprove={onApprove}
+          isApproved={isApproved}
+          approvalData={approvalData}
+          currentUserName={currentUserName}
+          currentUserSignature={currentUserSignature}
+          showApprovalButton={showApprovalButton}
+        />
+      );
     }
   }
 
