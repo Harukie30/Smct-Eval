@@ -246,17 +246,14 @@ export default function BranchRankNfileEvaluationForm({
           form.qualityOfWorkScore4 !== 0
         );
         
-        // qualityOfWorkScore5 (Job Targets row) is REQUIRED for BranchRankNfile
-        const hasQualityOfWorkScore5 = form.qualityOfWorkScore5 && form.qualityOfWorkScore5 !== 0;
-        
+  
         const hasQualityOfWorkComments =
           !!form.qualityOfWorkComments1?.trim() &&
           !!form.qualityOfWorkComments2?.trim() &&
           !!form.qualityOfWorkComments3?.trim() &&
-          !!form.qualityOfWorkComments4?.trim() &&
-          !!form.qualityOfWorkComments5?.trim();
+          !!form.qualityOfWorkComments4?.trim();
 
-        return hasBaseScores && hasQualityOfWorkScore5 && hasQualityOfWorkComments;
+        return hasBaseScores && hasQualityOfWorkComments;
       case 3: // Adaptability
         return (
           form.adaptabilityScore1 &&
@@ -383,15 +380,11 @@ export default function BranchRankNfileEvaluationForm({
         if (!form.qualityOfWorkScore1 || form.qualityOfWorkScore1 === 0) {
           return "Please complete all Quality of Work scores";
         }
-        if (!form.qualityOfWorkScore5 || form.qualityOfWorkScore5 === 0) {
-          return "Please complete the Job Targets score";
-        }
         if (
           !form.qualityOfWorkComments1?.trim() ||
           !form.qualityOfWorkComments2?.trim() ||
           !form.qualityOfWorkComments3?.trim() ||
-          !form.qualityOfWorkComments4?.trim() ||
-          !form.qualityOfWorkComments5?.trim()
+          !form.qualityOfWorkComments4?.trim() 
         ) {
           return "Please provide comments for all Quality of Work items";
         }
