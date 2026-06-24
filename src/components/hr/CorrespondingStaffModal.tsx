@@ -707,6 +707,12 @@ export default function CorrespondingStaffModal({
                               ? "No"
                               : "—";
 
+                          if (isStaffEmployee) {
+                            return (
+                              <span className="text-sm text-slate-400">—</span>
+                            );
+                          }
+
                           return (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -714,20 +720,9 @@ export default function CorrespondingStaffModal({
                                   type="button"
                                   size="sm"
                                   variant="outline"
-                                  disabled={
-                                    isUpdating || !evaluator?.id || isStaffEmployee
-                                  }
-                                  title={
-                                    isStaffEmployee
-                                      ? "Direct status is not available for employees"
-                                      : "Set whether this subordinate is direct"
-                                  }
-                                  className={cn(
-                                    "gap-1 border-slate-200 bg-white text-slate-800",
-                                    isStaffEmployee
-                                      ? "cursor-not-allowed opacity-60"
-                                      : "cursor-pointer hover:bg-slate-50"
-                                  )}
+                                  disabled={isUpdating || !evaluator?.id}
+                                  title="Set whether this subordinate is direct"
+                                  className="cursor-pointer gap-1 border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
                                 >
                                   {isUpdating ? (
                                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -739,7 +734,7 @@ export default function CorrespondingStaffModal({
                               <DropdownMenuContent align="end" className="min-w-[8rem]">
                                 <DropdownMenuItem
                                   className="cursor-pointer"
-                                  disabled={isUpdating || isStaffEmployee}
+                                  disabled={isUpdating}
                                   onClick={() => {
                                     void handleDirectStatusChange(staff.id, true);
                                   }}
@@ -748,7 +743,7 @@ export default function CorrespondingStaffModal({
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   className="cursor-pointer"
-                                  disabled={isUpdating || isStaffEmployee}
+                                  disabled={isUpdating}
                                   onClick={() => {
                                     void handleDirectStatusChange(staff.id, false);
                                   }}
