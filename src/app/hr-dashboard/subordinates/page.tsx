@@ -259,6 +259,41 @@ function pickLastQuarterEvaluated(raw: Record<string, unknown>): string | null {
   return null;
 }
 
+function parseIsDirectSubordinate(raw: Record<string, unknown>): boolean | null {
+  const pivot = raw.pivot as Record<string, unknown> | undefined;
+  const candidates = [
+    raw.is_direct,
+    raw.isDirect,
+    raw.direct,
+    raw.is_direct_subordinate,
+    raw.isDirectSubordinate,
+    pivot?.is_direct,
+    pivot?.isDirect,
+    pivot?.direct,
+  ];
+
+  for (const value of candidates) {
+    if (value === true || value === 1 || value === "1") return true;
+    if (value === false || value === 0 || value === "0") return false;
+    if (typeof value === "string") {
+      const normalized = value.trim().toLowerCase();
+      if (normalized === "yes" || normalized === "true" || normalized === "direct") {
+        return true;
+      }
+      if (
+        normalized === "no" ||
+        normalized === "false" ||
+        normalized === "indirect" ||
+        normalized === "in-direct"
+      ) {
+        return false;
+      }
+    }
+  }
+
+  return null;
+}
+
 function normalizeStaff(raw: Record<string, unknown>): CorrespondingStaffRow {
   const firstName = String(raw.fname ?? "").trim();
   const lastName = String(raw.lname ?? "").trim();
@@ -283,6 +318,7 @@ function normalizeStaff(raw: Record<string, unknown>): CorrespondingStaffRow {
     role: getDisplayRole(raw.roles),
     lastQuarterEvaluated: pickLastQuarterEvaluated(raw),
     lastQuarterEvaluatedAt: pickLastQuarterEvaluatedAt(raw),
+    isDirect: parseIsDirectSubordinate(raw),
   };
 }
 
@@ -674,6 +710,13 @@ export default function HRSubordinatesPage() {
         staffRows={staffRows}
         loadingStaff={loadingStaff}
         onAddEmployee={() => setIsAddEmployeeModalOpen(true)}
+        onStaffDirectStatusChange={(employeeId, isDirect) => {
+          setStaffRows((prev) =>
+            prev.map((row) =>
+              row.id === employeeId ? { ...row, isDirect } : row
+            )
+          );
+        }}
       />
 
       <AddEmployeeToEvaluatorModal

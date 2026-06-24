@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Info, Users2, X } from "lucide-react";
+import { ChevronDown, Info, Loader2, Users2, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -24,7 +30,9 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import EvaluationsPagination from "@/components/paginationComponent";
+import { apiService } from "@/lib/apiService";
 import { parseApiTimestampMs } from "@/lib/parseApiTimestamp";
+import { toastMessages } from "@/lib/toastMessages";
 import { cn } from "@/lib/utils";
 
 export type CorrespondingStaffRow = {
@@ -36,6 +44,8 @@ export type CorrespondingStaffRow = {
   role: string;
   lastQuarterEvaluated: string | null;
   lastQuarterEvaluatedAt: string | null;
+  /** Whether this employee is a direct subordinate of the evaluator. */
+  isDirect?: boolean | null;
 };
 
 export type CorrespondingStaffEvaluator = {
@@ -188,6 +198,7 @@ export interface CorrespondingStaffModalProps {
   staffRows: CorrespondingStaffRow[];
   loadingStaff: boolean;
   onAddEmployee: () => void;
+  onStaffDirectStatusChange?: (employeeId: string, isDirect: boolean) => void;
 }
 
 export default function CorrespondingStaffModal({
@@ -197,10 +208,14 @@ export default function CorrespondingStaffModal({
   staffRows,
   loadingStaff,
   onAddEmployee,
+  onStaffDirectStatusChange,
 }: CorrespondingStaffModalProps) {
   const [staffSearch, setStaffSearch] = useState("");
   const [staffCurrentPage, setStaffCurrentPage] = useState(1);
   const [staffPageLoading, setStaffPageLoading] = useState(false);
+  const [updatingDirectEmployeeId, setUpdatingDirectEmployeeId] = useState<
+    string | null
+  >(null);
   const staffPageMinLoadTimeoutRef = useRef<number | null>(null);
   const lastStaffLoadEvaluatorIdRef = useRef<string | null>(null);
   const prevStaffSearchRef = useRef<string | null>(null);
@@ -233,6 +248,36 @@ export default function CorrespondingStaffModal({
       beginStaffPageSkeletonMinDelay();
     },
     [beginStaffPageSkeletonMinDelay]
+  );
+
+  const handleDirectStatusChange = useCallback(
+    async (employeeId: string, isDirect: boolean) => {
+      if (!evaluator?.id) return;
+      if (updatingDirectEmployeeId === employeeId) return;
+
+      setUpdatingDirectEmployeeId(employeeId);
+      try {
+        await apiService.setEvaluatorEmployeeDirectStatus(
+          evaluator.id,
+          [employeeId],
+          isDirect
+        );
+        onStaffDirectStatusChange?.(employeeId, isDirect);
+        toastMessages.generic.success(
+          isDirect ? "Marked as direct" : "Marked as indirect",
+          "Subordinate status updated."
+        );
+      } catch (error) {
+        console.error("Failed to update direct status:", error);
+        toastMessages.generic.error(
+          "Unable to update direct status",
+          "Please try again."
+        );
+      } finally {
+        setUpdatingDirectEmployeeId(null);
+      }
+    },
+    [evaluator?.id, onStaffDirectStatusChange, updatingDirectEmployeeId]
   );
 
   const handleOpenChange = useCallback(
@@ -522,6 +567,9 @@ export default function CorrespondingStaffModal({
                   <TableHead className="text-center text-[10px] font-semibold uppercase leading-tight tracking-wide text-slate-600 whitespace-normal sm:text-xs">
                     Last Quarter Evaluated
                   </TableHead>
+                  <TableHead className="text-center text-xs font-semibold uppercase tracking-wide text-slate-600">
+                    Action
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -549,11 +597,14 @@ export default function CorrespondingStaffModal({
                           <Skeleton className="h-3 w-10" />
                         </div>
                       </TableCell>
+                      <TableCell className="text-center">
+                        <Skeleton className="mx-auto h-8 w-24" />
+                      </TableCell>
                     </TableRow>
                   ))
                 ) : filteredStaffRows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="py-14 text-center text-sm text-slate-500">
+                    <TableCell colSpan={7} className="py-14 text-center text-sm text-slate-500">
                       No corresponding staff found for this evaluator.
                     </TableCell>
                   </TableRow>
@@ -636,6 +687,57 @@ export default function CorrespondingStaffModal({
                                 </span>
                               ) : null}
                             </div>
+                          );
+                        })()}
+                      </TableCell>
+                      <TableCell className="text-center align-middle">
+                        {(() => {
+                          const isUpdating = updatingDirectEmployeeId === staff.id;
+                          const directLabel =
+                            staff.isDirect === true
+                              ? "Yes"
+                              : staff.isDirect === false
+                              ? "No"
+                              : "—";
+
+                          return (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={isUpdating || !evaluator?.id}
+                                  className="cursor-pointer gap-1 border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
+                                >
+                                  {isUpdating ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  ) : null}
+                                  <span>Direct: {directLabel}</span>
+                                  <ChevronDown className="h-3.5 w-3.5 opacity-70" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="min-w-[8rem]">
+                                <DropdownMenuItem
+                                  className="cursor-pointer"
+                                  disabled={isUpdating}
+                                  onClick={() => {
+                                    void handleDirectStatusChange(staff.id, true);
+                                  }}
+                                >
+                                  Yes
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="cursor-pointer"
+                                  disabled={isUpdating}
+                                  onClick={() => {
+                                    void handleDirectStatusChange(staff.id, false);
+                                  }}
+                                >
+                                  No
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           );
                         })()}
                       </TableCell>

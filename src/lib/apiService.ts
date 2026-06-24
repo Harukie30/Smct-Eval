@@ -8,6 +8,13 @@ const USER_LIST_SORT_PARAMS = {
 } as const;
 import { EvaluationPayload } from "../components/evaluation/types";
 
+export type ResubmitEvaluationType =
+  | "rankNfile"
+  | "basic"
+  | "branchRankNfile"
+  | "branchBasic"
+  | "branchBasicAreaManager";
+
 function isAxiosNotFound(error: unknown): boolean {
   return (
     typeof error === "object" &&
@@ -703,6 +710,56 @@ export const apiService = {
     return response.data;
   },
 
+  /**
+   * Mark assigned employees as direct subordinates of an evaluator.
+   * Backend: POST /setAsDirect/{evaluator} with { employee_ids: number[] }
+   */
+  setAsDirect: async (
+    evaluatorId: string | number,
+    employeeIds: Array<string | number>
+  ): Promise<any> => {
+    return apiService.setEvaluatorEmployeeDirectStatus(
+      evaluatorId,
+      employeeIds,
+      true
+    );
+  },
+
+  /**
+   * Mark assigned employees as indirect subordinates of an evaluator.
+   * Backend: POST /setAsInDirect/{evaluator} with { employee_ids: number[] }
+   */
+  setAsInDirect: async (
+    evaluatorId: string | number,
+    employeeIds: Array<string | number>
+  ): Promise<any> => {
+    return apiService.setEvaluatorEmployeeDirectStatus(
+      evaluatorId,
+      employeeIds,
+      false
+    );
+  },
+
+  /**
+   * Unified direct / indirect subordinate status update for an evaluator.
+   */
+  setEvaluatorEmployeeDirectStatus: async (
+    evaluatorId: string | number,
+    employeeIds: Array<string | number>,
+    isDirect: boolean
+  ): Promise<any> => {
+    const endpoint = isDirect ? "setAsDirect" : "setAsInDirect";
+    const ids = employeeIds
+      .map((id) => Number(id))
+      .filter((id) => Number.isFinite(id) && id > 0);
+
+    const response = await api.post(
+      `/${endpoint}/${encodeURIComponent(String(evaluatorId))}`,
+      { employee_ids: ids }
+    );
+    return response.data;
+  },
+
   // Get specific branch
   getBranch: async (branchId: string | number): Promise<any> => {
     const response = await api.get(`/branch/${branchId}`);
@@ -781,6 +838,32 @@ export const apiService = {
     submission: EvaluationPayload
   ): Promise<any> => {
     const response = await api.post(`/HoRankNFile/${employeeId}`, submission);
+    return response.data;
+  },
+
+  /**
+   * Unified resubmit API for all evaluation forms.
+   *
+   * Maps form type -> backend resubmit endpoint path.
+   */
+  resubmitEvaluation: async (
+    submissionId: number | string,
+    submission: EvaluationPayload,
+    evaluationType: ResubmitEvaluationType
+  ): Promise<any> => {
+    const endpointByType: Record<ResubmitEvaluationType, string> = {
+      rankNfile: "HoRankNFile",
+      basic: "HoBasic",
+      branchRankNfile: "BranchRankNFile",
+      branchBasic: "BranchBasic",
+      branchBasicAreaManager: "BranchBasicAreaManager",
+    };
+
+    const endpoint = endpointByType[evaluationType];
+    const response = await api.post(
+      `/${endpoint}/resubmit/${submissionId}`,
+      submission
+    );
     return response.data;
   },
 
