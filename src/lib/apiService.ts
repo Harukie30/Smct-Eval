@@ -357,6 +357,26 @@ export const apiService = {
     return response.data;
   },
 
+  /** Evaluator accepts a draft evaluation (moves it into the review workflow). */
+  acceptDraftEvaluation: async (
+    evaluationId: number | string
+  ): Promise<any> => {
+    const response = await api.post(
+      `/acceptDraftEvaluation/${evaluationId}`
+    );
+    return response.data;
+  },
+
+  /** Evaluator rejects a draft evaluation. */
+  rejectDraftEvaluation: async (
+    evaluationId: number | string
+  ): Promise<any> => {
+    const response = await api.post(
+      `/rejectDraftEvaluation/${evaluationId}`
+    );
+    return response.data;
+  },
+
   markNotificationAsRead: async (
     notificationId: string | number
   ): Promise<void> => {

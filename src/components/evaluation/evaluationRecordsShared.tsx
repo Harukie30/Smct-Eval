@@ -7,7 +7,7 @@ import {
   type ComponentProps,
   type ReactElement,
 } from "react";
-import { Eye, Pencil, Trash2 } from "lucide-react";
+import { Check, Eye, Pencil, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -81,11 +81,13 @@ export function evalTableActionsCellClass(rowClassName: string) {
     rowClassName.includes("bg-yellow-50") && "lg:bg-yellow-50",
     rowClassName.includes("bg-blue-50") && "lg:bg-blue-50",
     rowClassName.includes("bg-orange-50") && "lg:bg-orange-50",
+    rowClassName.includes("bg-violet-50") && "lg:bg-violet-50",
     !rowClassName.includes("bg-green-50") &&
       !rowClassName.includes("bg-red-200") &&
       !rowClassName.includes("bg-yellow-50") &&
       !rowClassName.includes("bg-blue-50") &&
       !rowClassName.includes("bg-orange-50") &&
+      !rowClassName.includes("bg-violet-50") &&
       "lg:bg-white"
   );
 }
@@ -150,10 +152,15 @@ export function formatReviewStatusLabel(status: string): {
   short: string;
   full: string;
 } {
-  const s = String(status ?? "");
-  if (s === "completed") return { short: "✓ Done", full: `✓ ${s}` };
-  if (s === "pending") return { short: "⏳ Pend.", full: `⏳ ${s}` };
+  const s = String(status ?? "").toLowerCase();
+  if (s === "completed") return { short: "✓ Done", full: "✓ completed" };
+  if (s === "pending") return { short: "⏳ Pend.", full: "⏳ pending" };
+  if (s === "draft") return { short: "📝 Draft", full: "📝 draft" };
   return { short: s, full: s };
+}
+
+export function isReviewDraft(review: EvaluationRecordReview): boolean {
+  return String(review.status ?? "").toLowerCase() === "draft";
 }
 
 export function isReviewDeletable(review: EvaluationRecordReview): boolean {
@@ -631,6 +638,7 @@ export function getReviewRowClassName(review: EvaluationRecordReview): string {
   const isRecent = hoursDiff > 24 && hoursDiff <= 168;
   const isCompleted = review.status === "completed";
   const isPending = review.status === "pending";
+  const isDraft = isReviewDraft(review);
   const isQuarterLate = isReviewQuarterLate(review);
 
   if (isQuarterLate) {
@@ -648,6 +656,9 @@ export function getReviewRowClassName(review: EvaluationRecordReview): string {
   }
   if (isPending) {
     return "bg-orange-50 hover:bg-orange-100 border-l-4 border-l-orange-500 transition-colors";
+  }
+  if (isDraft) {
+    return "bg-violet-50 hover:bg-violet-100 border-l-4 border-l-violet-500 transition-colors";
   }
   return "hover:bg-gray-100 transition-colors";
 }
@@ -699,16 +710,87 @@ export function EvalRecordRowActions({
   onViewAction,
   onEditAction,
   onDeleteAction,
+  onAcceptAction,
+  onRejectAction,
   deleting,
+  accepting,
+  rejecting,
 }: {
   review: EvaluationRecordReview;
   onViewAction: () => void;
   onEditAction?: () => void;
-  onDeleteAction: () => void;
+  onDeleteAction?: () => void;
+  onAcceptAction?: () => void;
+  onRejectAction?: () => void;
   deleting?: boolean;
+  accepting?: boolean;
+  rejecting?: boolean;
 }) {
-  const canDelete = isReviewDeletable(review);
+  const isDraft = isReviewDraft(review);
+  const showDraftActions =
+    isDraft && (onAcceptAction != null || onRejectAction != null);
+  const canDelete = isReviewDeletable(review) && onDeleteAction != null;
   const canEdit = isReviewEditable(review) && onEditAction != null;
+
+  if (showDraftActions) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-1 sm:flex-row sm:justify-end lg:flex-wrap lg:justify-start lg:gap-1.5">
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          onClick={onViewAction}
+          aria-label="View evaluation"
+          className="h-8 w-8 shrink-0 cursor-pointer border-blue-700 bg-blue-600 text-white hover:bg-blue-700 hover:text-white lg:h-8 lg:w-auto lg:px-2 lg:transition-all lg:duration-200 lg:hover:-translate-y-0.5 lg:hover:shadow-md lg:active:translate-y-0"
+        >
+          <Eye className="h-4 w-4 lg:hidden" />
+          <span className="hidden lg:inline">☰ View</span>
+        </Button>
+        {onAcceptAction ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={onAcceptAction}
+            disabled={accepting || rejecting}
+            aria-label="Accept draft evaluation"
+            title="Accept this draft evaluation"
+            className="h-8 w-8 shrink-0 cursor-pointer border-green-300 bg-green-600 text-white hover:bg-green-700 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 lg:h-8 lg:w-auto lg:px-2 lg:transition-all lg:duration-200 lg:hover:-translate-y-0.5 lg:hover:shadow-md lg:active:translate-y-0"
+          >
+            {accepting ? (
+              <span className="text-xs lg:hidden">…</span>
+            ) : (
+              <Check className="h-4 w-4 lg:hidden" />
+            )}
+            <span className="hidden lg:inline">
+              {accepting ? "Accepting…" : "✓ Accept"}
+            </span>
+          </Button>
+        ) : null}
+        {onRejectAction ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={onRejectAction}
+            disabled={accepting || rejecting}
+            aria-label="Reject draft evaluation"
+            title="Reject this draft evaluation"
+            className="h-8 w-8 shrink-0 cursor-pointer border-red-300 bg-red-600 text-white hover:bg-red-700 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 lg:h-8 lg:w-auto lg:px-2 lg:transition-all lg:duration-200 lg:hover:-translate-y-0.5 lg:hover:shadow-md lg:active:translate-y-0"
+          >
+            {rejecting ? (
+              <span className="text-xs lg:hidden">…</span>
+            ) : (
+              <X className="h-4 w-4 lg:hidden" />
+            )}
+            <span className="hidden lg:inline">
+              {rejecting ? "Rejecting…" : "✕ Reject"}
+            </span>
+          </Button>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-center justify-center gap-1 sm:flex-row sm:justify-end lg:flex-wrap lg:justify-start lg:gap-1.5">

@@ -176,16 +176,55 @@ function formatProbationaryQuarterLabel(value: string): string {
   return t;
 }
 
-function pickLastQuarterEvaluatedAt(raw: Record<string, unknown>): string | null {
-  const empLast =
-    raw.employee_last_evaluation && typeof raw.employee_last_evaluation === "object"
-      ? (raw.employee_last_evaluation as Record<string, unknown>)
-      : null;
-  const nested =
-    raw.last_evaluation && typeof raw.last_evaluation === "object"
-      ? (raw.last_evaluation as Record<string, unknown>)
-      : null;
+function asTrimmedOrNull(v: unknown): string | null {
+  if (v == null) return null;
+  const s = String(v).trim();
+  return s === "" || s.toLowerCase() === "null" ? null : s;
+}
 
+function getEmployeeLastEvaluationRecord(
+  raw: Record<string, unknown>
+): Record<string, unknown> | null | undefined {
+  if (!("employee_last_evaluation" in raw)) return undefined;
+  const value = raw.employee_last_evaluation;
+  if (value == null) return null;
+  if (typeof value === "object") return value as Record<string, unknown>;
+  return null;
+}
+
+function quarterLabelFromEvaluationRecord(
+  record: Record<string, unknown>
+): string | null {
+  const regular = asTrimmedOrNull(
+    record.reviewTypeRegular ?? record.review_type_regular
+  );
+  if (regular) return regular;
+
+  const probationary = asTrimmedOrNull(
+    record.reviewTypeProbationary ?? record.review_type_probationary
+  );
+  if (probationary) return formatProbationaryQuarterLabel(probationary);
+
+  const othersCustom = asTrimmedOrNull(
+    record.reviewTypeOthersCustom ?? record.review_type_others_custom
+  );
+  if (othersCustom) return othersCustom;
+
+  for (const key of [
+    "quarter",
+    "evaluation_quarter",
+    "evaluated_quarter",
+    "label",
+  ] as const) {
+    const value = asTrimmedOrNull(record[key]);
+    if (value) return value;
+  }
+
+  return null;
+}
+
+function pickLastQuarterEvaluatedAt(raw: Record<string, unknown>): string | null {
+  const empLast = getEmployeeLastEvaluationRecord(raw);
   const timestampKeys = [
     "created_at",
     "createdAt",
@@ -199,8 +238,16 @@ function pickLastQuarterEvaluatedAt(raw: Record<string, unknown>): string | null
     "completedAt",
   ] as const;
 
+  if (empLast !== undefined) {
+    return empLast ? pickApiTimestamp(empLast, timestampKeys) : null;
+  }
+
+  const nested =
+    raw.last_evaluation && typeof raw.last_evaluation === "object"
+      ? (raw.last_evaluation as Record<string, unknown>)
+      : null;
+
   return (
-    pickApiTimestamp(empLast, timestampKeys) ??
     pickApiTimestamp(nested, timestampKeys) ??
     pickApiTimestamp(raw, [
       "last_quarter_evaluated_at",
@@ -215,24 +262,9 @@ function pickLastQuarterEvaluatedAt(raw: Record<string, unknown>): string | null
 }
 
 function pickLastQuarterEvaluated(raw: Record<string, unknown>): string | null {
-  const asTrimmed = (v: unknown): string | null => {
-    if (v == null) return null;
-    const s = String(v).trim();
-    return s === "" || s.toLowerCase() === "null" ? null : s;
-  };
-
-  const empLast =
-    raw.employee_last_evaluation && typeof raw.employee_last_evaluation === "object"
-      ? (raw.employee_last_evaluation as Record<string, unknown>)
-      : null;
-  if (empLast) {
-    const regular = asTrimmed(empLast.reviewTypeRegular ?? empLast.review_type_regular);
-    if (regular) return regular;
-
-    const probationary = asTrimmed(
-      empLast.reviewTypeProbationary ?? empLast.review_type_probationary
-    );
-    if (probationary) return formatProbationaryQuarterLabel(probationary);
+  const empLast = getEmployeeLastEvaluationRecord(raw);
+  if (empLast !== undefined) {
+    return empLast ? quarterLabelFromEvaluationRecord(empLast) : null;
   }
 
   const nested =
@@ -253,14 +285,43 @@ function pickLastQuarterEvaluated(raw: Record<string, unknown>): string | null {
     nested?.label,
   ];
   for (const v of sources) {
-    const s = asTrimmed(v);
+    const s = asTrimmedOrNull(v);
     if (s) return s;
+  }
+  return null;
+}
+
+function parseIsDirectFromIndirectFlag(value: unknown): boolean | null {
+  // isIndirectEvaluator: 0 → direct (Yes), 1 → indirect (No)
+  if (value === true || value === 1 || value === "1") return false;
+  if (value === false || value === 0 || value === "0") return true;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "yes" || normalized === "true" || normalized === "indirect") {
+      return false;
+    }
+    if (normalized === "no" || normalized === "false" || normalized === "direct") {
+      return true;
+    }
   }
   return null;
 }
 
 function parseIsDirectSubordinate(raw: Record<string, unknown>): boolean | null {
   const pivot = raw.pivot as Record<string, unknown> | undefined;
+  const indirectCandidates = [
+    raw.isIndirectEvaluator,
+    raw.is_indirect_evaluator,
+    pivot?.isIndirectEvaluator,
+    pivot?.is_indirect_evaluator,
+  ];
+
+  for (const value of indirectCandidates) {
+    if (value === undefined || value === null) continue;
+    const parsed = parseIsDirectFromIndirectFlag(value);
+    if (parsed !== null) return parsed;
+  }
+
   const candidates = [
     raw.is_direct,
     raw.isDirect,

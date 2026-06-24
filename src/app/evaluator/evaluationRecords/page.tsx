@@ -71,8 +71,10 @@ import {
   hasEvaluatorSigned,
   isReviewDeletable,
   isReviewEditable,
+  isReviewDraft,
   getDeleteEvaluationErrorMessage,
   getViewEvaluationErrorMessage,
+  getEvaluationApiErrorMessage,
   ratingPillClass,
 } from "@/components/evaluation/evaluationRecordsShared";
 
@@ -119,6 +121,10 @@ export default function OverviewTab() {
     message: string;
   } | null>(null);
   const [deletingReviewId, setDeletingReviewId] = useState<number | null>(null);
+  const [acceptingReviewId, setAcceptingReviewId] = useState<number | null>(null);
+  const [rejectingReviewId, setRejectingReviewId] = useState<number | null>(null);
+  const [isRejectDraftModalOpen, setIsRejectDraftModalOpen] = useState(false);
+  const [reviewToReject, setReviewToReject] = useState<Review | null>(null);
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
   const [years, setYears] = useState<any[]>([]);
   const evaluationsInFlightKeyRef = useRef<string | null>(null);
@@ -397,6 +403,68 @@ export default function OverviewTab() {
     setReviewToDelete(review);
     setIsDeleteModalOpen(true);
   };
+
+  const handleAcceptDraft = async (review: Review) => {
+    if (!isReviewDraft(review) || acceptingReviewId != null || rejectingReviewId != null) {
+      return;
+    }
+
+    setAcceptingReviewId(review.id);
+    try {
+      await apiService.acceptDraftEvaluation(review.id);
+      await handleRefresh();
+      toastMessages.generic.success(
+        "Draft accepted",
+        "The evaluation has been accepted and moved forward."
+      );
+    } catch (error) {
+      setEvaluationActionError({
+        title: "Unable to Accept Draft",
+        message: getEvaluationApiErrorMessage(
+          error,
+          "Failed to accept draft evaluation. Please try again."
+        ),
+      });
+    } finally {
+      setAcceptingReviewId(null);
+    }
+  };
+
+  const openRejectDraftModal = (review: Review) => {
+    if (!isReviewDraft(review)) return;
+    setReviewToReject(review);
+    setIsRejectDraftModalOpen(true);
+  };
+
+  const handleRejectDraft = async () => {
+    if (!reviewToReject || rejectingReviewId != null || acceptingReviewId != null) {
+      return;
+    }
+
+    setRejectingReviewId(reviewToReject.id);
+    try {
+      await apiService.rejectDraftEvaluation(reviewToReject.id);
+      await handleRefresh();
+      toastMessages.generic.success(
+        "Draft rejected",
+        "The draft evaluation has been rejected."
+      );
+      setReviewToReject(null);
+      setIsRejectDraftModalOpen(false);
+    } catch (error) {
+      setEvaluationActionError({
+        title: "Unable to Reject Draft",
+        message: getEvaluationApiErrorMessage(
+          error,
+          "Failed to reject draft evaluation. Please try again."
+        ),
+      });
+      setReviewToReject(null);
+      setIsRejectDraftModalOpen(false);
+    } finally {
+      setRejectingReviewId(null);
+    }
+  };
   // const groupedByYear = evaluations.reduce((acc: any, item) => {
   //   const year = new Date(item.created_at).getFullYear();
   //   acc[year] = acc[year] || [];
@@ -494,6 +562,7 @@ export default function OverviewTab() {
                     <SelectItem value="pending">
                       Pending Verification
                     </SelectItem>
+                    <SelectItem value="draft">Draft</SelectItem>
                     <SelectItem value="completed">
                       All parties approved
                     </SelectItem>
@@ -635,6 +704,12 @@ export default function OverviewTab() {
                 <div className="w-2 h-2 bg-red-50 border-l-2 border-l-red-500 rounded"></div>
                 <Badge className="bg-orange-300 text-orange-800 text-xs">
                   Pending
+                </Badge>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 bg-violet-50 border-l-2 border-l-violet-500 rounded"></div>
+                <Badge className="bg-violet-200 text-violet-800 text-xs">
+                  Draft
                 </Badge>
               </div>
               <div className="flex items-center gap-1">
@@ -878,6 +953,8 @@ export default function OverviewTab() {
                                   ? "bg-green-100 text-green-800"
                                   : review.status === "pending"
                                   ? "bg-yellow-100 text-yellow-800"
+                                  : review.status === "draft"
+                                  ? "bg-violet-100 text-violet-800"
                                   : "bg-yellow-100 text-yellow-800"
                               )}
                             >
@@ -907,7 +984,19 @@ export default function OverviewTab() {
                               onViewAction={() => handleViewEvaluation(review)}
                               onEditAction={() => handleEditEvaluation(review)}
                               onDeleteAction={() => openDeleteModal(review)}
+                              onAcceptAction={
+                                isReviewDraft(review)
+                                  ? () => void handleAcceptDraft(review)
+                                  : undefined
+                              }
+                              onRejectAction={
+                                isReviewDraft(review)
+                                  ? () => openRejectDraftModal(review)
+                                  : undefined
+                              }
                               deleting={deletingReviewId === review.id}
+                              accepting={acceptingReviewId === review.id}
+                              rejecting={rejectingReviewId === review.id}
                             />
                           </TableCell>
                         </TableRow>
@@ -1052,6 +1141,66 @@ export default function OverviewTab() {
                     </div>
                   ) : (
                     "❌ Delete Permanently"
+                  )}
+                </Button>
+              </div>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Reject Draft Confirmation Modal */}
+        <Dialog
+          open={isRejectDraftModalOpen}
+          onOpenChangeAction={(open) => {
+            setIsRejectDraftModalOpen(open);
+            if (!open) {
+              setReviewToReject(null);
+            }
+          }}
+        >
+          <DialogContent className={`max-w-md p-6 ${dialogAnimationClass}`}>
+            <DialogHeader className="rounded-lg bg-red-50 pb-4">
+              <DialogTitle className="flex items-center gap-2 text-red-800">
+                <span className="text-xl">⚠️</span>
+                Reject Draft Evaluation
+              </DialogTitle>
+              <DialogDescription className="text-red-700">
+                Are you sure you want to reject this draft evaluation for{" "}
+                {[
+                  reviewToReject?.employee?.fname,
+                  reviewToReject?.employee?.lname,
+                ]
+                  .filter(Boolean)
+                  .join(" ")
+                  .trim() || "this employee"}
+                ?
+              </DialogDescription>
+            </DialogHeader>
+
+            <DialogFooter className="pt-6">
+              <div className="flex w-full justify-end space-x-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsRejectDraftModalOpen(false);
+                    setReviewToReject(null);
+                  }}
+                  className="cursor-pointer bg-blue-600 text-white hover:bg-blue-700 hover:text-white"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="cursor-pointer bg-red-600 text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={() => void handleRejectDraft()}
+                  disabled={rejectingReviewId !== null}
+                >
+                  {rejectingReviewId === reviewToReject?.id ? (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Rejecting...</span>
+                    </div>
+                  ) : (
+                    "Reject Draft"
                   )}
                 </Button>
               </div>
