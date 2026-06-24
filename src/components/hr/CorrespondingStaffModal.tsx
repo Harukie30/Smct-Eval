@@ -191,6 +191,10 @@ function staffQuarterHighlightSnapshot(row: CorrespondingStaffRow): string {
   return `${row.lastQuarterEvaluated ?? ""}\u001f${row.lastQuarterEvaluatedAt ?? ""}`;
 }
 
+function isEmployeeRole(role: string): boolean {
+  return role.trim().toLowerCase() === "employee";
+}
+
 export interface CorrespondingStaffModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -253,6 +257,8 @@ export default function CorrespondingStaffModal({
   const handleDirectStatusChange = useCallback(
     async (employeeId: string, isDirect: boolean) => {
       if (!evaluator?.id) return;
+      const staff = staffRows.find((row) => row.id === employeeId);
+      if (staff && isEmployeeRole(staff.role)) return;
       if (updatingDirectEmployeeId === employeeId) return;
 
       setUpdatingDirectEmployeeId(employeeId);
@@ -277,7 +283,7 @@ export default function CorrespondingStaffModal({
         setUpdatingDirectEmployeeId(null);
       }
     },
-    [evaluator?.id, onStaffDirectStatusChange, updatingDirectEmployeeId]
+    [evaluator?.id, staffRows, onStaffDirectStatusChange, updatingDirectEmployeeId]
   );
 
   const handleOpenChange = useCallback(
@@ -693,6 +699,7 @@ export default function CorrespondingStaffModal({
                       <TableCell className="text-center align-middle">
                         {(() => {
                           const isUpdating = updatingDirectEmployeeId === staff.id;
+                          const isStaffEmployee = isEmployeeRole(staff.role);
                           const directLabel =
                             staff.isDirect === true
                               ? "Yes"
@@ -707,8 +714,20 @@ export default function CorrespondingStaffModal({
                                   type="button"
                                   size="sm"
                                   variant="outline"
-                                  disabled={isUpdating || !evaluator?.id}
-                                  className="cursor-pointer gap-1 border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
+                                  disabled={
+                                    isUpdating || !evaluator?.id || isStaffEmployee
+                                  }
+                                  title={
+                                    isStaffEmployee
+                                      ? "Direct status is not available for employees"
+                                      : "Set whether this subordinate is direct"
+                                  }
+                                  className={cn(
+                                    "gap-1 border-slate-200 bg-white text-slate-800",
+                                    isStaffEmployee
+                                      ? "cursor-not-allowed opacity-60"
+                                      : "cursor-pointer hover:bg-slate-50"
+                                  )}
                                 >
                                   {isUpdating ? (
                                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -720,7 +739,7 @@ export default function CorrespondingStaffModal({
                               <DropdownMenuContent align="end" className="min-w-[8rem]">
                                 <DropdownMenuItem
                                   className="cursor-pointer"
-                                  disabled={isUpdating}
+                                  disabled={isUpdating || isStaffEmployee}
                                   onClick={() => {
                                     void handleDirectStatusChange(staff.id, true);
                                   }}
@@ -729,7 +748,7 @@ export default function CorrespondingStaffModal({
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   className="cursor-pointer"
-                                  disabled={isUpdating}
+                                  disabled={isUpdating || isStaffEmployee}
                                   onClick={() => {
                                     void handleDirectStatusChange(staff.id, false);
                                   }}
