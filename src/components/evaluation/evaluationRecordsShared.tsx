@@ -695,6 +695,10 @@ export function getReviewRowClassName(review: EvaluationRecordReview): string {
     return `${QUARTER_LATE_ROW_CLASS} transition-colors`;
   }
 
+  if (isDraft) {
+    return "bg-violet-50 hover:bg-violet-200 border-l-4 border-l-violet-600 transition-colors";
+  }
+
   if (isCompleted) {
     return "bg-green-50 hover:bg-green-100 border-l-4 border-l-green-500 transition-colors";
   }
@@ -706,9 +710,6 @@ export function getReviewRowClassName(review: EvaluationRecordReview): string {
   }
   if (isPending) {
     return "bg-orange-50 hover:bg-orange-100 border-l-4 border-l-orange-500 transition-colors";
-  }
-  if (isDraft) {
-    return "bg-violet-50 hover:bg-violet-100 border-l-4 border-l-violet-500 transition-colors";
   }
   return "hover:bg-gray-100 transition-colors";
 }

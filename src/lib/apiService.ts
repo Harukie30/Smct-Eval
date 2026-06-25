@@ -369,10 +369,12 @@ export const apiService = {
 
   /** Evaluator rejects a draft evaluation. */
   rejectDraftEvaluation: async (
-    evaluationId: number | string
+    evaluationId: number | string,
+    note: string
   ): Promise<any> => {
     const response = await api.post(
-      `/rejectDraftEvaluation/${evaluationId}`
+      `/rejectDraftEvaluation/${evaluationId}`,
+      { note: note.trim() }
     );
     return response.data;
   },

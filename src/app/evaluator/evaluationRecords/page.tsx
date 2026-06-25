@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -80,6 +81,8 @@ import {
 
 type Review = EvaluationRecordReview;
 
+const REJECT_DRAFT_NOTE_MIN_LENGTH = 20;
+
 export default function OverviewTab() {
   const { user } = useAuth();
   const isMobileViewport = useMobileViewport();
@@ -123,6 +126,7 @@ export default function OverviewTab() {
   const [rejectingReviewId, setRejectingReviewId] = useState<number | null>(null);
   const [isRejectDraftModalOpen, setIsRejectDraftModalOpen] = useState(false);
   const [reviewToReject, setReviewToReject] = useState<Review | null>(null);
+  const [rejectDraftNote, setRejectDraftNote] = useState("");
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
   const [years, setYears] = useState<any[]>([]);
   const evaluationsInFlightKeyRef = useRef<string | null>(null);
@@ -400,25 +404,37 @@ export default function OverviewTab() {
 
   const openRejectDraftModal = (review: Review) => {
     if (!isReviewDraft(review)) return;
+    setRejectDraftNote("");
     setReviewToReject(review);
     setIsRejectDraftModalOpen(true);
   };
 
+  const closeRejectDraftModal = () => {
+    setIsRejectDraftModalOpen(false);
+    setReviewToReject(null);
+    setRejectDraftNote("");
+  };
+
   const handleRejectDraft = async () => {
-    if (!reviewToReject || rejectingReviewId != null || acceptingReviewId != null) {
+    const note = rejectDraftNote.trim();
+    if (
+      !reviewToReject ||
+      note.length < REJECT_DRAFT_NOTE_MIN_LENGTH ||
+      rejectingReviewId != null ||
+      acceptingReviewId != null
+    ) {
       return;
     }
 
     setRejectingReviewId(reviewToReject.id);
     try {
-      await apiService.rejectDraftEvaluation(reviewToReject.id);
+      await apiService.rejectDraftEvaluation(reviewToReject.id, note);
       await handleRefresh();
       toastMessages.generic.success(
         "Draft rejected",
         "The draft evaluation has been rejected."
       );
-      setReviewToReject(null);
-      setIsRejectDraftModalOpen(false);
+      closeRejectDraftModal();
     } catch (error) {
       setEvaluationActionError({
         title: "Unable to Reject Draft",
@@ -427,8 +443,7 @@ export default function OverviewTab() {
           "Failed to reject draft evaluation. Please try again."
         ),
       });
-      setReviewToReject(null);
-      setIsRejectDraftModalOpen(false);
+      closeRejectDraftModal();
     } finally {
       setRejectingReviewId(null);
     }
@@ -1002,9 +1017,10 @@ export default function OverviewTab() {
         <Dialog
           open={isRejectDraftModalOpen}
           onOpenChangeAction={(open) => {
-            setIsRejectDraftModalOpen(open);
             if (!open) {
-              setReviewToReject(null);
+              closeRejectDraftModal();
+            } else {
+              setIsRejectDraftModalOpen(true);
             }
           }}
         >
@@ -1027,14 +1043,37 @@ export default function OverviewTab() {
               </DialogDescription>
             </DialogHeader>
 
-            <DialogFooter className="pt-6">
+            <div className="space-y-2 px-1 pt-2">
+              <Label htmlFor="reject-draft-note" className="text-sm font-medium">
+                Rejection note <span className="text-red-600">*</span>
+              </Label>
+              <Textarea
+                id="reject-draft-note"
+                value={rejectDraftNote}
+                onChange={(e) => setRejectDraftNote(e.target.value)}
+                placeholder="Explain why this draft is being rejected (at least 20 characters)..."
+                rows={4}
+                minLength={REJECT_DRAFT_NOTE_MIN_LENGTH}
+                className="resize-y min-h-[6rem]"
+              />
+              <p
+                className={cn(
+                  "text-xs",
+                  rejectDraftNote.trim().length >= REJECT_DRAFT_NOTE_MIN_LENGTH
+                    ? "text-muted-foreground"
+                    : "text-amber-700"
+                )}
+              >
+                {rejectDraftNote.trim().length}/{REJECT_DRAFT_NOTE_MIN_LENGTH}{" "}
+                characters minimum required to reject this draft.
+              </p>
+            </div>
+
+            <DialogFooter className="pt-4">
               <div className="flex w-full justify-end space-x-4">
                 <Button
                   variant="outline"
-                  onClick={() => {
-                    setIsRejectDraftModalOpen(false);
-                    setReviewToReject(null);
-                  }}
+                  onClick={closeRejectDraftModal}
                   className="cursor-pointer bg-blue-600 text-white hover:bg-blue-700 hover:text-white"
                 >
                   Cancel
@@ -1042,7 +1081,10 @@ export default function OverviewTab() {
                 <Button
                   className="cursor-pointer bg-red-600 text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                   onClick={() => void handleRejectDraft()}
-                  disabled={rejectingReviewId !== null}
+                  disabled={
+                    rejectingReviewId !== null ||
+                    rejectDraftNote.trim().length < REJECT_DRAFT_NOTE_MIN_LENGTH
+                  }
                 >
                   {rejectingReviewId === reviewToReject?.id ? (
                     <div className="flex items-center gap-2">
