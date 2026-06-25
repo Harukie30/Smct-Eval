@@ -163,6 +163,44 @@ export function isReviewDraft(review: EvaluationRecordReview): boolean {
   return String(review.status ?? "").toLowerCase() === "draft";
 }
 
+function normalizeRecordUserId(id: unknown): string | null {
+  if (id == null || String(id).trim() === "") return null;
+  return String(id).trim();
+}
+
+/** True when the evaluation's evaluator matches the signed-in user. */
+export function isReviewEvaluatorCurrentUser(
+  review: EvaluationRecordReview,
+  currentUserId: string | number | null | undefined
+): boolean {
+  const profileId = normalizeRecordUserId(currentUserId);
+  if (!profileId) return false;
+
+  const evaluator = review.evaluator as { id?: unknown } | null | undefined;
+  const evaluatorId = normalizeRecordUserId(evaluator?.id);
+  if (evaluatorId && evaluatorId === profileId) return true;
+
+  const extended = review as EvaluationRecordReview & {
+    evaluator_id?: unknown;
+    evaluatorId?: unknown;
+  };
+  const topLevelId = normalizeRecordUserId(
+    extended.evaluator_id ?? extended.evaluatorId
+  );
+  return topLevelId != null && topLevelId === profileId;
+}
+
+/** Draft evaluations created by the signed-in evaluator can be edited. */
+export function isReviewDraftEditableByEvaluator(
+  review: EvaluationRecordReview,
+  currentUserId: string | number | null | undefined
+): boolean {
+  return (
+    isReviewDraft(review) &&
+    isReviewEvaluatorCurrentUser(review, currentUserId)
+  );
+}
+
 export function isReviewDeletable(review: EvaluationRecordReview): boolean {
   const status = String(review.status ?? "").toLowerCase();
   return status === "pending";
@@ -712,6 +750,7 @@ export function EvalRecordRowActions({
   onDeleteAction,
   onAcceptAction,
   onRejectAction,
+  draftOwnedByCurrentUser = false,
   deleting,
   accepting,
   rejecting,
@@ -722,17 +761,53 @@ export function EvalRecordRowActions({
   onDeleteAction?: () => void;
   onAcceptAction?: () => void;
   onRejectAction?: () => void;
+  /** When true on a draft row, show View + Edit instead of Accept/Reject. */
+  draftOwnedByCurrentUser?: boolean;
   deleting?: boolean;
   accepting?: boolean;
   rejecting?: boolean;
 }) {
   const isDraft = isReviewDraft(review);
-  const showDraftActions =
-    isDraft && (onAcceptAction != null || onRejectAction != null);
+  const showDraftOwnerActions =
+    isDraft && draftOwnedByCurrentUser && onEditAction != null;
+  const showDraftReviewActions =
+    isDraft &&
+    !draftOwnedByCurrentUser &&
+    (onAcceptAction != null || onRejectAction != null);
   const canDelete = isReviewDeletable(review) && onDeleteAction != null;
   const canEdit = isReviewEditable(review) && onEditAction != null;
 
-  if (showDraftActions) {
+  if (showDraftOwnerActions) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-1 sm:flex-row sm:justify-end lg:flex-wrap lg:justify-start lg:gap-1.5">
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          onClick={onViewAction}
+          aria-label="View evaluation"
+          className="h-8 w-8 shrink-0 cursor-pointer border-blue-700 bg-blue-600 text-white hover:bg-blue-700 hover:text-white lg:h-8 lg:w-auto lg:px-2 lg:transition-all lg:duration-200 lg:hover:-translate-y-0.5 lg:hover:shadow-md lg:active:translate-y-0"
+        >
+          <Eye className="h-4 w-4 lg:hidden" />
+          <span className="hidden lg:inline">☰ View</span>
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          onClick={onEditAction}
+          aria-label="Edit evaluation"
+          title="Edit this draft evaluation"
+          className="h-8 w-8 shrink-0 cursor-pointer border-amber-200 bg-amber-100 text-amber-800 hover:bg-amber-500 hover:text-white lg:h-8 lg:w-auto lg:px-2 lg:transition-all lg:duration-200 lg:hover:-translate-y-0.5 lg:hover:shadow-md lg:active:translate-y-0"
+        >
+          <Pencil className="h-4 w-4 lg:hidden" />
+          <span className="hidden lg:inline">✏️ Edit</span>
+        </Button>
+      </div>
+    );
+  }
+
+  if (showDraftReviewActions) {
     return (
       <div className="flex flex-col items-center justify-center gap-1 sm:flex-row sm:justify-end lg:flex-wrap lg:justify-start lg:gap-1.5">
         <Button

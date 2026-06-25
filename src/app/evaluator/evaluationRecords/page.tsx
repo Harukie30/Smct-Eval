@@ -42,6 +42,7 @@ import {
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
 import EvaluationEditRouter from "@/components/evaluation/EvaluationEditRouter";
 import ViewEvaluationMobileWarningModal from "@/components/evaluation/ViewEvaluationMobileWarningModal";
+import { useAuth } from "@/contexts/UserContext";
 import { useMobileViewport } from "@/hooks/useMobileViewport";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 import { toastMessages } from "@/lib/toastMessages";
@@ -72,6 +73,8 @@ import {
   isReviewDeletable,
   isReviewEditable,
   isReviewDraft,
+  isReviewDraftEditableByEvaluator,
+  isReviewEvaluatorCurrentUser,
   getDeleteEvaluationErrorMessage,
   getViewEvaluationErrorMessage,
   getEvaluationApiErrorMessage,
@@ -81,6 +84,7 @@ import {
 type Review = EvaluationRecordReview;
 
 export default function OverviewTab() {
+  const { user } = useAuth();
   const isMobileViewport = useMobileViewport();
   const { branchOptions, isLoading: branchListLoading } =
     useBranchesForEvaluation();
@@ -348,7 +352,12 @@ export default function OverviewTab() {
   };
 
   const handleEditEvaluation = async (review: Review) => {
-    if (!isReviewEditable(review)) return;
+    if (
+      !isReviewEditable(review) &&
+      !isReviewDraftEditableByEvaluator(review, user?.id)
+    ) {
+      return;
+    }
 
     setIsLoadingEditEvaluation(true);
     try {
@@ -979,25 +988,34 @@ export default function OverviewTab() {
                           </TableCell>
 
                           <TableCell className={evalTableActionsCellClass(rowClassName)}>
-                            <EvalRecordRowActions
-                              review={review}
-                              onViewAction={() => handleViewEvaluation(review)}
-                              onEditAction={() => handleEditEvaluation(review)}
-                              onDeleteAction={() => openDeleteModal(review)}
-                              onAcceptAction={
-                                isReviewDraft(review)
-                                  ? () => void handleAcceptDraft(review)
-                                  : undefined
-                              }
-                              onRejectAction={
-                                isReviewDraft(review)
-                                  ? () => openRejectDraftModal(review)
-                                  : undefined
-                              }
-                              deleting={deletingReviewId === review.id}
-                              accepting={acceptingReviewId === review.id}
-                              rejecting={rejectingReviewId === review.id}
-                            />
+                            {(() => {
+                              const isOwnDraft =
+                                isReviewDraft(review) &&
+                                isReviewEvaluatorCurrentUser(review, user?.id);
+
+                              return (
+                                <EvalRecordRowActions
+                                  review={review}
+                                  onViewAction={() => handleViewEvaluation(review)}
+                                  onEditAction={() => handleEditEvaluation(review)}
+                                  onDeleteAction={() => openDeleteModal(review)}
+                                  onAcceptAction={
+                                    isReviewDraft(review) && !isOwnDraft
+                                      ? () => void handleAcceptDraft(review)
+                                      : undefined
+                                  }
+                                  onRejectAction={
+                                    isReviewDraft(review) && !isOwnDraft
+                                      ? () => openRejectDraftModal(review)
+                                      : undefined
+                                  }
+                                  draftOwnedByCurrentUser={isOwnDraft}
+                                  deleting={deletingReviewId === review.id}
+                                  accepting={acceptingReviewId === review.id}
+                                  rejecting={rejectingReviewId === review.id}
+                                />
+                              );
+                            })()}
                           </TableCell>
                         </TableRow>
                       );

@@ -44,6 +44,7 @@ export default function AreaManagerEvaluationForm({
   onCancelAction,
   editSubmissionId,
   initialFormData,
+  hoResubmitType,
 }: AreaManagerEvaluationFormProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [welcomeAnimationKey, setWelcomeAnimationKey] = useState(0);
@@ -518,7 +519,8 @@ export default function AreaManagerEvaluationForm({
               employeeId,
               submissionPayload
             );
-          }
+          },
+          hoResubmitType
         );
         
         // Store in localStorage as backup

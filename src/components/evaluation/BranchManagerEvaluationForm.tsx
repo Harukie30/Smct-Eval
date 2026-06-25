@@ -46,6 +46,7 @@ export default function BranchManagerEvaluationForm({
   evaluationType = 'default',
   editSubmissionId,
   initialFormData,
+  hoResubmitType,
 }: BranchManagerEvaluationFormProps) {
   const [currentStep, setCurrentStep] = useState(0); // 0 = welcome step, 1-N = actual steps
   const [welcomeAnimationKey, setWelcomeAnimationKey] = useState(0);
@@ -509,7 +510,10 @@ export default function BranchManagerEvaluationForm({
         const evaluatorId = typeof user?.id === 'string' ? parseInt(user.id, 10) : (user?.id || 0);
         
         // Branch Manager/Supervisor uses appropriate endpoint based on evaluationType
-        await submitEvaluationWithOptionalEdit(editSubmissionId, form, async () => {
+        await submitEvaluationWithOptionalEdit(
+          editSubmissionId,
+          form,
+          async () => {
           if (evaluationType === 'rankNfile') {
             await apiService.postBranchRankNFile(employeeId, form);
           } else if (evaluationType === 'basic') {
@@ -518,7 +522,9 @@ export default function BranchManagerEvaluationForm({
             // Default evaluation for branch - use BranchBasic endpoint
             await apiService.postBranchBasic(employeeId, form);
           }
-        });
+        },
+          hoResubmitType
+        );
         
         // Store in localStorage as backup
         if (!editSubmissionId && employee) {

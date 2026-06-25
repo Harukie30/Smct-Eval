@@ -2,13 +2,13 @@
 
 import { useMemo } from "react";
 import { User } from "@/contexts/UserContext";
-import {
-  isSubmissionHoEditable,
-  resolveHoEvaluationEditRoute,
-} from "@/lib/evaluationFormRouting";
+import { resolveEvaluationEditRoute } from "@/lib/evaluationFormRouting";
 import { submissionToEvaluationPayload } from "@/lib/submissionToEvaluationPayload";
 import RankNfileHo from "./RankNfileHo";
 import BasicHo from "./BasicHo";
+import BranchRankNfileEvaluationForm from "./BranchRankNfileEvaluationForm";
+import BranchManagerEvaluationForm from "./BranchManagerEvaluationForm";
+import AreaManagerEvaluationForm from "./AreaManagerEvaluationForm";
 import { EvaluationFormEditOptions } from "./evaluationFormEdit";
 
 interface EvaluationEditRouterProps extends EvaluationFormEditOptions {
@@ -34,52 +34,74 @@ export default function EvaluationEditRouter({
     return submissionToEvaluationPayload(submission);
   }, [initialFormDataProp, submission]);
 
-  const isHoEditable = useMemo(
-    () => isSubmissionHoEditable(submission),
-    [submission]
-  );
-
   const route = useMemo(
-    () => resolveHoEvaluationEditRoute(submission),
+    () => resolveEvaluationEditRoute(submission),
     [submission]
   );
 
-  const editProps = {
+  const editProps: EvaluationFormEditOptions = {
     editSubmissionId: resolvedEditSubmissionId,
     initialFormData,
+    hoResubmitType:
+      route.form === "basicHo"
+        ? ("basic" as const)
+        : route.form === "rankNfileHo"
+        ? ("rankNfile" as const)
+        : route.form === "branchRankNfile"
+        ? ("branchRankNfile" as const)
+        : route.form === "branchManager"
+        ? ("branchBasic" as const)
+        : ("branchBasicAreaManager" as const),
   };
 
-  if (!isHoEditable) {
-    return (
-      <div className="flex min-h-[12rem] flex-col items-center justify-center gap-3 p-8 text-center">
-        <p className="text-lg font-semibold text-slate-800">
-          Editing is only available for HO evaluations
-        </p>
-        <p className="max-w-md text-sm text-slate-600">
-          This evaluation is not eligible for edit. Rejected branch evaluations
-          cannot be edited from this screen.
-        </p>
-      </div>
-    );
+  switch (route.form) {
+    case "basicHo":
+      return (
+        <BasicHo
+          employee={employee}
+          onCloseAction={onCloseAction}
+          onCancelAction={onCancelAction}
+          {...editProps}
+        />
+      );
+    case "rankNfileHo":
+      return (
+        <RankNfileHo
+          employee={employee}
+          onCloseAction={onCloseAction}
+          onCancelAction={onCancelAction}
+          {...editProps}
+        />
+      );
+    case "branchRankNfile":
+      return (
+        <BranchRankNfileEvaluationForm
+          employee={employee}
+          onCloseAction={onCloseAction}
+          onCancelAction={onCancelAction}
+          {...editProps}
+        />
+      );
+    case "branchManager":
+      return (
+        <BranchManagerEvaluationForm
+          employee={employee}
+          onCloseAction={onCloseAction}
+          onCancelAction={onCancelAction}
+          evaluationType={route.evaluationType}
+          {...editProps}
+        />
+      );
+    case "areaManager":
+      return (
+        <AreaManagerEvaluationForm
+          employee={employee}
+          onCloseAction={onCloseAction}
+          onCancelAction={onCancelAction}
+          {...editProps}
+        />
+      );
+    default:
+      return null;
   }
-
-  if (route === "basicHo") {
-    return (
-      <BasicHo
-        employee={employee}
-        onCloseAction={onCloseAction}
-        onCancelAction={onCancelAction}
-        {...editProps}
-      />
-    );
-  }
-
-  return (
-    <RankNfileHo
-      employee={employee}
-      onCloseAction={onCloseAction}
-      onCancelAction={onCancelAction}
-      {...editProps}
-    />
-  );
 }

@@ -711,6 +711,7 @@ export default function OverviewTab() {
       setReviewToDelete(null);
       setIsDeleteModalOpen(false);
     }
+
   };
 
   const openDeleteModal = (review: Review) => {
