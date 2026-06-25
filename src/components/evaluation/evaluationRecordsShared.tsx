@@ -201,6 +201,18 @@ export function isReviewDraftEditableByEvaluator(
   );
 }
 
+/** Pending evaluations can be edited when the signed-in user is the evaluator. */
+export function isReviewPendingEditableByEvaluator(
+  review: EvaluationRecordReview,
+  currentUserId: string | number | null | undefined
+): boolean {
+  const status = String(review.status ?? "").toLowerCase();
+  return (
+    status === "pending" &&
+    isReviewEvaluatorCurrentUser(review, currentUserId)
+  );
+}
+
 export function isReviewDeletable(review: EvaluationRecordReview): boolean {
   const status = String(review.status ?? "").toLowerCase();
   return status === "pending";
@@ -751,6 +763,7 @@ export function EvalRecordRowActions({
   onAcceptAction,
   onRejectAction,
   draftOwnedByCurrentUser = false,
+  allowPendingEditByCurrentUser = false,
   deleting,
   accepting,
   rejecting,
@@ -763,6 +776,8 @@ export function EvalRecordRowActions({
   onRejectAction?: () => void;
   /** When true on a draft row, show View + Edit instead of Accept/Reject. */
   draftOwnedByCurrentUser?: boolean;
+  /** When true on a pending row, show Edit for the signed-in evaluator. */
+  allowPendingEditByCurrentUser?: boolean;
   deleting?: boolean;
   accepting?: boolean;
   rejecting?: boolean;
@@ -775,7 +790,9 @@ export function EvalRecordRowActions({
     !draftOwnedByCurrentUser &&
     (onAcceptAction != null || onRejectAction != null);
   const canDelete = isReviewDeletable(review) && onDeleteAction != null;
-  const canEdit = isReviewEditable(review) && onEditAction != null;
+  const canEdit =
+    onEditAction != null &&
+    (isReviewEditable(review) || allowPendingEditByCurrentUser);
 
   if (showDraftOwnerActions) {
     return (
@@ -887,7 +904,11 @@ export function EvalRecordRowActions({
           size="icon"
           onClick={onEditAction}
           aria-label="Edit evaluation"
-          title="Edit this rejected HO evaluation"
+          title={
+            allowPendingEditByCurrentUser
+              ? "Edit this pending evaluation"
+              : "Edit this rejected HO evaluation"
+          }
           className="h-8 w-8 shrink-0 cursor-pointer border-amber-200 bg-amber-100 text-amber-800 hover:bg-amber-500 hover:text-white lg:h-8 lg:w-auto lg:px-2 lg:transition-all lg:duration-200 lg:hover:-translate-y-0.5 lg:hover:shadow-md lg:active:translate-y-0"
         >
           <Pencil className="h-4 w-4 lg:hidden" />

@@ -47,8 +47,11 @@ import {
 } from "@/components/ui/popover";
 
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
+import EvaluationEditRouter from "@/components/evaluation/EvaluationEditRouter";
+import ViewEvaluationMobileWarningModal from "@/components/evaluation/ViewEvaluationMobileWarningModal";
+import { useAuth } from "@/contexts/UserContext";
+import { useMobileViewport } from "@/hooks/useMobileViewport";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
-import { toastMessages } from "@/lib/toastMessages";
 import { cn } from "@/lib/utils";
 import {
   EvalRecordSignBadge,
@@ -65,8 +68,8 @@ import {
   EvaluationApiErrorDialog,
   type EvaluationRecordReview,
   getReviewRowClassName,
-  getDeleteEvaluationErrorMessage,
   getViewEvaluationErrorMessage,
+  isReviewPendingEditableByEvaluator,
   QUARTER_LATE_LEGEND_LABEL,
 } from "@/components/evaluation/evaluationRecordsShared";
 
@@ -196,13 +199,9 @@ function formatReviewStatusLabel(status: string): { short: string; full: string 
   return { short: s, full: s };
 }
 
-/** Delete only while verification is still pending (not after all parties approved). */
-function isReviewDeletable(review: Review): boolean {
-  const status = String(review.status ?? "").toLowerCase();
-  return status === "pending";
-}
-
 export default function OverviewTab() {
+  const { user } = useAuth();
+  const isMobileViewport = useMobileViewport();
   const [evaluations, setEvaluations] = useState<Review[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [isPageLoading, setIsPageLoading] = useState(false);
@@ -247,20 +246,23 @@ export default function OverviewTab() {
 
   const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
+  const [isEditEvaluationModalOpen, setIsEditEvaluationModalOpen] =
+    useState(false);
+  const [selectedSubmissionForEdit, setSelectedSubmissionForEdit] =
+    useState<any>(null);
+  const [isLoadingEditEvaluation, setIsLoadingEditEvaluation] = useState(false);
+  const [bypassEditMobileWarning, setBypassEditMobileWarning] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
   const [overviewTotal, setOverviewTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [perPage, setPerPage] = useState(0);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [reviewToDelete, setReviewToDelete] = useState<Review | null>(null);
   const [evaluationActionError, setEvaluationActionError] = useState<{
     title: string;
     message: string;
   } | null>(null);
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
   const [years, setYears] = useState<any[]>([]);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [branchesData, setBranchesData] = useState<any[]>([]);
   const [branchPopoverSearch, setBranchPopoverSearch] = useState("");
   const submissionsInFlightKeyRef = useRef<string | null>(null);
@@ -688,41 +690,46 @@ export default function OverviewTab() {
     }
   };
 
-  const handleDeleteClick = async (submission: any) => {
-    if (!submission || !isReviewDeletable(submission as Review)) {
+  const closeEditEvaluationModal = async () => {
+    setIsEditEvaluationModalOpen(false);
+    setSelectedSubmissionForEdit(null);
+    setBypassEditMobileWarning(false);
+    await handleRefresh();
+  };
+
+  const handleEditEvaluation = async (review: Review) => {
+    if (
+      !isReviewPendingEditableByEvaluator(
+        review as EvaluationRecordReview,
+        user?.id
+      )
+    ) {
       return;
     }
+
+    setIsLoadingEditEvaluation(true);
     try {
-      await clientDataService.deleteSubmission(submission.id);
-      await handleRefresh();
-      toastMessages.evaluation.deleted(
-        [submission.employee?.fname, submission.employee?.lname]
-          .filter(Boolean)
-          .join(" ")
-          .trim() || "—"
-      );
-      setReviewToDelete(null);
-      setIsDeleteModalOpen(false);
+      const submission = await clientDataService.getSubmissionById(review.id);
+
+      if (submission) {
+        setSelectedSubmissionForEdit(submission);
+        setIsEditEvaluationModalOpen(true);
+      } else {
+        setEvaluationActionError({
+          title: "Unable to Edit Evaluation",
+          message:
+            "Evaluation record was not found. Please refresh to view the latest updates.",
+        });
+      }
     } catch (error) {
       setEvaluationActionError({
-        title: "Unable to Delete Evaluation",
-        message: getDeleteEvaluationErrorMessage(error),
+        title: "Unable to Edit Evaluation",
+        message: getViewEvaluationErrorMessage(error),
       });
-      setReviewToDelete(null);
-      setIsDeleteModalOpen(false);
+    } finally {
+      setIsLoadingEditEvaluation(false);
     }
-
   };
-
-  const openDeleteModal = (review: Review) => {
-    if (!isReviewDeletable(review)) {
-      return;
-    }
-    setReviewToDelete(review);
-    setIsDeleteModalOpen(true);
-  };
-  
-
 
   return (
     <div className="relative ">
@@ -1414,7 +1421,11 @@ export default function OverviewTab() {
                             <EvalRecordRowActions
                               review={review as EvaluationRecordReview}
                               onViewAction={() => handleViewEvaluation(review)}
-                              onDeleteAction={() => openDeleteModal(review)}
+                              onEditAction={() => handleEditEvaluation(review)}
+                              allowPendingEditByCurrentUser={isReviewPendingEditableByEvaluator(
+                                review as EvaluationRecordReview,
+                                user?.id
+                              )}
                             />
                           </TableCell>
                         </EvalRecordTableRow>
@@ -1442,130 +1453,6 @@ export default function OverviewTab() {
           )}
         </div>
 
-        {/* Delete Confirmation Modal */}
-        <Dialog
-          open={isDeleteModalOpen}
-          onOpenChangeAction={(open) => {
-            setIsDeleteModalOpen(open);
-            if (!open) {
-              setReviewToDelete(null);
-            }
-          }}
-        >
-          <DialogContent className={`max-w-md p-6 ${dialogAnimationClass}`}>
-            <DialogHeader className="pb-4 bg-red-50 rounded-lg ">
-              <DialogTitle className="text-red-800 flex items-center gap-2">
-                <span className="text-xl">⚠️</span>
-                Delete Evaluation of{" "}
-                {(reviewToDelete?.employee?.fname || "") +
-                  " " +
-                  (reviewToDelete?.employee?.lname || "") || 
-                  reviewToDelete?.employee?.name || 
-                  "Unknown Employee"}
-              </DialogTitle>
-              <DialogDescription className="text-red-700">
-                This action cannot be undone. Are you sure you want to
-                permanently delete this evaluation?
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4 px-2 mt-8">
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <div className="flex items-start space-x-3">
-                  <div className="flex-shrink-0">
-                    <svg
-                      className="h-5 w-5 text-red-400"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </div>
-                  <div className="text-sm text-red-700">
-                    <p className="font-medium">
-                      Warning: This will permanently delete:
-                    </p>
-                    <ul className="mt-2 list-disc list-inside space-y-1">
-                      <li>This evaluation record</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                <div className="text-sm text-gray-700">
-                  <p className="font-medium">Evaluation Details:</p>
-                  <div className="mt-2 space-y-1">
-                    <p>
-                      <span className="font-medium">Employee Name:</span>{" "}
-                      {(reviewToDelete?.employee?.fname || "") +
-                        " " +
-                        (reviewToDelete?.employee?.lname || "") || 
-                        reviewToDelete?.employee?.name || 
-                        "Unknown Employee"}
-                    </p>
-                    <p>
-                      <span className="font-medium">Evaluator Name:</span>{" "}
-                      {(reviewToDelete?.evaluator?.fname || "") +
-                        " " +
-                        (reviewToDelete?.evaluator?.lname || "") || 
-                        reviewToDelete?.evaluator?.name || 
-                        "Unknown Evaluator"}
-                    </p>
-                    <p>
-                      <span className="font-medium">Branch:</span>{" "}
-                      {getEmployeeBranchCode(reviewToDelete?.employee)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <DialogFooter className="pt-6 px-2">
-              <div className="flex justify-end space-x-4 w-full">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setIsDeleteModalOpen(false);
-                    setReviewToDelete(null);
-                  }}
-                  className="text-white bg-red-600 hover:text-white hover:bg-red-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  disabled={isDeleting}
-                  className={`bg-blue-600 hover:bg-blue-700 text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 ${isDeleting ? "opacity-70 cursor-not-allowed hover:translate-y-0 hover:shadow-none" : ""}`}
-                  onClick={async () => {
-                    if (!reviewToDelete) return;
-
-                    setIsDeleting(true);
-
-                    try {
-                      await handleDeleteClick(reviewToDelete);
-                    } finally {
-                      setIsDeleting(false);
-                    }
-                  }}
-                >
-                  {isDeleting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Deleting...
-                    </>
-                  ) : (
-                    <>❌ Delete Permanently</>
-                  )}
-                </Button>
-              </div>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
         <EvaluationApiErrorDialog
           open={evaluationActionError != null}
           title={evaluationActionError?.title ?? ""}
@@ -1587,6 +1474,39 @@ export default function OverviewTab() {
           submission={selectedSubmission}
           showApprovalButton={false}
         />
+
+        {isEditEvaluationModalOpen &&
+        isMobileViewport &&
+        !bypassEditMobileWarning ? (
+          <ViewEvaluationMobileWarningModal
+            isOpen={isEditEvaluationModalOpen}
+            onCloseAction={closeEditEvaluationModal}
+            onViewAnywayAction={() => setBypassEditMobileWarning(true)}
+          />
+        ) : (
+          <Dialog
+            open={isEditEvaluationModalOpen}
+            onOpenChangeAction={(open) => {
+              if (!open) {
+                void closeEditEvaluationModal();
+              }
+            }}
+          >
+            <DialogContent className="max-w-7xl max-h-[101vh] overflow-hidden p-0 evaluation-container">
+              {isLoadingEditEvaluation ? (
+                <div className="flex min-h-[12rem] items-center justify-center p-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                </div>
+              ) : selectedSubmissionForEdit ? (
+                <EvaluationEditRouter
+                  submission={selectedSubmissionForEdit}
+                  onCloseAction={closeEditEvaluationModal}
+                  onCancelAction={closeEditEvaluationModal}
+                />
+              ) : null}
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
     </div>
   );
