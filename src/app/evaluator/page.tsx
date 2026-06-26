@@ -27,6 +27,7 @@ import apiService from "@/lib/apiService";
 import {
   formatRatingDisplay,
   getPerformanceRatingBand,
+  normalizeRatingOnFiveScale,
 } from "@/lib/performanceRatingDisplay";
 import { Progress } from "@/components/ui/progress";
 import EvaluationsPagination from "@/components/paginationComponent";
@@ -113,10 +114,12 @@ function evaluatorActionsCellClass(rowClassName: string) {
     rowClassName.includes("bg-yellow-50") && "lg:bg-yellow-50",
     rowClassName.includes("bg-blue-50") && "lg:bg-blue-50",
     rowClassName.includes("bg-orange-50") && "lg:bg-orange-50",
+    rowClassName.includes("bg-violet-50") && "lg:bg-violet-50",
     !rowClassName.includes("bg-green-50") &&
       !rowClassName.includes("bg-yellow-50") &&
       !rowClassName.includes("bg-blue-50") &&
       !rowClassName.includes("bg-orange-50") &&
+      !rowClassName.includes("bg-violet-50") &&
       "lg:bg-white"
   );
 }
@@ -138,9 +141,11 @@ function formatListDate(createdAt: string): { short: string; full: string } {
 }
 
 function formatStatusLabel(status: string): { short: string; full: string } {
-  if (status === "completed") return { short: "✓ Done", full: "✓ Completed" };
-  if (status === "pending") return { short: "⏳ Pend.", full: "⏳ Pending" };
-  return { short: status, full: status };
+  const s = String(status ?? "").toLowerCase();
+  if (s === "completed") return { short: "✓ Done", full: "✓ Completed" };
+  if (s === "pending") return { short: "⏳ Pend.", full: "⏳ Pending" };
+  if (s === "draft") return { short: "📝 Draft", full: "📝 Draft" };
+  return { short: s, full: s };
 }
 
 export default function OverviewTab() {
@@ -150,6 +155,7 @@ export default function OverviewTab() {
   const [totalPending, setTotalPending] = useState(0);
   const [totalApproved, setTotalApproved] = useState(0);
   const [totalEmployees, setTotalEmployees] = useState(0);
+  const [teamAverage, setTeamAverage] = useState<number | null>(null);
 
   //filters
   const [searchTerm, setSearchTerm] = useState("");
@@ -203,38 +209,16 @@ export default function OverviewTab() {
             itemsPerPage
           );
 
-          setData(response.myEval_as_Evaluator.data);
-          setTotalEvaluations(response.total_evaluations);
-          setTotalPending(response.total_pending);
-          setTotalApproved(response.total_approved);
+          setData(response.myEval_as_Evaluator?.data ?? []);
+          setTotalEvaluations(response.total_evaluations ?? 0);
+          setTotalPending(response.total_pending ?? 0);
+          setTotalApproved(response.total_approved ?? 0);
+          setTotalEmployees(response.total_employees ?? 0);
+          setTeamAverage(normalizeRatingOnFiveScale(response.team_average));
 
-          setOverviewTotal(response.myEval_as_Evaluator.total);
-          setTotalPages(response.myEval_as_Evaluator.last_page);
-          setPerPage(response.myEval_as_Evaluator.per_page);
-
-          // Fetch total employees count
-          try {
-            const employeesRes = await apiService.getAllEmployeeByAuth(
-              "",
-              1, // per_page
-              1  // page
-            );
-            // getAllEmployeeByAuth returns: { data: [...], total, last_page, per_page }
-            if (employeesRes && employeesRes.total !== undefined) {
-              setTotalEmployees(employeesRes.total);
-            } else if (employeesRes && Array.isArray(employeesRes)) {
-              // Fallback: if response is an array, use its length
-              setTotalEmployees(employeesRes.length);
-            } else if (response.total_employees !== undefined) {
-              setTotalEmployees(response.total_employees);
-            }
-          } catch (error) {
-            console.error("Error fetching total employees:", error);
-            // If API response has total_employees, use it as fallback
-            if (response.total_employees !== undefined) {
-              setTotalEmployees(response.total_employees);
-            }
-          }
+          setOverviewTotal(response.myEval_as_Evaluator?.total ?? 0);
+          setTotalPages(response.myEval_as_Evaluator?.last_page ?? 1);
+          setPerPage(response.myEval_as_Evaluator?.per_page ?? itemsPerPage);
         } catch (error) {
           console.error("Error fetching dashboard data:", error);
         } finally {
@@ -324,17 +308,24 @@ export default function OverviewTab() {
       <>
         {isRefreshing ? (
           // Skeleton cards for overview
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
             <Card>
               <CardHeader className="pb-2">
                 <Skeleton className="h-3 w-20" />
               </CardHeader>
               <CardContent>
-                <div className="flex items-center space-x-2">
-                  <Skeleton className="h-6 w-8" />
-                  <Skeleton className="h-3 w-6" />
-                </div>
-                <Skeleton className="h-5 w-16 mt-2 rounded-full" />
+                <Skeleton className="h-6 w-8" />
+                <Skeleton className="h-3 w-16 mt-1" />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <Skeleton className="h-3 w-20" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-6 w-10" />
+                <Skeleton className="h-3 w-16 mt-1" />
               </CardContent>
             </Card>
 
@@ -371,13 +362,22 @@ export default function OverviewTab() {
           </div>
         ) : (
           // Actual cards with real data
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
             <DashboardStatCard
               title="Total Evaluations"
               value={totalEvaluations}
               subtitle="Conducted by you"
               valueClassName="text-gray-900"
               cardClassName="border-gray-200 bg-white"
+            />
+            <DashboardStatCard
+              title="Team Average"
+              value={
+                teamAverage !== null ? formatRatingDisplay(teamAverage) : "—"
+              }
+              subtitle="Average team rating"
+              valueClassName="text-indigo-600"
+              cardClassName="border-indigo-200/90 bg-indigo-50/90"
             />
             <DashboardStatCard
               title="Pending Approvals"
@@ -408,7 +408,7 @@ export default function OverviewTab() {
             <DashboardStatCard
               title="Total Employees"
               value={totalEmployees}
-              subtitle="All registered employees"
+              subtitle="Assigned to you"
               valueClassName="text-blue-600"
               cardClassName="border-blue-200/90 bg-blue-50/90"
             />
@@ -437,7 +437,7 @@ export default function OverviewTab() {
           </CardTitle>
 
           <CardDescription>
-            Latest items awaiting evaluation ({totalEvaluations} total)
+            Latest evaluation submissions ({overviewTotal} in list)
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
@@ -528,6 +528,12 @@ export default function OverviewTab() {
                     </Badge>
                   </div>
                   <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-violet-50 border-l-2 border-l-violet-500 rounded"></div>
+                    <Badge className="bg-violet-200 text-violet-800 text-xs">
+                      Draft
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-1">
                     <div className="w-2 h-2 bg-green-50 border-l-2 border-l-green-500 rounded"></div>
                     <Badge className="bg-green-500 text-white text-xs">
                       Approved
@@ -609,6 +615,12 @@ export default function OverviewTab() {
                     </Badge>
                   </div>
                   <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-violet-50 border-l-2 border-l-violet-500 rounded"></div>
+                    <Badge className="bg-violet-200 text-violet-800 text-xs">
+                      Draft
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-1">
                     <div className="w-2 h-2 bg-green-50 border-l-2 border-l-green-500 rounded"></div>
                     <Badge className="bg-green-500 text-white text-xs">
                       Approved
@@ -646,9 +658,7 @@ export default function OverviewTab() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {Number(totalEvaluations) === 0 ||
-                    !data ||
-                    data.length === 0 ? (
+                    {(!data || data.length === 0) ? (
                       <TableRow key="no-submissions">
                         <TableCell
                           colSpan={5}
@@ -703,11 +713,16 @@ export default function OverviewTab() {
                         const isRecent = hoursDiff > 24 && hoursDiff <= 168; // 7 days
                         const isCompleted = review.status === "completed";
                         const isPending = review.status === "pending";
+                        const isDraft =
+                          String(review.status ?? "").toLowerCase() === "draft";
 
                         // Determine row background color
                         let rowClassName =
                           "hover:bg-gray-100 transition-colors";
-                        if (isCompleted) {
+                        if (isDraft) {
+                          rowClassName =
+                            "bg-violet-50 hover:bg-violet-100 border-l-4 border-l-violet-500 transition-colors";
+                        } else if (isCompleted) {
                           rowClassName =
                             "bg-green-50 hover:bg-green-100 border-l-4 border-l-green-500 transition-colors";
                         } else if (isNew) {
@@ -757,6 +772,11 @@ export default function OverviewTab() {
                                   {isPending && (
                                     <Badge className="bg-orange-100 px-1 py-0 text-[0.6rem] font-semibold text-orange-800 sm:text-xs">
                                       ⏳ Pending
+                                    </Badge>
+                                  )}
+                                  {isDraft && (
+                                    <Badge className="bg-violet-100 px-1 py-0 text-[0.6rem] font-semibold text-violet-800 sm:text-xs">
+                                      📝 Draft
                                     </Badge>
                                   )}
                                   {isCompleted && (

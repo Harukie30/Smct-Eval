@@ -11,6 +11,11 @@ import { Check, Eye, Pencil, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Dialog,
   DialogContent,
   DialogFooter,
@@ -82,12 +87,14 @@ export function evalTableActionsCellClass(rowClassName: string) {
     rowClassName.includes("bg-blue-50") && "lg:bg-blue-50",
     rowClassName.includes("bg-orange-50") && "lg:bg-orange-50",
     rowClassName.includes("bg-violet-50") && "lg:bg-violet-50",
+    rowClassName.includes("bg-gray-100") && "lg:bg-gray-100",
     !rowClassName.includes("bg-green-50") &&
       !rowClassName.includes("bg-red-200") &&
       !rowClassName.includes("bg-yellow-50") &&
       !rowClassName.includes("bg-blue-50") &&
       !rowClassName.includes("bg-orange-50") &&
       !rowClassName.includes("bg-violet-50") &&
+      !rowClassName.includes("bg-gray-50") &&
       "lg:bg-white"
   );
 }
@@ -156,7 +163,32 @@ export function formatReviewStatusLabel(status: string): {
   if (s === "completed") return { short: "✓ Done", full: "✓ completed" };
   if (s === "pending") return { short: "⏳ Pend.", full: "⏳ pending" };
   if (s === "draft") return { short: "📝 Draft", full: "📝 draft" };
+  if (s === "rejected") return { short: "✕ Rej.", full: "✕ rejected" };
   return { short: s, full: s };
+}
+
+export function isReviewRejected(review: EvaluationRecordReview): boolean {
+  return String(review.status ?? "").toLowerCase() === "rejected";
+}
+
+export function getReviewRejectionNote(
+  review: EvaluationRecordReview
+): string | null {
+  const extended = review as EvaluationRecordReview & {
+    noteIfRejected?: string | null;
+    note_if_rejected?: string | null;
+    rejection_note?: string | null;
+  };
+  for (const value of [
+    extended.noteIfRejected,
+    extended.note_if_rejected,
+    extended.rejection_note,
+  ]) {
+    if (value != null && String(value).trim() !== "") {
+      return String(value).trim();
+    }
+  }
+  return null;
 }
 
 export function isReviewDraft(review: EvaluationRecordReview): boolean {
@@ -218,10 +250,13 @@ export function isReviewDeletable(review: EvaluationRecordReview): boolean {
   return status === "pending";
 }
 
-export function isReviewEditable(review: EvaluationRecordReview): boolean {
-  const status = String(review.status ?? "").toLowerCase();
-  if (status !== "rejected") return false;
-  return isEmployeeHeadOffice(review.employee);
+export function isReviewEditable(
+  review: EvaluationRecordReview,
+  currentUserId: string | number | null | undefined
+): boolean {
+  if (!isReviewRejected(review)) return false;
+  if (!isEmployeeHeadOffice(review.employee)) return false;
+  return isReviewEvaluatorCurrentUser(review, currentUserId);
 }
 
 export function getEvaluationApiErrorMessage(
@@ -578,6 +613,50 @@ export function shouldShowHrSignPending(
   );
 }
 
+function getReviewStatusBadgeClass(status: string): string {
+  const s = String(status ?? "").toLowerCase();
+  if (s === "completed") return "bg-green-100 text-green-800";
+  if (s === "pending") return "bg-yellow-100 text-yellow-800";
+  if (s === "draft") return "bg-violet-100 text-violet-800";
+  if (s === "rejected") return "bg-red-100 text-red-800";
+  return "bg-gray-100 text-gray-800";
+}
+
+export function EvalRecordStatusBadge({
+  review,
+}: {
+  review: EvaluationRecordReview;
+}) {
+  const statusLabels = formatReviewStatusLabel(review.status);
+  const rejectionNote = getReviewRejectionNote(review);
+  const showRejectionTooltip =
+    isReviewRejected(review) && rejectionNote != null;
+
+  const badge = (
+    <Badge
+      className={cn(
+        "text-[0.65rem] sm:text-xs",
+        getReviewStatusBadgeClass(review.status),
+        showRejectionTooltip && "cursor-help"
+      )}
+    >
+      <span className="sm:hidden">{statusLabels.short}</span>
+      <span className="hidden sm:inline">{statusLabels.full}</span>
+    </Badge>
+  );
+
+  if (!showRejectionTooltip) return badge;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{badge}</TooltipTrigger>
+      <TooltipContent side="top" className="max-w-xs whitespace-pre-wrap">
+        {rejectionNote}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 export function EvalRecordSignBadge({
   signed,
   pending = false,
@@ -699,6 +778,10 @@ export function getReviewRowClassName(review: EvaluationRecordReview): string {
     return "bg-violet-50 hover:bg-violet-200 border-l-4 border-l-violet-600 transition-colors";
   }
 
+  if (isReviewRejected(review)) {
+    return "bg-gray-200 hover:bg-gray-300 border-l-4 border-l-gray-600 transition-colors";
+  }
+
   if (isCompleted) {
     return "bg-green-50 hover:bg-green-100 border-l-4 border-l-green-500 transition-colors";
   }
@@ -763,6 +846,7 @@ export function EvalRecordRowActions({
   onDeleteAction,
   onAcceptAction,
   onRejectAction,
+  currentUserId,
   draftOwnedByCurrentUser = false,
   allowPendingEditByCurrentUser = false,
   deleting,
@@ -775,6 +859,7 @@ export function EvalRecordRowActions({
   onDeleteAction?: () => void;
   onAcceptAction?: () => void;
   onRejectAction?: () => void;
+  currentUserId?: string | number | null;
   /** When true on a draft row, show View + Edit instead of Accept/Reject. */
   draftOwnedByCurrentUser?: boolean;
   /** When true on a pending row, show Edit for the signed-in evaluator. */
@@ -793,7 +878,8 @@ export function EvalRecordRowActions({
   const canDelete = isReviewDeletable(review) && onDeleteAction != null;
   const canEdit =
     onEditAction != null &&
-    (isReviewEditable(review) || allowPendingEditByCurrentUser);
+    (isReviewEditable(review, currentUserId) ||
+      allowPendingEditByCurrentUser);
 
   if (showDraftOwnerActions) {
     return (

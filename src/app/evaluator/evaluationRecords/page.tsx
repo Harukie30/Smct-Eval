@@ -57,6 +57,7 @@ import {
   EVAL_TABLE_ACTIONS_HEAD_CLASS,
   EvalRecordRowActions,
   EvalRecordSignBadge,
+  EvalRecordStatusBadge,
   EvaluationApiErrorDialog,
   RATING_DISPLAY_BANDS,
   hasEmployeeSigned,
@@ -64,7 +65,6 @@ import {
   evalTableActionsCellClass,
   formatRatingDisplay,
   formatReviewListDate,
-  formatReviewStatusLabel,
   getQuarterColor,
   getRatingBadgeClassFromBands,
   getReviewListRating,
@@ -81,7 +81,7 @@ import {
 
 type Review = EvaluationRecordReview;
 
-const REJECT_DRAFT_NOTE_MIN_LENGTH = 20;
+const REJECT_DRAFT_NOTE_MAX_LENGTH = 20;
 
 export default function OverviewTab() {
   const { user } = useAuth();
@@ -91,6 +91,7 @@ export default function OverviewTab() {
 
   const [evaluations, setEvaluations] = useState<Review[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [isLoadingEvaluations, setIsLoadingEvaluations] = useState(true);
   const [isPageLoading, setIsPageLoading] = useState(false);
   //filters
   const [searchTerm, setSearchTerm] = useState("");
@@ -171,6 +172,7 @@ export default function OverviewTab() {
     }
 
     const requestPromise = (async () => {
+      setIsLoadingEvaluations(true);
       try {
         const response = await apiService.getEvalAuthEvaluator(
           searchValue,
@@ -210,6 +212,7 @@ export default function OverviewTab() {
         setTotalPages(1);
         setPerPage(itemsPerPage);
       } finally {
+        setIsLoadingEvaluations(false);
         if (evaluationsInFlightKeyRef.current === requestKey) {
           evaluationsInFlightKeyRef.current = null;
           evaluationsInFlightPromiseRef.current = null;
@@ -224,15 +227,11 @@ export default function OverviewTab() {
 
   useEffect(() => {
     const mount = async () => {
-      setRefreshing(true);
       try {
         const years = await apiService.getAllYears();
         setYears(years);
       } catch (error) {
         console.log(error);
-        setRefreshing(false);
-      } finally {
-        setRefreshing(false);
       }
     };
     mount();
@@ -350,7 +349,7 @@ export default function OverviewTab() {
   };
 
   const handleEditEvaluation = async (review: Review) => {
-    if (!isReviewEditable(review)) return;
+    if (!isReviewEditable(review, user?.id)) return;
 
     setIsLoadingEditEvaluation(true);
     try {
@@ -419,7 +418,8 @@ export default function OverviewTab() {
     const note = rejectDraftNote.trim();
     if (
       !reviewToReject ||
-      note.length < REJECT_DRAFT_NOTE_MIN_LENGTH ||
+      note.length === 0 ||
+      note.length > REJECT_DRAFT_NOTE_MAX_LENGTH ||
       rejectingReviewId != null ||
       acceptingReviewId != null
     ) {
@@ -696,6 +696,12 @@ export default function OverviewTab() {
                 </Badge>
               </div>
               <div className="flex items-center gap-1">
+                <div className="w-2 h-2 bg-gray-400 border-l-2 border-l-gray-500 rounded"></div>
+                <Badge className="bg-red-100 text-red-800 text-xs">
+                  Rejected
+                </Badge>
+              </div>
+              <div className="flex items-center gap-1">
                 <div className="w-2 h-2 bg-green-50 border-l-2 border-l-green-500 rounded"></div>
                 <Badge className="bg-green-500 text-white text-xs">
                   Completed
@@ -729,13 +735,11 @@ export default function OverviewTab() {
                 scrollbarColor: "#cbd5e1 #f1f5f9",
               }}
             >
-              {refreshing && ( // Only show spinner for initial refresh
-                <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none bg-white/80">
-                  <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
+              {(refreshing || isPageLoading || isLoadingEvaluations) && (
+                <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
+                  <div className="flex flex-col items-center gap-3 rounded-lg bg-white/95 px-8 py-6 shadow-lg">
                     <div className="relative">
-                      {/* Spinning ring */}
-                      <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
-                      {/* Logo in center */}
+                      <div className="h-16 w-16 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
                       <div className="absolute inset-0 flex items-center justify-center">
                         <img
                           src="/smct.png"
@@ -744,8 +748,8 @@ export default function OverviewTab() {
                         />
                       </div>
                     </div>
-                    <p className="text-sm text-gray-600 font-medium">
-                      Refreshing...
+                    <p className="text-sm font-medium text-gray-600">
+                      {refreshing ? "Refreshing..." : "Loading records..."}
                     </p>
                   </div>
                 </div>
@@ -789,38 +793,44 @@ export default function OverviewTab() {
                   </TableRow>
                 </TableHeader>
                 <TableBody className="divide-y divide-gray-200">
-                  {refreshing || isPageLoading ? (
+                  {refreshing || isPageLoading || isLoadingEvaluations ? (
                     Array.from({ length: itemsPerPage }).map((_, index) => (
                       <TableRow key={`skeleton-${index}`}>
                         <TableCell>
-                          <Skeleton className="h-5 w-20 sm:h-6 sm:w-24" />
+                          <div className="flex items-center space-x-3">
+                            <Skeleton className="h-8 w-8 rounded-full" />
+                            <div className="space-y-2">
+                              <Skeleton className="h-4 w-24" />
+                              <Skeleton className="h-3 w-16" />
+                            </div>
+                          </div>
                         </TableCell>
                         <TableCell>
-                          <Skeleton className="h-5 w-20 sm:h-6 sm:w-24" />
+                          <Skeleton className="h-4 w-24" />
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
-                          <Skeleton className="h-5 w-14 sm:h-6 sm:w-20" />
+                          <Skeleton className="h-4 w-16" />
                         </TableCell>
                         <TableCell>
-                          <Skeleton className="h-5 w-12 sm:h-6 sm:w-16" />
+                          <Skeleton className="h-6 w-16 rounded-full" />
                         </TableCell>
                         <TableCell>
-                          <Skeleton className="h-5 w-24 sm:h-6 sm:w-28" />
+                          <Skeleton className="h-4 w-20" />
                         </TableCell>
                         <TableCell>
-                          <Skeleton className="h-5 w-12 sm:h-6 sm:w-16" />
+                          <Skeleton className="h-6 w-20 rounded-full" />
                         </TableCell>
                         <TableCell>
-                          <Skeleton className="h-5 w-16 sm:h-6 sm:w-20" />
+                          <Skeleton className="h-6 w-16 rounded-full" />
                         </TableCell>
                         <TableCell className="hidden lg:table-cell">
-                          <Skeleton className="h-5 w-14 sm:h-6 sm:w-20" />
+                          <Skeleton className="h-5 w-14" />
                         </TableCell>
                         <TableCell className="hidden xl:table-cell">
-                          <Skeleton className="h-5 w-14 sm:h-6 sm:w-20" />
+                          <Skeleton className="h-5 w-14" />
                         </TableCell>
                         <TableCell className={evalTableActionsCellClass("")}>
-                          <Skeleton className="mx-auto h-8 w-8 rounded-md sm:mx-0 sm:h-8 sm:w-24" />
+                          <Skeleton className="mx-auto h-8 w-8 rounded-md bg-gray-200 sm:mx-0" />
                         </TableCell>
                       </TableRow>
                     ))
@@ -869,7 +879,6 @@ export default function OverviewTab() {
                     evaluations.map((review) => {
                       const rowClassName = getReviewRowClassName(review);
                       const reviewDate = formatReviewListDate(review.created_at);
-                      const statusLabels = formatReviewStatusLabel(review.status);
                       const quarterDisplay = getReviewQuarterDisplay(review);
 
                       return (
@@ -929,23 +938,7 @@ export default function OverviewTab() {
                             })()}
                           </TableCell>
                           <TableCell>
-                            <Badge
-                              className={cn(
-                                "text-[0.65rem] sm:text-xs",
-                                review.status === "completed"
-                                  ? "bg-green-100 text-green-800"
-                                  : review.status === "pending"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : review.status === "draft"
-                                  ? "bg-violet-100 text-violet-800"
-                                  : "bg-yellow-100 text-yellow-800"
-                              )}
-                            >
-                              <span className="sm:hidden">{statusLabels.short}</span>
-                              <span className="hidden sm:inline">
-                                {statusLabels.full}
-                              </span>
-                            </Badge>
+                            <EvalRecordStatusBadge review={review} />
                           </TableCell>
                           <TableCell className="hidden text-gray-600 lg:table-cell">
                             <EvalRecordSignBadge
@@ -970,6 +963,7 @@ export default function OverviewTab() {
                               return (
                                 <EvalRecordRowActions
                                   review={review}
+                                  currentUserId={user?.id}
                                   onViewAction={() => handleViewEvaluation(review)}
                                   onEditAction={() => handleEditEvaluation(review)}
                                   onAcceptAction={
@@ -1050,22 +1044,28 @@ export default function OverviewTab() {
               <Textarea
                 id="reject-draft-note"
                 value={rejectDraftNote}
-                onChange={(e) => setRejectDraftNote(e.target.value)}
-                placeholder="Explain why this draft is being rejected (at least 20 characters)..."
+                onChange={(e) =>
+                  setRejectDraftNote(
+                    e.target.value.slice(0, REJECT_DRAFT_NOTE_MAX_LENGTH)
+                  )
+                }
+                placeholder="Explain why this draft is being rejected (max 20 characters)..."
                 rows={4}
-                minLength={REJECT_DRAFT_NOTE_MIN_LENGTH}
+                maxLength={REJECT_DRAFT_NOTE_MAX_LENGTH}
                 className="resize-y min-h-[6rem]"
               />
               <p
                 className={cn(
                   "text-xs",
-                  rejectDraftNote.trim().length >= REJECT_DRAFT_NOTE_MIN_LENGTH
-                    ? "text-muted-foreground"
-                    : "text-amber-700"
+                  rejectDraftNote.trim().length === 0
+                    ? "text-amber-700"
+                    : rejectDraftNote.length >= REJECT_DRAFT_NOTE_MAX_LENGTH
+                      ? "text-red-600"
+                      : "text-muted-foreground"
                 )}
               >
-                {rejectDraftNote.trim().length}/{REJECT_DRAFT_NOTE_MIN_LENGTH}{" "}
-                characters minimum required to reject this draft.
+                {rejectDraftNote.length}/{REJECT_DRAFT_NOTE_MAX_LENGTH}{" "}
+                characters maximum. A note is required to reject this draft.
               </p>
             </div>
 
@@ -1083,7 +1083,8 @@ export default function OverviewTab() {
                   onClick={() => void handleRejectDraft()}
                   disabled={
                     rejectingReviewId !== null ||
-                    rejectDraftNote.trim().length < REJECT_DRAFT_NOTE_MIN_LENGTH
+                    rejectDraftNote.trim().length === 0 ||
+                    rejectDraftNote.length > REJECT_DRAFT_NOTE_MAX_LENGTH
                   }
                 >
                   {rejectingReviewId === reviewToReject?.id ? (
