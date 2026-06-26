@@ -11,7 +11,7 @@ import Step8 from "./Step8";
 import OverallAssessmentBasic from "./OverallAssessmentBasic";
 import { EvaluationStepConfig } from "./types";
 import { User } from "../../contexts/UserContext";
-import { EvaluationFormEditOptions } from "./evaluationFormEdit";
+import { EvaluationFormSessionProps } from "./evaluationFormEdit";
 
 // Basic HO evaluation configuration - Steps 1-6, Step 7 (Managerial Skills), Step 8 (Overall Assessment with Managerial Skills)
 // Note: Job Targets (qualityOfWorkScore5) is automatically excluded from Step2 and calculations for HO users
@@ -26,7 +26,7 @@ const basicHoSteps: EvaluationStepConfig[] = [
   { id: 8, title: "Overall Assessment", component: OverallAssessmentBasic },
 ];
 
-interface BasicHoProps extends EvaluationFormEditOptions {
+interface BasicHoProps extends EvaluationFormSessionProps {
   employee?: User | null;
   onCloseAction?: () => void;
   onCancelAction?: () => void;
@@ -36,9 +36,7 @@ export default function BasicHo({
   employee,
   onCloseAction,
   onCancelAction,
-  editSubmissionId,
-  initialFormData,
-  hoResubmitType,
+  editSession,
 }: BasicHoProps) {
   return (
     <EvaluationForm
@@ -47,9 +45,7 @@ export default function BasicHo({
       onCancelAction={onCancelAction}
       steps={basicHoSteps}
       evaluationType="basic"
-      editSubmissionId={editSubmissionId}
-      initialFormData={initialFormData}
-      hoResubmitType={hoResubmitType ?? "basic"}
+      editSession={editSession}
     />
   );
 }

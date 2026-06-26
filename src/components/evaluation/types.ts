@@ -126,6 +126,14 @@ interface EvaluationPayload {
 
 export type { EvaluationPayload };
 
+/** API record from GET /submissions/:id — use submissionToEvaluationPayload() for forms. */
+export type {
+  EvaluationScoreItem,
+  EvaluationSubmissionData,
+  EvaluationSubmissionEmployee,
+  EvaluationSubmissionRecord,
+} from "@/lib/evaluationSubmissionRecord";
+
 import React from "react";
 
 // Evaluation step configuration

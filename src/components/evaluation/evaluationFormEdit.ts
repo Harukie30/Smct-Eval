@@ -1,21 +1,23 @@
 import { useEffect, type Dispatch, type SetStateAction } from "react";
 import { EvaluationPayload } from "./types";
-import type { HoResubmitType } from "@/lib/evaluationEditSubmit";
+import {
+  type EvaluationEditSession,
+  isEditSession,
+} from "@/lib/evaluationEditTypes";
 
-export interface EvaluationFormEditOptions {
-  editSubmissionId?: number;
-  initialFormData?: Partial<EvaluationPayload>;
-  /** Required when resubmitting an edited evaluation */
-  hoResubmitType?: HoResubmitType;
+export interface EvaluationFormSessionProps {
+  /** Present when editing an existing evaluation (e.g. rejected resubmit). */
+  editSession?: EvaluationEditSession;
 }
+
+export type { EvaluationEditSession } from "@/lib/evaluationEditTypes";
 
 export function useApplyInitialFormData(
   setForm: Dispatch<SetStateAction<EvaluationPayload>>,
-  editSubmissionId?: number,
-  initialFormData?: Partial<EvaluationPayload>
+  editSession?: EvaluationEditSession
 ) {
   useEffect(() => {
-    if (!editSubmissionId || !initialFormData) return;
-    setForm((prev) => ({ ...prev, ...initialFormData }));
-  }, [editSubmissionId, initialFormData, setForm]);
+    if (!isEditSession(editSession)) return;
+    setForm((prev) => ({ ...prev, ...editSession.initialData }));
+  }, [editSession, setForm]);
 }

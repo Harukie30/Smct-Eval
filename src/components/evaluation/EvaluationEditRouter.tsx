@@ -2,19 +2,25 @@
 
 import { useMemo } from "react";
 import { User } from "@/contexts/UserContext";
-import { resolveEvaluationEditRoute } from "@/lib/evaluationFormRouting";
-import { submissionToEvaluationPayload } from "@/lib/submissionToEvaluationPayload";
+import { buildEditSession } from "@/lib/evaluationEditTypes";
+import {
+  asEvaluationSubmissionRecord,
+  type EvaluationSubmissionRecord,
+  getSubmissionRecordId,
+} from "@/lib/evaluationSubmissionRecord";
 import RankNfileHo from "./RankNfileHo";
 import BasicHo from "./BasicHo";
 import BranchRankNfileEvaluationForm from "./BranchRankNfileEvaluationForm";
 import BranchManagerEvaluationForm from "./BranchManagerEvaluationForm";
 import AreaManagerEvaluationForm from "./AreaManagerEvaluationForm";
-import { EvaluationFormEditOptions } from "./evaluationFormEdit";
+import { EvaluationFormSessionProps } from "./evaluationFormEdit";
 
-interface EvaluationEditRouterProps extends EvaluationFormEditOptions {
-  submission: Record<string, unknown> | null;
+interface EvaluationEditRouterProps extends EvaluationFormSessionProps {
+  submission: EvaluationSubmissionRecord | null;
   onCloseAction?: () => void;
   onCancelAction?: () => void;
+  /** Override submission id when not on submission.id */
+  editSubmissionId?: number;
 }
 
 export default function EvaluationEditRouter({
@@ -22,55 +28,39 @@ export default function EvaluationEditRouter({
   onCloseAction,
   onCancelAction,
   editSubmissionId,
-  initialFormData: initialFormDataProp,
+  editSession: editSessionProp,
 }: EvaluationEditRouterProps) {
   const employee = (submission?.employee as User | undefined) ?? null;
-  const resolvedEditSubmissionId =
-    editSubmissionId ?? (Number(submission?.id ?? 0) || undefined);
 
-  const initialFormData = useMemo(() => {
-    if (initialFormDataProp) return initialFormDataProp;
-    if (!submission) return undefined;
-    return submissionToEvaluationPayload(submission);
-  }, [initialFormDataProp, submission]);
+  const editSession = useMemo(() => {
+    if (editSessionProp) return editSessionProp;
+    const submissionId =
+      editSubmissionId ?? getSubmissionRecordId(submission);
+    if (!submissionId) return undefined;
+    return buildEditSession(submissionId, submission);
+  }, [editSessionProp, editSubmissionId, submission]);
 
-  const route = useMemo(
-    () => resolveEvaluationEditRoute(submission),
-    [submission]
-  );
+  if (!editSession) return null;
 
-  const editProps: EvaluationFormEditOptions = {
-    editSubmissionId: resolvedEditSubmissionId,
-    initialFormData,
-    hoResubmitType:
-      route.form === "basicHo"
-        ? ("basic" as const)
-        : route.form === "rankNfileHo"
-        ? ("rankNfile" as const)
-        : route.form === "branchRankNfile"
-        ? ("branchRankNfile" as const)
-        : route.form === "branchManager"
-        ? ("branchBasic" as const)
-        : ("branchBasicAreaManager" as const),
-  };
+  const sessionProps = { editSession };
 
-  switch (route.form) {
-    case "basicHo":
+  switch (editSession.variant) {
+    case "hoBasic":
       return (
         <BasicHo
           employee={employee}
           onCloseAction={onCloseAction}
           onCancelAction={onCancelAction}
-          {...editProps}
+          {...sessionProps}
         />
       );
-    case "rankNfileHo":
+    case "hoRankNfile":
       return (
         <RankNfileHo
           employee={employee}
           onCloseAction={onCloseAction}
           onCancelAction={onCancelAction}
-          {...editProps}
+          {...sessionProps}
         />
       );
     case "branchRankNfile":
@@ -79,7 +69,7 @@ export default function EvaluationEditRouter({
           employee={employee}
           onCloseAction={onCloseAction}
           onCancelAction={onCancelAction}
-          {...editProps}
+          {...sessionProps}
         />
       );
     case "branchManager":
@@ -88,8 +78,8 @@ export default function EvaluationEditRouter({
           employee={employee}
           onCloseAction={onCloseAction}
           onCancelAction={onCancelAction}
-          evaluationType={route.evaluationType}
-          {...editProps}
+          evaluationType={editSession.branchEvaluationType ?? "basic"}
+          {...sessionProps}
         />
       );
     case "areaManager":
@@ -98,7 +88,7 @@ export default function EvaluationEditRouter({
           employee={employee}
           onCloseAction={onCloseAction}
           onCancelAction={onCancelAction}
-          {...editProps}
+          {...sessionProps}
         />
       );
     default:

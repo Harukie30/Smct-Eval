@@ -124,7 +124,7 @@ export default function WelcomeStep({
       )}
 
       {/* Welcome Header */}
-      <div className={disabled ? "pointer-events-none space-y-6 opacity-60" : "space-y-6"}>
+      <div className={disabled ? "pointer-events-none opacity-60" : undefined}>
         <div className="text-center">
         <h3 className="text-2xl font-bold text-gray-900 mb-2">
           Welcome to Performance Evaluation

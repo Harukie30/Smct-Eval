@@ -7,13 +7,11 @@ const USER_LIST_SORT_PARAMS = {
   direction: "asc",
 } as const;
 import { EvaluationPayload } from "../components/evaluation/types";
+import type { EvaluationResubmitType } from "@/lib/evaluationEditTypes";
+import type { EvaluationSubmissionRecord } from "@/lib/evaluationSubmissionRecord";
+import { asEvaluationSubmissionRecord } from "@/lib/evaluationSubmissionRecord";
 
-export type ResubmitEvaluationType =
-  | "rankNfile"
-  | "basic"
-  | "branchRankNfile"
-  | "branchBasic"
-  | "branchBasicAreaManager";
+export type ResubmitEvaluationType = EvaluationResubmitType;
 
 function isAxiosNotFound(error: unknown): boolean {
   return (
@@ -301,10 +299,12 @@ export const apiService = {
     return response.data.evaluations;
   },
 
-  getSubmissionById: async (id: number | string): Promise<any | null> => {
+  getSubmissionById: async (
+    id: number | string
+  ): Promise<EvaluationSubmissionRecord | null> => {
     try {
       const response = await api.get(`/submissions/${id}`);
-      return response.data.user_eval ?? null;
+      return asEvaluationSubmissionRecord(response.data.user_eval);
     } catch (error) {
       // 404 is expected when a list row points at a deleted/missing evaluation.
       // Return null so callers show the dialog without Next.js surfacing an Axios throw.
@@ -870,7 +870,7 @@ export const apiService = {
    */
   resubmitEvaluation: async (
     submissionId: number | string,
-    submission: EvaluationPayload,
+    submission: EvaluationPayload | Record<string, unknown>,
     evaluationType: ResubmitEvaluationType
   ): Promise<any> => {
     const endpointByType: Record<ResubmitEvaluationType, string> = {
@@ -884,7 +884,13 @@ export const apiService = {
     const endpoint = endpointByType[evaluationType];
     const response = await api.post(
       `/${endpoint}/resubmit/${submissionId}`,
-      submission
+      submission,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+      }
     );
     return response.data;
   },

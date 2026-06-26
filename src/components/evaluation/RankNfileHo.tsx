@@ -10,7 +10,7 @@ import Step6 from "./Step6";
 import OverallAssessmentRankNfile from "./OverallAssessmentRankNfile";
 import { EvaluationStepConfig } from "./types";
 import { User } from "../../contexts/UserContext";
-import { EvaluationFormEditOptions } from "./evaluationFormEdit";
+import { EvaluationFormSessionProps } from "./evaluationFormEdit";
 
 // Rank and File HO evaluation configuration - Steps 1-6, Step 7 (Overall Assessment without Customer Service)
 // Note: Job Targets (qualityOfWorkScore5) is automatically excluded from Step2 and calculations for HO users
@@ -24,7 +24,7 @@ const rankNfileHoSteps: EvaluationStepConfig[] = [
   { id: 7, title: "Overall Assessment", component: OverallAssessmentRankNfile },
 ];
 
-interface RankNfileHoProps extends EvaluationFormEditOptions {
+interface RankNfileHoProps extends EvaluationFormSessionProps {
   employee?: User | null;
   onCloseAction?: () => void;
   onCancelAction?: () => void;
@@ -34,9 +34,7 @@ export default function RankNfileHo({
   employee,
   onCloseAction,
   onCancelAction,
-  editSubmissionId,
-  initialFormData,
-  hoResubmitType,
+  editSession,
 }: RankNfileHoProps) {
   return (
     <EvaluationForm
@@ -45,9 +43,7 @@ export default function RankNfileHo({
       onCancelAction={onCancelAction}
       steps={rankNfileHoSteps}
       evaluationType="rankNfile"
-      editSubmissionId={editSubmissionId}
-      initialFormData={initialFormData}
-      hoResubmitType={hoResubmitType ?? "rankNfile"}
+      editSession={editSession}
     />
   );
 }

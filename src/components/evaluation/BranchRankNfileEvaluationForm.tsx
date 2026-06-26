@@ -27,12 +27,13 @@ import { User, useAuth } from "../../contexts/UserContext";
 import { useBranchesForEvaluation } from "@/hooks/useBranchesForEvaluation";
 import { branchRankNfileSteps } from "./configs/branchRankNfileConfig";
 import {
-  EvaluationFormEditOptions,
+  EvaluationFormSessionProps,
   useApplyInitialFormData,
 } from "./evaluationFormEdit";
-import { submitEvaluationWithOptionalEdit } from "@/lib/evaluationEditSubmit";
+import { submitEvaluationForm } from "@/lib/evaluationEditSubmit";
+import { isEditSession } from "@/lib/evaluationEditTypes";
 
-interface BranchRankNfileEvaluationFormProps extends EvaluationFormEditOptions {
+interface BranchRankNfileEvaluationFormProps extends EvaluationFormSessionProps {
   employee?: User | null;
   onCloseAction?: () => void;
   onCancelAction?: () => void;
@@ -42,9 +43,7 @@ export default function BranchRankNfileEvaluationForm({
   employee,
   onCloseAction,
   onCancelAction,
-  editSubmissionId,
-  initialFormData,
-  hoResubmitType,
+  editSession,
 }: BranchRankNfileEvaluationFormProps) {
   const [currentStep, setCurrentStep] = useState(0); // 0 = welcome step, 1-N = actual steps
   const [welcomeAnimationKey, setWelcomeAnimationKey] = useState(0);
@@ -145,7 +144,7 @@ export default function BranchRankNfileEvaluationForm({
     created_at: "",
   });
 
-  useApplyInitialFormData(setForm, editSubmissionId, initialFormData);
+  useApplyInitialFormData(setForm, editSession);
 
   const updateDataAction = useCallback((updates: Partial<EvaluationPayload>) => {
     setForm((prev: EvaluationPayload) => ({
@@ -464,17 +463,12 @@ export default function BranchRankNfileEvaluationForm({
         const evaluatorId = typeof user?.id === 'string' ? parseInt(user.id, 10) : (user?.id || 0);
         
         // BranchRankNfile always uses postBranchRankNFile endpoint
-        await submitEvaluationWithOptionalEdit(
-          editSubmissionId,
-          form,
-          async () => {
+        await submitEvaluationForm(editSession, form, async () => {
             await apiService.postBranchRankNFile(employeeId, form);
-          },
-          hoResubmitType ?? "branchRankNfile"
-        );
+          });
         
         // Store in localStorage as backup
-        if (!editSubmissionId && employee) {
+        if (!isEditSession(editSession) && employee) {
           await storeEvaluationResult({
             employeeId: employeeId,
             employeeEmail: employee.email || "",

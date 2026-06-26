@@ -77,8 +77,13 @@ export function getPerformanceRatingBand(raw: unknown): PerformanceRatingBand {
   };
 }
 
+function formatRatingNumber(ratingNum: number): string {
+  const rounded = Math.round(ratingNum * 10) / 10;
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+}
+
 export function formatRatingDisplay(raw: unknown): string {
   const ratingNum = normalizeRatingOnFiveScale(raw);
   if (ratingNum === null) return "—";
-  return `${ratingNum}/${PERFORMANCE_RATING_SCALE_MAX}`;
+  return `${formatRatingNumber(ratingNum)}/${PERFORMANCE_RATING_SCALE_MAX}`;
 }

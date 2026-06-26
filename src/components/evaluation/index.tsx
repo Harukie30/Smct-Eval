@@ -28,15 +28,16 @@ import { branchEvaluationSteps, branchRankNfileSteps } from "./configs";
 import { isEmployeeHeadOffice } from "./employeeBranchLabel";
 import { useBranchesForEvaluation } from "@/hooks/useBranchesForEvaluation";
 import {
-  EvaluationFormEditOptions,
+  EvaluationFormSessionProps,
   useApplyInitialFormData,
 } from "./evaluationFormEdit";
-import { submitEvaluationWithOptionalEdit } from "@/lib/evaluationEditSubmit";
+import { submitEvaluationForm } from "@/lib/evaluationEditSubmit";
+import { isEditSession } from "@/lib/evaluationEditTypes";
 
 // Default steps use branch evaluation configuration
 const defaultSteps: EvaluationStepConfig[] = branchEvaluationSteps;
 
-interface EvaluationFormProps extends EvaluationFormEditOptions {
+interface EvaluationFormProps extends EvaluationFormSessionProps {
   employee?: User | null;
   onCloseAction?: () => void;
   onCancelAction?: () => void;
@@ -48,13 +49,11 @@ export default function EvaluationForm({
   employee,
   onCloseAction,
   onCancelAction,
-  editSubmissionId,
-  initialFormData,
-  hoResubmitType,
+  editSession,
   steps: customSteps,
   evaluationType = 'default',
 }: EvaluationFormProps) {
-  const isEditMode = Boolean(editSubmissionId);
+  const isEditMode = isEditSession(editSession);
   const [currentStep, setCurrentStep] = useState(() => (isEditMode ? 1 : 0)); // 0 = welcome step, 1-N = actual steps
   const [welcomeAnimationKey, setWelcomeAnimationKey] = useState(0);
   const { user } = useAuth();
@@ -295,7 +294,7 @@ export default function EvaluationForm({
   });
   const [isCancelling, setIsCancelling] = useState(false);
 
-  useApplyInitialFormData(setForm, editSubmissionId, initialFormData);
+  useApplyInitialFormData(setForm, editSession);
 
   useEffect(() => {
     if (isEditMode && currentStep === 0) {
@@ -848,18 +847,7 @@ export default function EvaluationForm({
           console.warn('⚠️ Frontend: qualityOfWorkScore12 is missing or zero');
         }
 
-        const resolvedResubmitType =
-          hoResubmitType ??
-          (isHO && evaluationType === "rankNfile"
-            ? ("rankNfile" as const)
-            : isHO && evaluationType === "basic"
-              ? ("basic" as const)
-              : undefined);
-
-        await submitEvaluationWithOptionalEdit(
-          editSubmissionId,
-          form,
-          async () => {
+        await submitEvaluationForm(editSession, form, async () => {
           if (isHO) {
             if (evaluationType === 'rankNfile') {
               await apiService.postHoRankNFile(empID, form);
@@ -877,9 +865,7 @@ export default function EvaluationForm({
               await apiService.postBranchBasic(empID, form);
             }
           }
-        },
-          resolvedResubmitType
-        );
+        });
       }
       setShowSuccessDialog(true);
     } catch (clientError) {

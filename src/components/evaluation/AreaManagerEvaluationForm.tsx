@@ -27,12 +27,13 @@ import { User, useAuth } from "../../contexts/UserContext";
 import { areaManagerEvaluationSteps } from "./configs/areaManagerEvaluationConfig";
 import { useBranchesForEvaluation } from "@/hooks/useBranchesForEvaluation";
 import {
-  EvaluationFormEditOptions,
+  EvaluationFormSessionProps,
   useApplyInitialFormData,
 } from "./evaluationFormEdit";
-import { submitEvaluationWithOptionalEdit } from "@/lib/evaluationEditSubmit";
+import { submitEvaluationForm } from "@/lib/evaluationEditSubmit";
+import { isEditSession } from "@/lib/evaluationEditTypes";
 
-interface AreaManagerEvaluationFormProps extends EvaluationFormEditOptions {
+interface AreaManagerEvaluationFormProps extends EvaluationFormSessionProps {
   employee?: User | null;
   onCloseAction?: () => void;
   onCancelAction?: () => void;
@@ -42,11 +43,9 @@ export default function AreaManagerEvaluationForm({
   employee,
   onCloseAction,
   onCancelAction,
-  editSubmissionId,
-  initialFormData,
-  hoResubmitType,
+  editSession,
 }: AreaManagerEvaluationFormProps) {
-  const isEditMode = Boolean(editSubmissionId);
+  const isEditMode = isEditSession(editSession);
   const [currentStep, setCurrentStep] = useState(() => (isEditMode ? 1 : 0));
   const [welcomeAnimationKey, setWelcomeAnimationKey] = useState(0);
   const { user } = useAuth();
@@ -167,7 +166,7 @@ export default function AreaManagerEvaluationForm({
     created_at: "",
   });
 
-  useApplyInitialFormData(setForm, editSubmissionId, initialFormData);
+  useApplyInitialFormData(setForm, editSession);
 
   useEffect(() => {
     if (isEditMode && currentStep === 0) {
@@ -518,20 +517,15 @@ export default function AreaManagerEvaluationForm({
           managerial_skills,
         };
 
-        await submitEvaluationWithOptionalEdit(
-          editSubmissionId,
-          submissionPayload,
-          async () => {
+        await submitEvaluationForm(editSession, submissionPayload, async () => {
             await apiService.postBranchBasicAreaManager(
               employeeId,
               submissionPayload
             );
-          },
-          hoResubmitType
-        );
+          });
         
         // Store in localStorage as backup
-        if (!editSubmissionId && employee) {
+        if (!isEditSession(editSession) && employee) {
           await storeEvaluationResult({
             employeeId: employeeId,
             employeeEmail: employee.email || "",

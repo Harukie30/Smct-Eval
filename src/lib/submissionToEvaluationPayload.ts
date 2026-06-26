@@ -1,15 +1,9 @@
 import { EvaluationPayload } from "@/components/evaluation/types";
-
-type ScoreItem = {
-  question_number?: number;
-  questionNumber?: number;
-  q?: number;
-  score?: number;
-  value?: number;
-  comment?: string;
-  comments?: string;
-  explanation?: string;
-};
+import {
+  type EvaluationScoreItem,
+  type EvaluationSubmissionData,
+  type EvaluationSubmissionRecord,
+} from "@/lib/evaluationSubmissionRecord";
 
 const JOB_TARGET_BY_QUESTION: Record<
   number,
@@ -42,18 +36,15 @@ const JOB_TARGET_BY_QUESTION: Record<
   },
 };
 
-function getQuestionNumber(item: ScoreItem): number {
+function getQuestionNumber(item: EvaluationScoreItem): number {
   return Number(item.question_number ?? item.questionNumber ?? item.q ?? 0);
 }
 
-function getScore(item: ScoreItem): number {
+function getScore(item: EvaluationScoreItem): number {
   return Number(item.score ?? item.value ?? 0);
 }
 
-function getText(
-  item: ScoreItem,
-  preferExplanation = false
-): string {
+function getText(item: EvaluationScoreItem, preferExplanation = false): string {
   if (preferExplanation) {
     return String(
       item.explanation ?? item.comment ?? item.comments ?? ""
@@ -63,7 +54,7 @@ function getText(
 }
 
 function mapScoreCommentItems(
-  items: ScoreItem[] | null | undefined,
+  items: EvaluationScoreItem[] | null | undefined,
   prefix: string,
   useExplanation = false
 ): Partial<EvaluationPayload> {
@@ -83,7 +74,7 @@ function mapScoreCommentItems(
 }
 
 function mapQualityOfWorks(
-  items: ScoreItem[] | null | undefined
+  items: EvaluationScoreItem[] | null | undefined
 ): Partial<EvaluationPayload> {
   const result: Record<string, string | number> = {};
   if (!Array.isArray(items)) return result;
@@ -113,14 +104,16 @@ function mapQualityOfWorks(
   return result as Partial<EvaluationPayload>;
 }
 
-function pickKnownFields(source: Record<string, unknown>): Partial<EvaluationPayload> {
+function pickKnownFields(
+  source: EvaluationSubmissionData | null | undefined
+): Partial<EvaluationPayload> {
   if (!source || typeof source !== "object") return {};
 
   const payload: Record<string, unknown> = {};
 
   const assign = (targetKey: string, ...keys: string[]) => {
     for (const key of keys) {
-      const value = source[key];
+      const value = (source as Record<string, unknown>)[key];
       if (value !== undefined && value !== null && value !== "") {
         payload[targetKey] = value;
         return;
@@ -157,15 +150,25 @@ function pickKnownFields(source: Record<string, unknown>): Partial<EvaluationPay
   return payload as Partial<EvaluationPayload>;
 }
 
+function firstScoreItems(
+  ...candidates: Array<EvaluationScoreItem[] | undefined>
+): EvaluationScoreItem[] | undefined {
+  for (const items of candidates) {
+    if (Array.isArray(items) && items.length > 0) return items;
+  }
+  return candidates.find(Array.isArray);
+}
+
+/**
+ * Maps a GET /submissions/:id record into flat form state for edit/create UIs.
+ */
 export function submissionToEvaluationPayload(
-  submission: Record<string, unknown> | null | undefined
+  submission: EvaluationSubmissionRecord | null | undefined
 ): Partial<EvaluationPayload> {
   if (!submission) return {};
 
   const evaluationData =
-    (submission.evaluationData as Record<string, unknown> | undefined) ??
-    (submission.evaluation_data as Record<string, unknown> | undefined) ??
-    {};
+    submission.evaluationData ?? submission.evaluation_data ?? {};
 
   const base = {
     ...pickKnownFields(evaluationData),
@@ -175,51 +178,74 @@ export function submissionToEvaluationPayload(
   return {
     ...base,
     ...mapScoreCommentItems(
-      (submission.job_knowledge as ScoreItem[] | undefined) ??
-        (evaluationData.job_knowledge as ScoreItem[] | undefined),
+      firstScoreItems(
+        submission.job_knowledge,
+        evaluationData.job_knowledge
+      ),
       "jobKnowledge"
     ),
     ...mapQualityOfWorks(
-      (submission.quality_of_works as ScoreItem[] | undefined) ??
-        (submission.qualityOfWorks as ScoreItem[] | undefined) ??
-        (evaluationData.quality_of_works as ScoreItem[] | undefined)
+      firstScoreItems(
+        submission.quality_of_works,
+        submission.qualityOfWorks,
+        evaluationData.quality_of_works,
+        evaluationData.qualityOfWorks
+      )
     ),
     ...mapScoreCommentItems(
-      (submission.adaptabilities as ScoreItem[] | undefined) ??
-        (submission.adaptability as ScoreItem[] | undefined) ??
-        (evaluationData.adaptabilities as ScoreItem[] | undefined),
+      firstScoreItems(
+        submission.adaptabilities,
+        submission.adaptability,
+        evaluationData.adaptabilities,
+        evaluationData.adaptability
+      ),
       "adaptability"
     ),
     ...mapScoreCommentItems(
-      (submission.teamworks as ScoreItem[] | undefined) ??
-        (submission.teamwork as ScoreItem[] | undefined) ??
-        (evaluationData.teamworks as ScoreItem[] | undefined),
+      firstScoreItems(
+        submission.teamworks,
+        submission.teamwork,
+        evaluationData.teamworks,
+        evaluationData.teamwork
+      ),
       "teamwork"
     ),
     ...mapScoreCommentItems(
-      (submission.reliabilities as ScoreItem[] | undefined) ??
-        (submission.reliability as ScoreItem[] | undefined) ??
-        (evaluationData.reliabilities as ScoreItem[] | undefined),
+      firstScoreItems(
+        submission.reliabilities,
+        submission.reliability,
+        evaluationData.reliabilities,
+        evaluationData.reliability
+      ),
       "reliability"
     ),
     ...mapScoreCommentItems(
-      (submission.ethicals as ScoreItem[] | undefined) ??
-        (submission.ethical as ScoreItem[] | undefined) ??
-        (evaluationData.ethicals as ScoreItem[] | undefined),
+      firstScoreItems(
+        submission.ethicals,
+        submission.ethical,
+        evaluationData.ethicals,
+        evaluationData.ethical
+      ),
       "ethical",
       true
     ),
     ...mapScoreCommentItems(
-      (submission.customer_services as ScoreItem[] | undefined) ??
-        (submission.customerServices as ScoreItem[] | undefined) ??
-        (evaluationData.customer_services as ScoreItem[] | undefined),
+      firstScoreItems(
+        submission.customer_services,
+        submission.customerServices,
+        evaluationData.customer_services,
+        evaluationData.customerServices
+      ),
       "customerService",
       true
     ),
     ...mapScoreCommentItems(
-      (submission.managerial_skills as ScoreItem[] | undefined) ??
-        (submission.managerialSkills as ScoreItem[] | undefined) ??
-        (evaluationData.managerial_skills as ScoreItem[] | undefined),
+      firstScoreItems(
+        submission.managerial_skills,
+        submission.managerialSkills,
+        evaluationData.managerial_skills,
+        evaluationData.managerialSkills
+      ),
       "managerialSkills",
       true
     ),

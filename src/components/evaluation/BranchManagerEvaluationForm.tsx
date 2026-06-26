@@ -27,12 +27,13 @@ import { User, useAuth } from "../../contexts/UserContext";
 import { branchEvaluationSteps } from "./configs/branchEvaluationConfig";
 import { useBranchesForEvaluation } from "@/hooks/useBranchesForEvaluation";
 import {
-  EvaluationFormEditOptions,
+  EvaluationFormSessionProps,
   useApplyInitialFormData,
 } from "./evaluationFormEdit";
-import { submitEvaluationWithOptionalEdit } from "@/lib/evaluationEditSubmit";
+import { submitEvaluationForm } from "@/lib/evaluationEditSubmit";
+import { isEditSession } from "@/lib/evaluationEditTypes";
 
-interface BranchManagerEvaluationFormProps extends EvaluationFormEditOptions {
+interface BranchManagerEvaluationFormProps extends EvaluationFormSessionProps {
   employee?: User | null;
   onCloseAction?: () => void;
   onCancelAction?: () => void;
@@ -44,9 +45,7 @@ export default function BranchManagerEvaluationForm({
   onCloseAction,
   onCancelAction,
   evaluationType = 'default',
-  editSubmissionId,
-  initialFormData,
-  hoResubmitType,
+  editSession,
 }: BranchManagerEvaluationFormProps) {
   const [currentStep, setCurrentStep] = useState(0); // 0 = welcome step, 1-N = actual steps
   const [welcomeAnimationKey, setWelcomeAnimationKey] = useState(0);
@@ -176,7 +175,7 @@ export default function BranchManagerEvaluationForm({
     created_at: "",
   });
 
-  useApplyInitialFormData(setForm, editSubmissionId, initialFormData);
+  useApplyInitialFormData(setForm, editSession);
 
   const updateDataAction = useCallback((updates: Partial<EvaluationPayload>) => {
     setForm((prev: EvaluationPayload) => ({
@@ -510,10 +509,7 @@ export default function BranchManagerEvaluationForm({
         const evaluatorId = typeof user?.id === 'string' ? parseInt(user.id, 10) : (user?.id || 0);
         
         // Branch Manager/Supervisor uses appropriate endpoint based on evaluationType
-        await submitEvaluationWithOptionalEdit(
-          editSubmissionId,
-          form,
-          async () => {
+        await submitEvaluationForm(editSession, form, async () => {
           if (evaluationType === 'rankNfile') {
             await apiService.postBranchRankNFile(employeeId, form);
           } else if (evaluationType === 'basic') {
@@ -522,12 +518,10 @@ export default function BranchManagerEvaluationForm({
             // Default evaluation for branch - use BranchBasic endpoint
             await apiService.postBranchBasic(employeeId, form);
           }
-        },
-          hoResubmitType
-        );
+        });
         
         // Store in localStorage as backup
-        if (!editSubmissionId && employee) {
+        if (!isEditSession(editSession) && employee) {
           await storeEvaluationResult({
             employeeId: employeeId,
             employeeEmail: employee.email || "",

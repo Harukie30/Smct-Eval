@@ -1,4 +1,5 @@
 import { isEmployeeHeadOffice } from "@/components/evaluation/employeeBranchLabel";
+import type { EvaluationSubmissionRecord } from "@/lib/evaluationSubmissionRecord";
 
 export type EvaluationEditRoute =
   | { form: "rankNfileHo" }
@@ -7,17 +8,7 @@ export type EvaluationEditRoute =
   | { form: "branchManager"; evaluationType: "basic" | "default" }
   | { form: "areaManager" };
 
-type RoutableSubmission = {
-  employee?: Record<string, unknown> | null;
-  evaluationType?: string;
-  evaluation_type?: string;
-  type?: string;
-  form_type?: string;
-  customer_services?: unknown[];
-  customerServices?: unknown[];
-  managerial_skills?: unknown[];
-  managerialSkills?: unknown[];
-};
+type RoutableSubmission = EvaluationSubmissionRecord;
 
 function getEvaluationType(submission: RoutableSubmission | null): string | null {
   if (!submission) return null;
@@ -81,7 +72,7 @@ function normalizeEvalType(evaluationType: string): string {
 }
 
 export function resolveEvaluationEditRoute(
-  submission: RoutableSubmission | null
+  submission: EvaluationSubmissionRecord | null
 ): EvaluationEditRoute {
   const apiEvaluationType = getEvaluationType(submission);
   const isHOEmp = isEmployeeHO(submission);
@@ -183,7 +174,7 @@ export type HoEvaluationEditRoute = "rankNfileHo" | "basicHo";
 
 /** HO-only edit flow: rank-and-file vs basic (managerial skills). */
 export function resolveHoEvaluationEditRoute(
-  submission: RoutableSubmission | null
+  submission: EvaluationSubmissionRecord | null
 ): HoEvaluationEditRoute {
   if (!submission || !isEmployeeHO(submission)) {
     return "rankNfileHo";
@@ -219,7 +210,7 @@ export function resolveHoEvaluationEditRoute(
 }
 
 export function isSubmissionHoEditable(
-  submission: RoutableSubmission | null
+  submission: EvaluationSubmissionRecord | null
 ): boolean {
   return isEmployeeHO(submission);
 }
