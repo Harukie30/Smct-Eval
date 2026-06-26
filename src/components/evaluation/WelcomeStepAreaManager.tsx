@@ -19,6 +19,8 @@ interface WelcomeStepAreaManagerProps {
   onBackAction?: () => void;
   branchOptions?: BranchOption[];
   branchListLoading?: boolean;
+  /** When true (edit mode), welcome actions are disabled and start is hidden. */
+  disabled?: boolean;
 }
 
 export default function WelcomeStepAreaManager({
@@ -27,10 +29,12 @@ export default function WelcomeStepAreaManager({
   onBackAction,
   branchOptions,
   branchListLoading = false,
+  disabled = false,
 }: WelcomeStepAreaManagerProps) {
   const { user } = useAuth();
   // Signature can be a PNG file (base64 data URL or file path)
   const hasSignature = user?.signature;
+  const canStart = hasSignature && !disabled;
 
   // Steps for Area Manager (branch-based) evaluation:
   // 1–6 core competencies, 7 Managerial Skills, then Overall Assessment (no Customer Service step)
@@ -63,6 +67,18 @@ export default function WelcomeStepAreaManager({
         </div>
       )}
 
+      {disabled && (
+        <Card className="border-gray-300 bg-gray-100">
+          <CardContent className="pt-4 pb-4">
+            <p className="text-center text-sm font-medium text-gray-700">
+              Welcome step is not available while editing an evaluation. Continue
+              with the evaluation steps below.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className={disabled ? "pointer-events-none space-y-6 opacity-60" : "space-y-6"}>
       {/* Welcome Header */}
       <div className="text-center">
         <h3 className="text-2xl font-bold text-gray-900 mb-2">
@@ -218,7 +234,7 @@ export default function WelcomeStepAreaManager({
       </Card>
 
       {/* Signature Validation */}
-      {!hasSignature && (
+      {!hasSignature && !disabled && (
         <Card className="bg-red-50 border-red-200">
           <CardContent className="pt-6">
             <div className="flex items-start gap-3">
@@ -275,6 +291,7 @@ export default function WelcomeStepAreaManager({
       </Card>
 
       {/* Action Buttons */}
+      {!disabled && (
       <div className="text-center">
         <div className="flex items-center justify-center gap-4">
           {/* Back Button - Only show when no signature */}
@@ -292,11 +309,11 @@ export default function WelcomeStepAreaManager({
 
           {/* Start Button */}
           <Button
-            onClick={hasSignature ? onStartAction : undefined}
+            onClick={canStart ? onStartAction : undefined}
             size="lg"
-            disabled={!hasSignature}
+            disabled={!canStart}
             className={`px-8 py-3 text-lg ${
-              hasSignature
+              canStart
                 ? "bg-blue-600 hover:bg-blue-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                 : "bg-gray-400 cursor-not-allowed"
             }`}
@@ -310,6 +327,8 @@ export default function WelcomeStepAreaManager({
             ? "Click to begin the Area Manager performance evaluation"
             : "Add your signature in profile settings to start evaluation"}
         </p>
+      </div>
+      )}
       </div>
     </div>
   );

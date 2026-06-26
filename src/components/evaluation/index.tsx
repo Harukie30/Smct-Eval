@@ -50,10 +50,12 @@ export default function EvaluationForm({
   onCancelAction,
   editSubmissionId,
   initialFormData,
+  hoResubmitType,
   steps: customSteps,
   evaluationType = 'default',
 }: EvaluationFormProps) {
-  const [currentStep, setCurrentStep] = useState(0); // 0 = welcome step, 1-N = actual steps
+  const isEditMode = Boolean(editSubmissionId);
+  const [currentStep, setCurrentStep] = useState(() => (isEditMode ? 1 : 0)); // 0 = welcome step, 1-N = actual steps
   const [welcomeAnimationKey, setWelcomeAnimationKey] = useState(0);
   const { user } = useAuth();
   const { branchOptions, isLoading: branchListLoading } =
@@ -294,6 +296,12 @@ export default function EvaluationForm({
   const [isCancelling, setIsCancelling] = useState(false);
 
   useApplyInitialFormData(setForm, editSubmissionId, initialFormData);
+
+  useEffect(() => {
+    if (isEditMode && currentStep === 0) {
+      setCurrentStep(1);
+    }
+  }, [isEditMode, currentStep]);
 
   const updateDataAction = (updates: Partial<EvaluationPayload>) => {
     setForm((prev: EvaluationPayload) => ({
@@ -840,7 +848,18 @@ export default function EvaluationForm({
           console.warn('⚠️ Frontend: qualityOfWorkScore12 is missing or zero');
         }
 
-        await submitEvaluationWithOptionalEdit(editSubmissionId, form, async () => {
+        const resolvedResubmitType =
+          hoResubmitType ??
+          (isHO && evaluationType === "rankNfile"
+            ? ("rankNfile" as const)
+            : isHO && evaluationType === "basic"
+              ? ("basic" as const)
+              : undefined);
+
+        await submitEvaluationWithOptionalEdit(
+          editSubmissionId,
+          form,
+          async () => {
           if (isHO) {
             if (evaluationType === 'rankNfile') {
               await apiService.postHoRankNFile(empID, form);
@@ -858,7 +877,9 @@ export default function EvaluationForm({
               await apiService.postBranchBasic(empID, form);
             }
           }
-        });
+        },
+          resolvedResubmitType
+        );
       }
       setShowSuccessDialog(true);
     } catch (clientError) {
@@ -1026,7 +1047,7 @@ export default function EvaluationForm({
             )}
 
             {/* Step Content */}
-            {currentStep === 0 ? (
+            {currentStep === 0 && !isEditMode ? (
               <Card
                 key={`welcome-${welcomeAnimationKey}`}
                 className="welcome-step-animate"
@@ -1041,6 +1062,7 @@ export default function EvaluationForm({
                     evaluationType={evaluationType}
                     branchOptions={branchOptions}
                     branchListLoading={branchListLoading}
+                    disabled={isEditMode}
                   />
                 </CardContent>
               </Card>
@@ -1055,18 +1077,7 @@ export default function EvaluationForm({
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {currentStep === 0 ? (
-                    <WelcomeStep
-                      data={form}
-                      updateDataAction={updateDataAction}
-                      employee={employee}
-                      onStartAction={startEvaluation}
-                      onBackAction={onCloseAction}
-                      evaluationType={evaluationType}
-                      branchOptions={branchOptions}
-                      branchListLoading={branchListLoading}
-                    />
-                  ) : (() => {
+                  {(() => {
                     const stepIndex = currentStep - 1;
                     const step = filteredSteps[stepIndex];
                     if (!step) return null;

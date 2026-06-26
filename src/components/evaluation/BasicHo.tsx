@@ -38,6 +38,7 @@ export default function BasicHo({
   onCancelAction,
   editSubmissionId,
   initialFormData,
+  hoResubmitType,
 }: BasicHoProps) {
   return (
     <EvaluationForm
@@ -48,6 +49,7 @@ export default function BasicHo({
       evaluationType="basic"
       editSubmissionId={editSubmissionId}
       initialFormData={initialFormData}
+      hoResubmitType={hoResubmitType ?? "basic"}
     />
   );
 }

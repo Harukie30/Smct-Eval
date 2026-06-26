@@ -44,6 +44,7 @@ export default function BranchRankNfileEvaluationForm({
   onCancelAction,
   editSubmissionId,
   initialFormData,
+  hoResubmitType,
 }: BranchRankNfileEvaluationFormProps) {
   const [currentStep, setCurrentStep] = useState(0); // 0 = welcome step, 1-N = actual steps
   const [welcomeAnimationKey, setWelcomeAnimationKey] = useState(0);
@@ -463,9 +464,14 @@ export default function BranchRankNfileEvaluationForm({
         const evaluatorId = typeof user?.id === 'string' ? parseInt(user.id, 10) : (user?.id || 0);
         
         // BranchRankNfile always uses postBranchRankNFile endpoint
-        await submitEvaluationWithOptionalEdit(editSubmissionId, form, async () => {
-          await apiService.postBranchRankNFile(employeeId, form);
-        });
+        await submitEvaluationWithOptionalEdit(
+          editSubmissionId,
+          form,
+          async () => {
+            await apiService.postBranchRankNFile(employeeId, form);
+          },
+          hoResubmitType ?? "branchRankNfile"
+        );
         
         // Store in localStorage as backup
         if (!editSubmissionId && employee) {

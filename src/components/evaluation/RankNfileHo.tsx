@@ -36,6 +36,7 @@ export default function RankNfileHo({
   onCancelAction,
   editSubmissionId,
   initialFormData,
+  hoResubmitType,
 }: RankNfileHoProps) {
   return (
     <EvaluationForm
@@ -46,6 +47,7 @@ export default function RankNfileHo({
       evaluationType="rankNfile"
       editSubmissionId={editSubmissionId}
       initialFormData={initialFormData}
+      hoResubmitType={hoResubmitType ?? "rankNfile"}
     />
   );
 }

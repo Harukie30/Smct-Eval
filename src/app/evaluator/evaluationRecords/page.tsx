@@ -57,7 +57,9 @@ import {
   EVAL_TABLE_ACTIONS_HEAD_CLASS,
   EvalRecordRowActions,
   EvalRecordSignBadge,
+  EvalRecordRejectedHoverHintBanner,
   EvalRecordStatusBadge,
+  EvalRecordStatusTableHead,
   EvaluationApiErrorDialog,
   RATING_DISPLAY_BANDS,
   hasEmployeeSigned,
@@ -667,6 +669,7 @@ export default function OverviewTab() {
 
           {/* Indicator Legend */}
           <div className="mb-3 rounded-lg border border-gray-200 bg-gray-50 p-2.5 sm:mb-4 sm:p-3">
+            <EvalRecordRejectedHoverHintBanner />
             <div className="flex flex-wrap gap-2 text-[0.65rem] sm:gap-3 sm:text-xs md:gap-4">
               <span className="mr-1 w-full text-xs font-medium text-gray-700 sm:mr-2 sm:w-auto sm:text-sm">
                 Indicators:
@@ -696,7 +699,7 @@ export default function OverviewTab() {
                 </Badge>
               </div>
               <div className="flex items-center gap-1">
-                <div className="w-2 h-2 bg-gray-400 border-l-2 border-l-gray-500 rounded"></div>
+                <div className="w-2 h-2 bg-gray-50 border-l-2 border-l-gray-500 rounded"></div>
                 <Badge className="bg-red-100 text-red-800 text-xs">
                   Rejected
                 </Badge>
@@ -775,7 +778,7 @@ export default function OverviewTab() {
                     </TableHead>
                     <TableHead className="min-w-[3.25rem]">Rating</TableHead>
                     <TableHead className="min-w-[4.5rem] sm:min-w-[5rem]">
-                      Status
+                      <EvalRecordStatusTableHead />
                     </TableHead>
                     <TableHead className="hidden min-w-[4.5rem] lg:table-cell xl:min-w-[5.5rem]">
                       <span className="xl:hidden">Emp. Sign</span>

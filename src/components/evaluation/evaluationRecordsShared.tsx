@@ -7,7 +7,7 @@ import {
   type ComponentProps,
   type ReactElement,
 } from "react";
-import { Check, Eye, Pencil, Trash2, X } from "lucide-react";
+import { Check, Eye, Info, Pencil, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -622,6 +622,70 @@ function getReviewStatusBadgeClass(status: string): string {
   return "bg-gray-100 text-gray-800";
 }
 
+export const REJECTED_STATUS_HOVER_HINT =
+  "Hover a rejected status badge to view the rejection reason.";
+
+export function EvalRecordRejectedHoverHintBanner({
+  className,
+}: {
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "mb-2 flex items-start gap-2.5 rounded-md border border-blue-300 bg-blue-50 px-3 py-2.5 shadow-sm sm:gap-3 sm:px-3.5 sm:py-3",
+        className
+      )}
+      role="note"
+    >
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700 ring-2 ring-blue-200">
+        <Info className="h-4 w-4" aria-hidden />
+      </span>
+      <div className="min-w-0 space-y-1">
+        <p className="text-xs font-semibold text-blue-950 sm:text-sm">
+          Rejected evaluations
+        </p>
+        <p className="text-xs leading-snug text-blue-900 sm:text-sm">
+          {REJECTED_STATUS_HOVER_HINT} Look for the{" "}
+          <Badge className="mx-0.5 align-middle bg-red-100 px-1.5 text-[0.65rem] font-semibold text-red-800 sm:text-xs">
+            ✕ rejected
+          </Badge>{" "}
+          badge in the Status column.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+export function EvalRecordStatusTableHead({
+  className,
+}: {
+  className?: string;
+}) {
+  return (
+    <span className={cn("inline-flex items-center gap-1", className)}>
+      Status
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700 ring-1 ring-blue-300 transition-colors hover:bg-blue-200 hover:text-blue-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+            aria-label="Status column help"
+          >
+            <Info className="h-3 w-3" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent
+          side="top"
+          className="max-w-[16rem] border border-blue-200 bg-blue-50 text-center text-blue-950"
+        >
+          {REJECTED_STATUS_HOVER_HINT}
+        </TooltipContent>
+      </Tooltip>
+    </span>
+  );
+}
+
 export function EvalRecordStatusBadge({
   review,
 }: {
@@ -650,8 +714,11 @@ export function EvalRecordStatusBadge({
   return (
     <Tooltip>
       <TooltipTrigger asChild>{badge}</TooltipTrigger>
-      <TooltipContent side="top" className="max-w-xs whitespace-pre-wrap">
-        {rejectionNote}
+      <TooltipContent side="top" className="max-w-xs">
+        <p className="mb-1 text-[0.65rem] font-medium opacity-90">
+          Rejection reason
+        </p>
+        <p className="whitespace-pre-wrap">{rejectionNote}</p>
       </TooltipContent>
     </Tooltip>
   );

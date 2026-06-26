@@ -46,7 +46,8 @@ export default function AreaManagerEvaluationForm({
   initialFormData,
   hoResubmitType,
 }: AreaManagerEvaluationFormProps) {
-  const [currentStep, setCurrentStep] = useState(0);
+  const isEditMode = Boolean(editSubmissionId);
+  const [currentStep, setCurrentStep] = useState(() => (isEditMode ? 1 : 0));
   const [welcomeAnimationKey, setWelcomeAnimationKey] = useState(0);
   const { user } = useAuth();
   const { branchOptions, isLoading: branchListLoading } =
@@ -167,6 +168,12 @@ export default function AreaManagerEvaluationForm({
   });
 
   useApplyInitialFormData(setForm, editSubmissionId, initialFormData);
+
+  useEffect(() => {
+    if (isEditMode && currentStep === 0) {
+      setCurrentStep(1);
+    }
+  }, [isEditMode, currentStep]);
 
   const updateDataAction = useCallback((updates: Partial<EvaluationPayload>) => {
     setForm((prev: EvaluationPayload) => ({
@@ -639,7 +646,7 @@ export default function AreaManagerEvaluationForm({
                 </CardHeader>
               )}
               <CardContent>
-                {currentStep === 0 ? (
+                {currentStep === 0 && !isEditMode ? (
                   <WelcomeStepAreaManager
                     data={form}
                     updateDataAction={updateDataAction}
@@ -648,6 +655,7 @@ export default function AreaManagerEvaluationForm({
                     onBackAction={onCloseAction}
                     branchOptions={branchOptions}
                     branchListLoading={branchListLoading}
+                    disabled={isEditMode}
                   />
                 ) : (() => {
                   const stepIndex = currentStep - 1;
