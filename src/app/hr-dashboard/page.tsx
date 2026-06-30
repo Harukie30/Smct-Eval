@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -21,7 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { getQuarterColor } from "@/lib/quarterUtils";
 import apiService from "@/lib/apiService";
-import { EvaluationPayload } from "@/components/evaluation/types";
+import { formatRatingDisplay } from "@/lib/performanceRatingDisplay";
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
 import {
   EvaluationApiErrorDialog,
@@ -30,6 +30,21 @@ import {
 import EvaluationsPagination from "@/components/paginationComponent";
 import { cn } from "@/lib/utils";
 import { Eye } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { HiringRateTooltipContent } from "@/components/hr/HiringRateTooltipContent";
+import { ApprovalStatusTooltipContent } from "@/components/hr/ApprovalStatusTooltipContent";
+import {
+  resolveHiringRateStats,
+  type HiringRateStats,
+} from "@/lib/employeeHiringRate";
+import {
+  resolveApprovalStatusStats,
+  type ApprovalStatusStats,
+} from "@/lib/evaluationApprovalStats";
 
 const HR_OVERVIEW_TABLE_CLASS =
   "min-w-[34rem] sm:min-w-[42rem] md:min-w-[52rem] lg:min-w-0 lg:w-full [&_th]:h-auto [&_th]:min-h-8 [&_th]:whitespace-nowrap [&_th]:px-2 [&_th]:py-2 [&_th]:align-middle [&_th]:text-[0.6rem] [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600 sm:[&_th]:px-2.5 sm:[&_th]:py-2.5 sm:[&_th]:text-[0.65rem] lg:[&_th]:px-3 lg:[&_th]:text-xs [&_td]:min-w-0 [&_td]:px-2 [&_td]:py-2 [&_td]:align-top [&_td]:text-[0.7rem] [&_td]:leading-snug sm:[&_td]:px-2.5 sm:[&_td]:py-2.5 sm:[&_td]:text-xs lg:[&_td]:px-3 lg:[&_td]:text-sm";
@@ -132,6 +147,7 @@ type DashboardStatCardProps = {
   subtitle: string;
   valueClassName: string;
   cardClassName: string;
+  tooltip?: React.ReactNode;
 };
 
 function DashboardStatCard({
@@ -141,11 +157,13 @@ function DashboardStatCard({
   subtitle,
   valueClassName,
   cardClassName,
+  tooltip,
 }: DashboardStatCardProps) {
-  return (
+  const card = (
     <Card
       className={cn(
         "min-h-[6.75rem] overflow-hidden border shadow-sm transition-shadow duration-200 hover:shadow-md sm:min-h-[7.25rem]",
+        tooltip && "cursor-help",
         cardClassName
       )}
     >
@@ -172,15 +190,36 @@ function DashboardStatCard({
       </CardContent>
     </Card>
   );
+
+  if (!tooltip) return card;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{card}</TooltipTrigger>
+      <TooltipContent
+        side="bottom"
+        align="center"
+        sideOffset={8}
+        className="border border-gray-200 bg-white px-4 py-3 text-gray-900 shadow-lg"
+      >
+        {tooltip}
+      </TooltipContent>
+    </Tooltip>
+  );
 }
 
 export default function OverviewTab() {
   //data
-  const [submissions, setSubmissions] = useState<EvaluationPayload[]>([]);
+  const [submissions, setSubmissions] = useState<any[]>([]);
   const [newEval, setNewEval] = useState<any | null>(null);
   const [pendingEval, setPendingEval] = useState<any | null>(null);
   const [completedEval, setCompletedEval] = useState<any | null>(null);
   const [totalEmployees, setTotalEmployees] = useState<any | null>(null);
+  const [hiringRateStats, setHiringRateStats] = useState<HiringRateStats | null>(
+    null
+  );
+  const [approvalStatusStats, setApprovalStatusStats] =
+    useState<ApprovalStatusStats | null>(null);
   //filters
   const [overviewSearchTerm, setOverviewSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] =
@@ -193,7 +232,7 @@ export default function OverviewTab() {
   const [totalPages, setTotalPages] = useState(1);
   const [perPage, setPerPage] = useState(0);
   //view
-  const [selectedSubmission, setSelectedSubmission] = useState(null);
+  const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
   //modal
   const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
   const [evaluationActionError, setEvaluationActionError] = useState<{
@@ -239,7 +278,14 @@ export default function OverviewTab() {
           setNewEval(dashboard.new_eval);
           setPendingEval(dashboard.pending_eval);
           setCompletedEval(dashboard.completed_eval);
-          setTotalEmployees(dashboard.total_users);
+          const employeeTotal = Number(dashboard.total_users ?? 0);
+          setTotalEmployees(employeeTotal);
+
+          const hiringStats = await resolveHiringRateStats(dashboard, () =>
+            apiService.getActiveRegistrations("", "", 1, 5000)
+          );
+          setHiringRateStats(hiringStats);
+          setApprovalStatusStats(resolveApprovalStatusStats(dashboard));
         } catch (error) {
           console.log(error);
         } finally {
@@ -269,19 +315,17 @@ export default function OverviewTab() {
     return () => clearTimeout(debounceTimeout);
   }, [overviewSearchTerm]);
 
-  // Helper function to get rating color
-  const getRatingColor = (rating: number) => {
-    if (rating >= 4.5) return "bg-green-100 text-green-800";
-    if (rating >= 4.0) return "bg-blue-100 text-blue-800";
-    if (rating >= 3.5) return "bg-yellow-100 text-yellow-800";
+  // Helper function to get rating color (legacy bands for badge background)
+  const getRatingColor = (rating: number | string) => {
+    const score = Number(rating);
+    if (!Number.isFinite(score)) return "bg-gray-100 text-gray-800";
+    if (score >= 4.5) return "bg-green-100 text-green-800";
+    if (score >= 4.0) return "bg-blue-100 text-blue-800";
+    if (score >= 3.5) return "bg-yellow-100 text-yellow-800";
     return "bg-red-100 text-red-800";
   };
 
-  const handleRefresh = async () => {
-    // await onRefresh();
-  };
-
-  const handleViewEvaluation = async (submission: any) => {
+  const handleViewEvaluation = async (submission: { id: number | string }) => {
     try {
       const fullSubmission = await apiService.getSubmissionById(submission.id);
 
@@ -303,6 +347,11 @@ export default function OverviewTab() {
     }
   };
 
+  const approvalStatusTooltip = useMemo(
+    () => <ApprovalStatusTooltipContent stats={approvalStatusStats} />,
+    [approvalStatusStats]
+  );
+
   return (
     <>
       <div className="mb-4 grid grid-cols-2 gap-3 sm:mb-5 sm:gap-4 lg:grid-cols-4">
@@ -321,6 +370,7 @@ export default function OverviewTab() {
           subtitle="Needs review"
           valueClassName="text-orange-600"
           cardClassName="border-orange-200/90 bg-orange-50/90"
+          tooltip={approvalStatusTooltip}
         />
         <DashboardStatCard
           emoji="✅"
@@ -329,6 +379,7 @@ export default function OverviewTab() {
           subtitle="Completed reviews"
           valueClassName="text-green-600"
           cardClassName="border-green-200/90 bg-green-50/90"
+          tooltip={approvalStatusTooltip}
         />
         <DashboardStatCard
           emoji="👥"
@@ -337,6 +388,7 @@ export default function OverviewTab() {
           subtitle="All registered employees"
           valueClassName="text-blue-600"
           cardClassName="border-blue-200/90 bg-blue-50/90"
+          tooltip={<HiringRateTooltipContent stats={hiringRateStats} />}
         />
       </div>
       <div className="relative space-y-6 pr-2">
@@ -347,6 +399,7 @@ export default function OverviewTab() {
               {(() => {
                 const now = new Date();
                 const newCount = submissions.filter((sub) => {
+                  if (!sub.created_at) return false;
                   const hoursDiff =
                     (now.getTime() - new Date(sub.created_at).getTime()) /
                     (1000 * 60 * 60);
@@ -574,22 +627,23 @@ export default function OverviewTab() {
                   ) : (
                     submissions.map((submission: any) => {
                       const now = new Date();
-                      const hoursDiff =
-                        (now.getTime() -
-                          new Date(submission.created_at).getTime()) /
-                        (1000 * 60 * 60);
+                      const createdAt = String(submission.created_at ?? "");
+                      const hoursDiff = createdAt
+                        ? (now.getTime() - new Date(createdAt).getTime()) /
+                          (1000 * 60 * 60)
+                        : 0;
                       const isNew = hoursDiff <= 24;
                       const isRecent = hoursDiff > 24 && hoursDiff <= 168;
                       const rowClassName = getSubmissionRowClassName(
                         isNew,
                         isRecent,
-                        submission.status
+                        String(submission.status ?? "")
                       );
-                      const reviewDate = formatSubmissionDate(
-                        submission.created_at
-                      );
+                      const reviewDate = createdAt
+                        ? formatSubmissionDate(createdAt)
+                        : { short: "—", full: "—" };
                       const statusLabels = formatApprovalStatus(
-                        submission.status
+                        String(submission.status ?? "")
                       );
                       const quarterValue = getSubmissionQuarterDisplay(
                         submission
@@ -630,8 +684,9 @@ export default function OverviewTab() {
                                       getRatingColor(submission.rating)
                                     )}
                                   >
-                                    {submission.rating > 0
-                                      ? `${submission.rating}/5`
+                                    {submission.rating != null &&
+                                    Number(submission.rating) > 0
+                                      ? formatRatingDisplay(submission.rating)
                                       : "N/A"}
                                   </Badge>
                                 ) : null}
@@ -669,8 +724,9 @@ export default function OverviewTab() {
                                   getRatingColor(submission.rating)
                                 )}
                               >
-                                {submission.rating > 0
-                                  ? `${submission.rating}/5`
+                                {submission.rating != null &&
+                                Number(submission.rating) > 0
+                                  ? formatRatingDisplay(submission.rating)
                                   : "N/A"}
                               </Badge>
                             ) : (

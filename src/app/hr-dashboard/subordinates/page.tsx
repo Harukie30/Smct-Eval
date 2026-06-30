@@ -16,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toastMessages } from "@/lib/toastMessages";
 import { apiService } from "@/lib/apiService";
 import { pickApiTimestamp } from "@/lib/parseApiTimestamp";
-import { Eye, RefreshCw, Users2, X } from "lucide-react";
+import { Eye, Plus, RefreshCw, Users2, X } from "lucide-react";
 import EvaluationsPagination from "@/components/paginationComponent";
 import AddEmployeeToEvaluatorModal, {
   AssignEvaluatorTarget,
@@ -24,6 +24,7 @@ import AddEmployeeToEvaluatorModal, {
 import CorrespondingStaffModal, {
   type CorrespondingStaffRow,
 } from "@/components/hr/CorrespondingStaffModal";
+import ApprovalFlowModal from "@/components/hr/ApprovalFlowModal";
 
 type EvaluatorRow = {
   id: string;
@@ -291,70 +292,6 @@ function pickLastQuarterEvaluated(raw: Record<string, unknown>): string | null {
   return null;
 }
 
-function parseIsDirectFromIndirectFlag(value: unknown): boolean | null {
-  // isIndirectEvaluator: 0 → direct (Yes), 1 → indirect (No)
-  if (value === true || value === 1 || value === "1") return false;
-  if (value === false || value === 0 || value === "0") return true;
-  if (typeof value === "string") {
-    const normalized = value.trim().toLowerCase();
-    if (normalized === "yes" || normalized === "true" || normalized === "indirect") {
-      return false;
-    }
-    if (normalized === "no" || normalized === "false" || normalized === "direct") {
-      return true;
-    }
-  }
-  return null;
-}
-
-function parseIsDirectSubordinate(raw: Record<string, unknown>): boolean | null {
-  const pivot = raw.pivot as Record<string, unknown> | undefined;
-  const indirectCandidates = [
-    raw.isIndirectEvaluator,
-    raw.is_indirect_evaluator,
-    pivot?.isIndirectEvaluator,
-    pivot?.is_indirect_evaluator,
-  ];
-
-  for (const value of indirectCandidates) {
-    if (value === undefined || value === null) continue;
-    const parsed = parseIsDirectFromIndirectFlag(value);
-    if (parsed !== null) return parsed;
-  }
-
-  const candidates = [
-    raw.is_direct,
-    raw.isDirect,
-    raw.direct,
-    raw.is_direct_subordinate,
-    raw.isDirectSubordinate,
-    pivot?.is_direct,
-    pivot?.isDirect,
-    pivot?.direct,
-  ];
-
-  for (const value of candidates) {
-    if (value === true || value === 1 || value === "1") return true;
-    if (value === false || value === 0 || value === "0") return false;
-    if (typeof value === "string") {
-      const normalized = value.trim().toLowerCase();
-      if (normalized === "yes" || normalized === "true" || normalized === "direct") {
-        return true;
-      }
-      if (
-        normalized === "no" ||
-        normalized === "false" ||
-        normalized === "indirect" ||
-        normalized === "in-direct"
-      ) {
-        return false;
-      }
-    }
-  }
-
-  return null;
-}
-
 function normalizeStaff(raw: Record<string, unknown>): CorrespondingStaffRow {
   const firstName = String(raw.fname ?? "").trim();
   const lastName = String(raw.lname ?? "").trim();
@@ -379,7 +316,6 @@ function normalizeStaff(raw: Record<string, unknown>): CorrespondingStaffRow {
     role: getDisplayRole(raw.roles),
     lastQuarterEvaluated: pickLastQuarterEvaluated(raw),
     lastQuarterEvaluatedAt: pickLastQuarterEvaluatedAt(raw),
-    isDirect: parseIsDirectSubordinate(raw),
   };
 }
 
@@ -460,6 +396,7 @@ export default function HRSubordinatesPage() {
   const [staffRows, setStaffRows] = useState<CorrespondingStaffRow[]>([]);
   const [loadingStaff, setLoadingStaff] = useState(false);
   const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false);
+  const [isApprovalFlowModalOpen, setIsApprovalFlowModalOpen] = useState(false);
 
   const prevEvaluatorsDebouncedRef = useRef<string | null>(null);
   const evaluatorsFirstLoadDoneRef = useRef(false);
@@ -571,6 +508,11 @@ export default function HRSubordinatesPage() {
     } finally {
       setLoadingStaff(false);
     }
+  }, []);
+
+  const openApprovalFlowForEvaluator = useCallback((evaluator: EvaluatorRow) => {
+    setSelectedEvaluator(evaluator);
+    setIsApprovalFlowModalOpen(true);
   }, []);
 
   return (
@@ -704,7 +646,10 @@ export default function HRSubordinatesPage() {
                         <Skeleton className="h-5 w-24" />
                       </TableCell>
                       <TableCell>
-                        <Skeleton className="ml-auto h-8 w-24" />
+                        <div className="ml-auto flex w-fit items-center justify-end gap-1.5">
+                          <Skeleton className="h-8 w-8 rounded-md" />
+                          <Skeleton className="h-8 w-24" />
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -723,18 +668,31 @@ export default function HRSubordinatesPage() {
                       <TableCell>{row.branch}</TableCell>
                       <TableCell>{row.role}</TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          className="cursor-pointer bg-blue-600 text-white hover:bg-blue-700 hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
-                          onClick={() => {
-                            void loadStaffForEvaluator(row);
-                          }}
-                        >
-                          <Eye className="mr-1.5 h-4 w-4" />
-                          View
-                        </Button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="outline"
+                            aria-label={`Configure approval flow for ${row.name}`}
+                            title="Approval flow"
+                            className="h-8 w-8 shrink-0 cursor-pointer border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700 hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+                            onClick={() => openApprovalFlowForEvaluator(row)}
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="cursor-pointer bg-blue-600 text-white hover:bg-blue-700 hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+                            onClick={() => {
+                              void loadStaffForEvaluator(row);
+                            }}
+                          >
+                            <Eye className="mr-1.5 h-4 w-4" />
+                            View
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -771,13 +729,21 @@ export default function HRSubordinatesPage() {
         staffRows={staffRows}
         loadingStaff={loadingStaff}
         onAddEmployee={() => setIsAddEmployeeModalOpen(true)}
-        onStaffDirectStatusChange={(employeeId, isDirect) => {
-          setStaffRows((prev) =>
-            prev.map((row) =>
-              row.id === employeeId ? { ...row, isDirect } : row
-            )
-          );
+      />
+
+      <ApprovalFlowModal
+        open={isApprovalFlowModalOpen}
+        onOpenChange={(open) => {
+          setIsApprovalFlowModalOpen(open);
+          if (!open && !isStaffModalOpen && !isAddEmployeeModalOpen) {
+            setSelectedEvaluator(null);
+          }
         }}
+        evaluator={
+          selectedEvaluator
+            ? { id: selectedEvaluator.id, name: selectedEvaluator.name }
+            : null
+        }
       />
 
       <AddEmployeeToEvaluatorModal

@@ -77,7 +77,30 @@ export default function OverviewTab() {
 
   const { user } = useAuth();
 
-  // Load approved evaluations from API
+  const loadDashboardStats = async () => {
+    try {
+      const dashboard = await apiService.employeeDashboard();
+
+      if (!dashboard) {
+        console.error("Dashboard API response is undefined");
+        setTotalEvaluations(0);
+        setAverage(0);
+        setRecentEvaluation([]);
+        return;
+      }
+
+      setTotalEvaluations(dashboard.total_evaluations || 0);
+      setAverage(dashboard.average || 0);
+      setRecentEvaluation(dashboard.recent_evaluation || []);
+    } catch (error) {
+      console.error("Error loading dashboard data:", error);
+      setTotalEvaluations(0);
+      setAverage(0);
+      setRecentEvaluation([]);
+    }
+  };
+
+  // Load evaluations for the overview table
   const loadApprovedEvaluations = async (searchValue: string) => {
     const requestKey = JSON.stringify({
       searchValue,
@@ -102,20 +125,11 @@ export default function OverviewTab() {
           itemsPerPage
         );
 
-        // Add safety checks to prevent "Cannot read properties of undefined" error
-        if (!response || !response.myEval_as_Employee) {
-          console.error("API response is undefined or missing myEval_as_Employee");
-          setMyEvaluations([]);
-          setOverviewTotal(0);
-          setTotalPages(1);
-          setPerPage(itemsPerPage);
-          return;
-        }
-
-        setMyEvaluations(response.myEval_as_Employee.data || []);
-        setOverviewTotal(response.myEval_as_Employee.total || 0);
-        setTotalPages(response.myEval_as_Employee.last_page || 1);
-        setPerPage(response.myEval_as_Employee.per_page || itemsPerPage);
+        const page = response?.myEval_as_Employee;
+        setMyEvaluations(page?.data || []);
+        setOverviewTotal(page?.total || 0);
+        setTotalPages(page?.last_page || 1);
+        setPerPage(page?.per_page || itemsPerPage);
       } catch (error) {
         console.error("Error loading approved evaluations:", error);
         // Set default values on error to prevent crashes
@@ -138,31 +152,7 @@ export default function OverviewTab() {
   };
 
   useEffect(() => {
-    const loadDashboard = async () => {
-      try {
-        const dashboard = await apiService.employeeDashboard();
-        
-        // Add safety checks to prevent "Cannot read properties of undefined" error
-        if (!dashboard) {
-          console.error("Dashboard API response is undefined");
-          setTotalEvaluations(0);
-          setAverage(0);
-          setRecentEvaluation([]);
-          return;
-        }
-
-        setTotalEvaluations(dashboard.total_evaluations || 0);
-        setAverage(dashboard.average || 0);
-        setRecentEvaluation(dashboard.recent_evaluation || []);
-      } catch (error) {
-        console.error("Error loading dashboard data:", error);
-        // Set default values on error
-        setTotalEvaluations(0);
-        setAverage(0);
-        setRecentEvaluation([]);
-      }
-    };
-    loadDashboard();
+    loadDashboardStats();
   }, []);
 
   useEffect(() => {
@@ -191,8 +181,10 @@ export default function OverviewTab() {
   const refresh = async () => {
     setIsRefreshingOverview(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      await loadApprovedEvaluations(debouncedSearchTerm);
+      await Promise.all([
+        loadDashboardStats(),
+        loadApprovedEvaluations(debouncedSearchTerm),
+      ]);
     } catch (error) {
       console.error("Error refreshing on tab click:", error);
     } finally {
@@ -630,8 +622,16 @@ export default function OverviewTab() {
             </div>
           ) : myEvaluations.length === 0 && searchTerm === "" ? (
             <NotFoundEmptyState
-              title="No performance reviews yet"
-              description="Your evaluations will appear here once they are completed by your manager."
+              title={
+                Number(totalEvaluations) > 0
+                  ? "Reviews are not listed yet"
+                  : "No performance reviews yet"
+              }
+              description={
+                Number(totalEvaluations) > 0
+                  ? "Your scores above are from your evaluations, but none are available in this list yet. They may still be pending approval. Try Refresh, or ask HR if this continues."
+                  : "Your evaluations will appear here once your manager submits them."
+              }
             />
           ) : myEvaluations.length === 0 && searchTerm !== "" ? (
             <NotFoundEmptyState
