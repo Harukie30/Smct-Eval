@@ -35,10 +35,120 @@ type ApproverRow = {
   value: string | number;
 };
 
-function createApproverRow(): ApproverRow {
+function createApproverRow(value: string | number = "", keySuffix = ""): ApproverRow {
   return {
-    key: `approver-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-    value: "",
+    key: `approver-${keySuffix || Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    value,
+  };
+}
+
+function getResponseRoot(raw: unknown): Record<string, unknown> | null {
+  if (!raw || typeof raw !== "object") return null;
+  const root = raw as Record<string, unknown>;
+  if (root.data && typeof root.data === "object" && !Array.isArray(root.data)) {
+    return root.data as Record<string, unknown>;
+  }
+  return root;
+}
+
+function coerceUserArray(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function extractUserOptions(raw: unknown): ApproverOption[] {
+  const root = getResponseRoot(raw);
+  if (!root) return [];
+
+  const users = coerceUserArray(root.users);
+  const seen = new Set<string>();
+  const options: ApproverOption[] = [];
+
+  for (const item of users) {
+    if (!item || typeof item !== "object") continue;
+    const option = normalizeApproverOption(item as Record<string, unknown>);
+    if (!option || seen.has(option.value)) continue;
+    seen.add(option.value);
+    options.push(option);
+  }
+
+  return options.sort((a, b) => a.label.localeCompare(b.label));
+}
+
+function extractAssignedApprovers(raw: unknown): ApproverOption[] {
+  const root = getResponseRoot(raw);
+  if (!root) return [];
+
+  const assigned = coerceUserArray(
+    root.assigned_approver ?? root.assigned_approvers ?? root.assignedApprover
+  );
+
+  return assigned
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const record = item as Record<string, unknown>;
+      const pivot =
+        record.pivot && typeof record.pivot === "object"
+          ? (record.pivot as Record<string, unknown>)
+          : null;
+      const sequence = Number(pivot?.sequence ?? Number.MAX_SAFE_INTEGER);
+      const option = normalizeApproverOption(record);
+      if (!option) return null;
+      return { ...option, sequence };
+    })
+    .filter((item): item is ApproverOption & { sequence: number } => item !== null)
+    .sort((a, b) => a.sequence - b.sequence)
+    .map(({ sequence: _sequence, ...option }) => option);
+}
+
+function extractRequiresApproval(raw: unknown): RequiresApprovalValue {
+  const root = getResponseRoot(raw);
+  if (!root) return "";
+
+  const candidates = [
+    root.requires_approval,
+    root.requiresApproval,
+    root.is_approval_required,
+    root.isApprovalRequired,
+  ];
+
+  for (const value of candidates) {
+    if (value === true || value === 1 || value === "1") return "yes";
+    if (value === false || value === 0 || value === "0") return "no";
+  }
+
+  const assigned = extractAssignedApprovers(raw);
+  if (assigned.length > 0) return "yes";
+
+  return "";
+}
+
+function mergeApproverOptions(...lists: ApproverOption[][]): ApproverOption[] {
+  const seen = new Set<string>();
+  const merged: ApproverOption[] = [];
+
+  for (const list of lists) {
+    for (const option of list) {
+      if (seen.has(option.value)) continue;
+      seen.add(option.value);
+      merged.push(option);
+    }
+  }
+
+  return merged.sort((a, b) => a.label.localeCompare(b.label));
+}
+
+function parseApprovalFlowResponse(raw: unknown): {
+  options: ApproverOption[];
+  assignedApprovers: ApproverOption[];
+  requiresApproval: RequiresApprovalValue;
+} {
+  const userOptions = extractUserOptions(raw);
+  const assignedApprovers = extractAssignedApprovers(raw);
+
+  return {
+    options: mergeApproverOptions(userOptions, assignedApprovers),
+    assignedApprovers,
+    requiresApproval: extractRequiresApproval(raw),
   };
 }
 
@@ -63,7 +173,11 @@ function normalizeApproverOption(raw: Record<string, unknown>): ApproverOption |
   const lastName = String(raw.lname ?? "").trim();
   const fullName =
     String(raw.full_name ?? "").trim() || `${firstName} ${lastName}`.trim();
-  const id = raw.id ?? raw.user_id;
+  const pivot =
+    raw.pivot && typeof raw.pivot === "object"
+      ? (raw.pivot as Record<string, unknown>)
+      : null;
+  const id = raw.id ?? raw.user_id ?? pivot?.approver_id;
   if (id == null || fullName === "") return null;
 
   const role = getDisplayRole(raw.roles);
@@ -73,57 +187,6 @@ function normalizeApproverOption(raw: Record<string, unknown>): ApproverOption |
     value: String(id),
     label: email ? `${fullName} (${email}) · ${role}` : `${fullName} · ${role}`,
   };
-}
-
-function extractEvaluatorOptions(raw: unknown): ApproverOption[] {
-  if (!raw || typeof raw !== "object") return [];
-  const root = raw as Record<string, unknown>;
-
-  const data =
-    root.data && typeof root.data === "object" && !Array.isArray(root.data)
-      ? (root.data as Record<string, unknown>)
-      : null;
-
-  const lists: unknown[] = [];
-  const candidates = [
-    root.evaluators,
-    root.evaluators_by_branch,
-    root.evaluatorsByBranch,
-    root.users,
-    root.data,
-    data?.evaluators,
-    data?.evaluators_by_branch,
-    data?.evaluatorsByBranch,
-    data?.users,
-    data?.data,
-  ];
-
-  for (const candidate of candidates) {
-    if (Array.isArray(candidate)) {
-      lists.push(candidate);
-      continue;
-    }
-    if (candidate && typeof candidate === "object" && !Array.isArray(candidate)) {
-      const nested = (candidate as Record<string, unknown>).data;
-      if (Array.isArray(nested)) lists.push(nested);
-    }
-  }
-
-  const seen = new Set<string>();
-  const options: ApproverOption[] = [];
-
-  for (const list of lists) {
-    if (!Array.isArray(list)) continue;
-    for (const item of list) {
-      if (!item || typeof item !== "object") continue;
-      const option = normalizeApproverOption(item as Record<string, unknown>);
-      if (!option || seen.has(option.value)) continue;
-      seen.add(option.value);
-      options.push(option);
-    }
-  }
-
-  return options.sort((a, b) => a.label.localeCompare(b.label));
 }
 
 export default function ApprovalFlowModal({
@@ -167,10 +230,30 @@ export default function ApprovalFlowModal({
       try {
         const response = await apiService.getEvaluatorsByBranch(evaluator.id);
         if (cancelled) return;
-        const options = extractEvaluatorOptions(response).filter(
+
+        const parsed = parseApprovalFlowResponse(response);
+        const options = parsed.options.filter(
           (option) => option.value !== evaluator.id
         );
+
         setApproverOptions(options);
+
+        if (parsed.requiresApproval) {
+          setRequiresApproval(parsed.requiresApproval);
+        }
+
+        if (
+          parsed.requiresApproval === "yes" &&
+          parsed.assignedApprovers.length > 0
+        ) {
+          setApproverRows(
+            parsed.assignedApprovers.map((approver, index) =>
+              createApproverRow(approver.value, `saved-${approver.value}-${index}`)
+            )
+          );
+        } else {
+          setApproverRows([createApproverRow()]);
+        }
       } catch (error) {
         console.error("Failed to load branch evaluators:", error);
         if (!cancelled) {
@@ -205,7 +288,7 @@ export default function ApprovalFlowModal({
   }, [isSuccessDialogOpen]);
 
   useEffect(() => {
-    if (requiresApproval !== "yes") {
+    if (requiresApproval === "no") {
       setApproverRows([createApproverRow()]);
     }
   }, [requiresApproval]);
