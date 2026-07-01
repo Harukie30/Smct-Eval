@@ -666,6 +666,32 @@ export const apiService = {
     return response.data;
   },
 
+  /**
+   * Save evaluator approval flow settings.
+   * Backend: POST /saveApprovalFlow/{user}
+   * Body: { requires_approval: 0|1, approver_ids: number[] }
+   */
+  saveApprovalFlow: async (
+    evaluatorId: string | number,
+    payload: {
+      requiresApproval: boolean;
+      approverIds: Array<string | number>;
+    }
+  ): Promise<any> => {
+    const approverIds = payload.approverIds
+      .map((id) => Number(id))
+      .filter((id) => Number.isFinite(id) && id > 0);
+
+    const response = await api.post(
+      `/saveApprovalFlow/${encodeURIComponent(String(evaluatorId))}`,
+      {
+        requires_approval: payload.requiresApproval ? 1 : 0,
+        approver_ids: approverIds,
+      }
+    );
+    return response.data;
+  },
+
   getAllEvaluatorAssignedEmployees: async (
     userId: string | number,
     params?: {

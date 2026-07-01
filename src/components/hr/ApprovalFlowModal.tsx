@@ -43,13 +43,6 @@ function createApproverRow(): ApproverRow {
 }
 
 const APPROVAL_FLOW_SUCCESS_AUTO_CLOSE_MS = 2800;
-const APPROVAL_FLOW_SAVE_MIN_MS = 500;
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    window.setTimeout(resolve, ms);
-  });
-}
 
 export interface ApprovalFlowModalProps {
   open: boolean;
@@ -295,10 +288,17 @@ export default function ApprovalFlowModal({
     }
 
     setSaving(true);
-    const saveStartedAt = Date.now();
     try {
-      // API wiring will be added when backend endpoint is available.
-      const approverCount = approverRows.filter((row) => row.value !== "").length;
+      const selectedApproverIds = approverRows
+        .map((row) => row.value)
+        .filter((value) => value !== "");
+
+      await apiService.saveApprovalFlow(evaluator.id, {
+        requiresApproval: requiresApproval === "yes",
+        approverIds: requiresApproval === "yes" ? selectedApproverIds : [],
+      });
+
+      const approverCount = selectedApproverIds.length;
       const message =
         requiresApproval === "yes"
           ? `Approval flow saved for ${evaluator.name}${
@@ -308,16 +308,17 @@ export default function ApprovalFlowModal({
             }`
           : `Approval is not required for ${evaluator.name}.`;
 
-      const elapsed = Date.now() - saveStartedAt;
-      if (elapsed < APPROVAL_FLOW_SAVE_MIN_MS) {
-        await delay(APPROVAL_FLOW_SAVE_MIN_MS - elapsed);
-      }
-
       setSuccessMessage(message);
       resetApprovalForm();
       setApproverOptions([]);
       onOpenChange(false);
       setIsSuccessDialogOpen(true);
+    } catch (error) {
+      console.error("Failed to save approval flow:", error);
+      toastMessages.generic.error(
+        "Failed to save approval flow",
+        "Please try again."
+      );
     } finally {
       setSaving(false);
     }
@@ -370,7 +371,7 @@ export default function ApprovalFlowModal({
                   checked={requiresApproval === "yes"}
                   disabled={saving}
                   onChange={() => setRequiresApproval("yes")}
-                  className="h-4 w-4 border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                  className="h-4 w-4 border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                 />
                 <Label
                   htmlFor="approval-flow-yes"
@@ -388,7 +389,7 @@ export default function ApprovalFlowModal({
                   checked={requiresApproval === "no"}
                   disabled={saving}
                   onChange={() => setRequiresApproval("no")}
-                  className="h-4 w-4 border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                  className="h-4 w-4 border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                 />
                 <Label
                   htmlFor="approval-flow-no"
