@@ -4,6 +4,7 @@ import {
   isEditSession,
 } from "@/lib/evaluationEditTypes";
 import { buildResubmitJsonPayload } from "@/lib/evaluationResubmitPayload";
+import { isSubmissionResubmitAllowed } from "@/lib/evaluationSubmissionRecord";
 import { EvaluationPayload } from "@/components/evaluation/types";
 
 export type { EvaluationResubmitType as HoResubmitType } from "@/lib/evaluationEditTypes";
@@ -20,6 +21,12 @@ export async function submitEvaluationForm(
   if (!isEditSession(editSession)) {
     await submitNew();
     return;
+  }
+
+  if (!isSubmissionResubmitAllowed(editSession.sourceRecord)) {
+    throw new Error(
+      "This evaluation cannot be edited in its current status. Please refresh and try again."
+    );
   }
 
   await apiService.resubmitEvaluation(

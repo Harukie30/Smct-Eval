@@ -93,10 +93,15 @@ export function isEvaluationStatusAnyPending(status: unknown): boolean {
   );
 }
 
-/** Evaluator may edit when an evaluation is in an approval step that allows changes. */
-export function isEvaluationStatusEditableByEvaluator(status: unknown): boolean {
+/** Evaluator may edit pending (with approver), pending approval 1, or pending approval 2. */
+export function isEvaluationStatusEditableByEvaluator(
+  status: unknown,
+  hasApprover = false
+): boolean {
   const s = normalizeEvaluationStatus(status);
-  return s === "pending_approval_1" || s === "pending_approval_2";
+  if (s === "pending_approval_1" || s === "pending_approval_2") return true;
+  if (s === "pending" && hasApprover) return true;
+  return false;
 }
 
 export function getEvaluationStatusRowAccentClass(status: unknown): string | null {

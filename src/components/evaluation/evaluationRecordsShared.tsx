@@ -30,9 +30,12 @@ import {
   isEvaluationStatusAnyPending,
   isEvaluationStatusEditableByEvaluator,
   isEvaluationStatusPending,
+  isEvaluationStatusPendingApproval1,
+  isEvaluationStatusPendingApproval2,
   isEvaluationStatusRejected,
   normalizeEvaluationStatus,
 } from "@/lib/evaluationStatus";
+import { recordHasApprover } from "@/lib/evaluationSubmissionRecord";
 import { cn } from "@/lib/utils";
 import {
   isQuarterLateByStaticPeriod,
@@ -260,65 +263,7 @@ function isPresentId(value: unknown): boolean {
 
 /** True when the evaluation record has at least one assigned approver. */
 export function reviewHasApprover(review: EvaluationRecordReview): boolean {
-  const extended = review as EvaluationRecordReview & Record<string, unknown>;
-
-  const scalarCandidates = [
-    extended.approver_id,
-    extended.approverId,
-    extended.current_approver_id,
-    extended.currentApproverId,
-    extended.pending_approver_id,
-    extended.pendingApproverId,
-  ];
-
-  for (const value of scalarCandidates) {
-    if (isPresentId(value)) return true;
-  }
-
-  const objectCandidates = [
-    extended.approver,
-    extended.approver1,
-    extended.approver_1,
-    extended.approver2,
-    extended.approver_2,
-    extended.current_approver,
-    extended.currentApprover,
-    extended.pending_approver,
-    extended.pendingApprover,
-  ];
-
-  for (const value of objectCandidates) {
-    if (!value || typeof value !== "object") continue;
-    const record = value as Record<string, unknown>;
-    if (isPresentId(record.id ?? record.user_id ?? record.approver_id)) {
-      return true;
-    }
-  }
-
-  const arrayCandidates = [
-    extended.approvers,
-    extended.assigned_approver,
-    extended.assigned_approvers,
-    extended.assignedApprover,
-    extended.assignedApprovers,
-  ];
-
-  for (const value of arrayCandidates) {
-    if (!Array.isArray(value) || value.length === 0) continue;
-    for (const item of value) {
-      if (item == null) continue;
-      if (typeof item === "object") {
-        const record = item as Record<string, unknown>;
-        if (isPresentId(record.id ?? record.user_id ?? record.approver_id)) {
-          return true;
-        }
-        continue;
-      }
-      if (isPresentId(item)) return true;
-    }
-  }
-
-  return false;
+  return recordHasApprover(review as EvaluationRecordReview & Record<string, unknown>);
 }
 
 export function getReviewApproverUserId(
@@ -367,11 +312,34 @@ export function isReviewEditable(
   review: EvaluationRecordReview,
   currentUserId: string | number | null | undefined
 ): boolean {
+  return isEvaluationRecordEditableByEvaluator(review, currentUserId);
+}
+
+/** Evaluator may open the edit flow (draft, pending with approver, or approval steps). */
+export function canEvaluatorOpenEvaluationEdit(
+  review: EvaluationRecordReview,
+  currentUserId: string | number | null | undefined,
+  options?: { allowPendingEditByCurrentUser?: boolean }
+): boolean {
+  if (isReviewDraftEditableByEvaluator(review, currentUserId)) return true;
+  if (
+    options?.allowPendingEditByCurrentUser &&
+    isReviewPendingEditableByEvaluator(review, currentUserId)
+  ) {
+    return true;
+  }
+  return isEvaluationRecordEditableByEvaluator(review, currentUserId);
+}
+
+export function isEvaluationRecordEditableByEvaluator(
+  review: EvaluationRecordReview,
+  currentUserId: string | number | null | undefined
+): boolean {
   if (!isReviewEvaluatorCurrentUser(review, currentUserId)) return false;
   if (isReviewEditDisabledForEvaluator(review, currentUserId)) return false;
 
   const status = normalizeEvaluationStatus(review.status);
-  return isEvaluationStatusEditableByEvaluator(status);
+  return isEvaluationStatusEditableByEvaluator(status, reviewHasApprover(review));
 }
 
 /** Evaluator sees a disabled Edit control for these statuses (cannot open edit flow). */
@@ -1083,7 +1051,12 @@ export function EvalRecordRowActions({
       ? "Edit this draft evaluation"
       : allowPendingEditByCurrentUser
         ? "Edit this pending evaluation"
-        : "Edit this evaluation";
+        : isEvaluationStatusPendingApproval1(review.status) ||
+            isEvaluationStatusPendingApproval2(review.status)
+          ? "Edit this evaluation while it is awaiting approval"
+          : isEvaluationStatusPending(review.status) && reviewHasApprover(review)
+            ? "Edit this pending evaluation"
+            : "Edit this evaluation";
 
   if (showApproverReviewActions) {
     return (

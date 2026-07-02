@@ -5,6 +5,11 @@
  * Form editing uses EvaluationPayload — map with submissionToEvaluationPayload().
  */
 
+import {
+  isEvaluationStatusEditableByEvaluator,
+  normalizeEvaluationStatus,
+} from "@/lib/evaluationStatus";
+
 export interface EvaluationScoreItem {
   id?: number;
   users_evaluation_id?: number;
@@ -111,4 +116,88 @@ export function getSubmissionRecordId(
   if (!record?.id) return undefined;
   const id = Number(record.id);
   return Number.isFinite(id) && id > 0 ? id : undefined;
+}
+
+function isPresentApproverId(value: unknown): boolean {
+  if (value == null) return false;
+  const s = String(value).trim();
+  return s !== "" && s !== "0" && s.toLowerCase() !== "null";
+}
+
+/** True when the evaluation record has at least one assigned approver. */
+export function recordHasApprover(
+  record: EvaluationSubmissionRecord | Record<string, unknown>
+): boolean {
+  const extended = record as Record<string, unknown>;
+
+  const scalarCandidates = [
+    extended.approver_id,
+    extended.approverId,
+    extended.current_approver_id,
+    extended.currentApproverId,
+    extended.pending_approver_id,
+    extended.pendingApproverId,
+  ];
+
+  for (const value of scalarCandidates) {
+    if (isPresentApproverId(value)) return true;
+  }
+
+  const objectCandidates = [
+    extended.approver,
+    extended.approver1,
+    extended.approver_1,
+    extended.approver2,
+    extended.approver_2,
+    extended.current_approver,
+    extended.currentApprover,
+    extended.pending_approver,
+    extended.pendingApprover,
+  ];
+
+  for (const value of objectCandidates) {
+    if (!value || typeof value !== "object") continue;
+    const item = value as Record<string, unknown>;
+    if (isPresentApproverId(item.id ?? item.user_id ?? item.approver_id)) {
+      return true;
+    }
+  }
+
+  const arrayCandidates = [
+    extended.approvers,
+    extended.assigned_approver,
+    extended.assigned_approvers,
+    extended.assignedApprover,
+    extended.assignedApprovers,
+  ];
+
+  for (const value of arrayCandidates) {
+    if (!Array.isArray(value) || value.length === 0) continue;
+    for (const item of value) {
+      if (item == null) continue;
+      if (typeof item === "object") {
+        const row = item as Record<string, unknown>;
+        if (isPresentApproverId(row.id ?? row.user_id ?? row.approver_id)) {
+          return true;
+        }
+        continue;
+      }
+      if (isPresentApproverId(item)) return true;
+    }
+  }
+
+  return false;
+}
+
+/** Status + approver gate for resubmit (draft uses a separate submit path). */
+export function isSubmissionResubmitAllowed(
+  record: EvaluationSubmissionRecord | null | undefined
+): boolean {
+  if (!record) return false;
+
+  const status = normalizeEvaluationStatus(record.status);
+  if (status === "draft") return true;
+  if (status === "rejected") return false;
+
+  return isEvaluationStatusEditableByEvaluator(status, recordHasApprover(record));
 }

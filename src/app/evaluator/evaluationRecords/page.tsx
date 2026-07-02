@@ -55,6 +55,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useBranchesForEvaluation } from "@/hooks/useBranchesForEvaluation";
 import { getEmployeeBranchCodeDisplay } from "@/components/evaluation/employeeBranchLabel";
+import { isSubmissionResubmitAllowed } from "@/lib/evaluationSubmissionRecord";
 import {
   type EvaluationRecordReview,
   EVAL_RECORDS_TABLE_CLASS,
@@ -77,8 +78,9 @@ import {
   getReviewQuarterDisplay,
   getReviewRowClassName,
   hasEvaluatorSigned,
-  isReviewEditable,
+  canEvaluatorOpenEvaluationEdit,
   isReviewDraft,
+  isReviewDraftEditableByEvaluator,
   isReviewApproverActionable,
   isReviewEvaluatorCurrentUser,
   getViewEvaluationErrorMessage,
@@ -359,13 +361,28 @@ export default function OverviewTab() {
   };
 
   const handleEditEvaluation = async (review: Review) => {
-    if (!isReviewEditable(review, user?.id)) return;
+    if (!canEvaluatorOpenEvaluationEdit(review, user?.id)) return;
 
     setIsLoadingEditEvaluation(true);
     try {
       const submission = await clientDataService.getSubmissionById(review.id);
 
       if (submission) {
+        const draftEdit = isReviewDraftEditableByEvaluator(review, user?.id);
+        const stillEditable =
+          draftEdit ||
+          (canEvaluatorOpenEvaluationEdit(review, user?.id) &&
+            isSubmissionResubmitAllowed(submission));
+
+        if (!stillEditable) {
+          setEvaluationActionError({
+            title: "Unable to Edit Evaluation",
+            message:
+              "This evaluation can no longer be edited in its current status. Please refresh to view the latest updates.",
+          });
+          return;
+        }
+
         setSelectedSubmissionForEdit(submission);
         setIsEditEvaluationModalOpen(true);
       } else {
