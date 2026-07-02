@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 export type ApprovalFlowEvaluator = {
   id: string;
   name: string;
+  role?: string;
 };
 
 type RequiresApprovalValue = "yes" | "no" | "";
@@ -65,7 +66,9 @@ function extractUserOptions(raw: unknown): ApproverOption[] {
 
   for (const item of users) {
     if (!item || typeof item !== "object") continue;
-    const option = normalizeApproverOption(item as Record<string, unknown>);
+    const record = item as Record<string, unknown>;
+    if (userHasHrRole(record)) continue;
+    const option = normalizeApproverOption(record);
     if (!option || seen.has(option.value)) continue;
     seen.add(option.value);
     options.push(option);
@@ -161,12 +164,28 @@ export interface ApprovalFlowModalProps {
   evaluator: ApprovalFlowEvaluator | null;
 }
 
-function getDisplayRole(roles: unknown): string {
-  if (!Array.isArray(roles) || roles.length === 0) return "N/A";
-  const nonAdmin = (roles as Array<{ name?: string }>).find(
-    (r) => String(r?.name ?? "").toLowerCase() !== "admin"
+function isHrRoleName(name: string): boolean {
+  const normalized = name.trim().toLowerCase();
+  return (
+    normalized === "hr" ||
+    normalized === "human resources" ||
+    normalized === "human resource"
   );
-  return String(nonAdmin?.name ?? (roles[0] as { name?: string })?.name ?? "N/A");
+}
+
+function userHasHrRole(raw: Record<string, unknown>): boolean {
+  const roles = raw.roles;
+  if (!Array.isArray(roles)) return false;
+
+  return roles.some((role) => {
+    if (!role || typeof role !== "object") return false;
+    return isHrRoleName(String((role as { name?: string }).name ?? ""));
+  });
+}
+
+export function isHrEvaluatorRole(role: string | undefined | null): boolean {
+  if (!role) return false;
+  return isHrRoleName(role);
 }
 
 function normalizeApproverOption(raw: Record<string, unknown>): ApproverOption | null {
@@ -291,8 +310,10 @@ export default function ApprovalFlowModal({
     }
   }, [requiresApproval]);
 
+  const isHrEvaluator = isHrEvaluatorRole(evaluator?.role);
+
   const comboboxDisabled =
-    requiresApproval !== "yes" || loadingApprovers || saving;
+    isHrEvaluator || requiresApproval !== "yes" || loadingApprovers || saving;
 
   const comboboxPlaceholder = useMemo(() => {
     if (requiresApproval !== "yes") return "Select Yes to choose approvers";
@@ -453,7 +474,7 @@ export default function ApprovalFlowModal({
                   name="requiresApproval"
                   value="yes"
                   checked={requiresApproval === "yes"}
-                  disabled={saving}
+                  disabled={saving || isHrEvaluator}
                   onChange={() => setRequiresApproval("yes")}
                   className="h-4 w-4 border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                 />
@@ -471,7 +492,7 @@ export default function ApprovalFlowModal({
                   name="requiresApproval"
                   value="no"
                   checked={requiresApproval === "no"}
-                  disabled={saving}
+                  disabled={saving || isHrEvaluator}
                   onChange={() => setRequiresApproval("no")}
                   className="h-4 w-4 border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                 />
@@ -485,6 +506,11 @@ export default function ApprovalFlowModal({
             </div>
           </fieldset>
 
+          {isHrEvaluator ? (
+            <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+              Approval flow is not available for HR employees.
+            </p>
+          ) : (
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-2">
               <Label
@@ -495,18 +521,20 @@ export default function ApprovalFlowModal({
               >
                 Approvers
               </Label>
-              <Button
-                type="button"
-                size="icon"
-                variant="outline"
-                aria-label="Add approver"
-                title="Add approver"
-                disabled={comboboxDisabled || approverRows.length >= MAX_APPROVERS}
-                className="h-8 w-8 shrink-0 cursor-pointer border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700 hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 disabled:hover:translate-y-0 disabled:hover:shadow-none"
-                onClick={handleAddApproverRow}
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
+              {!isHrEvaluator ? (
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="outline"
+                  aria-label="Add approver"
+                  title="Add approver"
+                  disabled={comboboxDisabled || approverRows.length >= MAX_APPROVERS}
+                  className="h-8 w-8 shrink-0 cursor-pointer border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700 hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 disabled:hover:translate-y-0 disabled:hover:shadow-none"
+                  onClick={handleAddApproverRow}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              ) : null}
             </div>
 
             <div className="space-y-2">
@@ -566,6 +594,7 @@ export default function ApprovalFlowModal({
               ))}
             </div>
           </div>
+          )}
         </div>
 
         <DialogFooter className="shrink-0 border-t bg-white px-4 py-3 sm:px-6 sm:py-4">
@@ -580,7 +609,7 @@ export default function ApprovalFlowModal({
           </Button>
           <Button
             type="button"
-            disabled={saving || !evaluator}
+            disabled={saving || !evaluator || isHrEvaluator}
             className="cursor-pointer bg-emerald-600 text-white hover:bg-emerald-700 hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-70 disabled:hover:translate-y-0 disabled:hover:shadow-none"
             onClick={() => {
               void handleSave();

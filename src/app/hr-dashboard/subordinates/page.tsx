@@ -24,7 +24,9 @@ import AddEmployeeToEvaluatorModal, {
 import CorrespondingStaffModal, {
   type CorrespondingStaffRow,
 } from "@/components/hr/CorrespondingStaffModal";
-import ApprovalFlowModal from "@/components/hr/ApprovalFlowModal";
+import ApprovalFlowModal, {
+  isHrEvaluatorRole,
+} from "@/components/hr/ApprovalFlowModal";
 
 type EvaluatorRow = {
   id: string;
@@ -669,17 +671,19 @@ export default function HRSubordinatesPage() {
                       <TableCell>{row.role}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="outline"
-                            aria-label={`Configure approval flow for ${row.name}`}
-                            title="Approval flow"
-                            className="h-8 w-8 shrink-0 cursor-pointer border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700 hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
-                            onClick={() => openApprovalFlowForEvaluator(row)}
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
+                          {!isHrEvaluatorRole(row.role) ? (
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="outline"
+                              aria-label={`Configure approval flow for ${row.name}`}
+                              title="Approval flow"
+                              className="h-8 w-8 shrink-0 cursor-pointer border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700 hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+                              onClick={() => openApprovalFlowForEvaluator(row)}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          ) : null}
                           <Button
                             type="button"
                             size="sm"
@@ -741,7 +745,11 @@ export default function HRSubordinatesPage() {
         }}
         evaluator={
           selectedEvaluator
-            ? { id: selectedEvaluator.id, name: selectedEvaluator.name }
+            ? {
+                id: selectedEvaluator.id,
+                name: selectedEvaluator.name,
+                role: selectedEvaluator.role,
+              }
             : null
         }
       />
