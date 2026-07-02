@@ -368,9 +368,21 @@ export function isReviewEditable(
   currentUserId: string | number | null | undefined
 ): boolean {
   if (!isReviewEvaluatorCurrentUser(review, currentUserId)) return false;
+  if (isReviewEditDisabledForEvaluator(review, currentUserId)) return false;
 
   const status = normalizeEvaluationStatus(review.status);
-  if (isEvaluationStatusEditableByEvaluator(status)) return true;
+  return isEvaluationStatusEditableByEvaluator(status);
+}
+
+/** Evaluator sees a disabled Edit control for these statuses (cannot open edit flow). */
+export function isReviewEditDisabledForEvaluator(
+  review: EvaluationRecordReview,
+  currentUserId: string | number | null | undefined
+): boolean {
+  if (!isReviewEvaluatorCurrentUser(review, currentUserId)) return false;
+
+  const status = normalizeEvaluationStatus(review.status);
+  if (isEvaluationStatusRejected(status)) return true;
   if (isEvaluationStatusPending(status) && !reviewHasApprover(review)) return true;
 
   return false;
@@ -1051,11 +1063,27 @@ export function EvalRecordRowActions({
     !draftOwnedByCurrentUser &&
     (onAcceptAction != null || onRejectAction != null);
   const canDelete = isReviewDeletable(review) && onDeleteAction != null;
+  const editDisabledForEvaluator = isReviewEditDisabledForEvaluator(
+    review,
+    currentUserId
+  );
   const canEdit =
     onEditAction != null &&
+    !editDisabledForEvaluator &&
     (isReviewEditable(review, currentUserId) ||
       allowPendingEditByCurrentUser ||
       (isDraft && draftOwnedByCurrentUser));
+  const showDisabledEdit =
+    onEditAction != null && editDisabledForEvaluator;
+  const editButtonTitle = editDisabledForEvaluator
+    ? isEvaluationStatusRejected(review.status)
+      ? "Editing is disabled while this evaluation is rejected"
+      : "Editing is disabled for pending evaluations without an approver"
+    : isDraft && draftOwnedByCurrentUser
+      ? "Edit this draft evaluation"
+      : allowPendingEditByCurrentUser
+        ? "Edit this pending evaluation"
+        : "Edit this evaluation";
 
   if (showApproverReviewActions) {
     return (
@@ -1220,21 +1248,16 @@ export function EvalRecordRowActions({
         <Eye className="h-4 w-4 lg:hidden" />
         <span className="hidden lg:inline">☰ View</span>
       </Button>
-      {canEdit ? (
+      {canEdit || showDisabledEdit ? (
         <Button
           type="button"
           variant="outline"
           size="icon"
-          onClick={onEditAction}
+          onClick={showDisabledEdit ? undefined : onEditAction}
+          disabled={showDisabledEdit}
           aria-label="Edit evaluation"
-          title={
-            isDraft && draftOwnedByCurrentUser
-              ? "Edit this draft evaluation"
-              : allowPendingEditByCurrentUser
-                ? "Edit this pending evaluation"
-                : "Edit this evaluation"
-          }
-          className="h-8 w-8 shrink-0 cursor-pointer border-amber-200 bg-amber-100 text-amber-800 hover:bg-amber-500 hover:text-white lg:h-8 lg:w-auto lg:px-2 lg:transition-all lg:duration-200 lg:hover:-translate-y-0.5 lg:hover:shadow-md lg:active:translate-y-0"
+          title={editButtonTitle}
+          className="h-8 w-8 shrink-0 border-amber-200 bg-amber-100 text-amber-800 hover:bg-amber-500 hover:text-white disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 disabled:hover:bg-slate-100 disabled:hover:text-slate-400 lg:h-8 lg:w-auto lg:px-2 lg:transition-all lg:duration-200 lg:hover:-translate-y-0.5 lg:hover:shadow-md lg:active:translate-y-0 disabled:lg:hover:translate-y-0 disabled:lg:hover:shadow-none"
         >
           <Pencil className="h-4 w-4 lg:hidden" />
           <span className="hidden lg:inline">✏️ Edit</span>

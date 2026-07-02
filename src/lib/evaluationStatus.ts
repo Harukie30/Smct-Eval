@@ -93,14 +93,10 @@ export function isEvaluationStatusAnyPending(status: unknown): boolean {
   );
 }
 
-/** Evaluator may edit/resubmit when approval was rejected or sent back for changes. */
+/** Evaluator may edit when an evaluation is in an approval step that allows changes. */
 export function isEvaluationStatusEditableByEvaluator(status: unknown): boolean {
   const s = normalizeEvaluationStatus(status);
-  return (
-    s === "pending_approval_1" ||
-    s === "pending_approval_2" ||
-    s === "rejected"
-  );
+  return s === "pending_approval_1" || s === "pending_approval_2";
 }
 
 export function getEvaluationStatusRowAccentClass(status: unknown): string | null {
