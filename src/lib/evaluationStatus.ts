@@ -93,14 +93,13 @@ export function isEvaluationStatusAnyPending(status: unknown): boolean {
   );
 }
 
-/** Evaluator may edit pending (with approver), pending approval 1, or pending approval 2. */
+/** Evaluator cannot edit non-draft evaluation statuses from this table. */
 export function isEvaluationStatusEditableByEvaluator(
   status: unknown,
   hasApprover = false
 ): boolean {
-  const s = normalizeEvaluationStatus(status);
-  if (s === "pending_approval_1" || s === "pending_approval_2") return true;
-  if (s === "pending" && hasApprover) return true;
+  void status;
+  void hasApprover;
   return false;
 }
 

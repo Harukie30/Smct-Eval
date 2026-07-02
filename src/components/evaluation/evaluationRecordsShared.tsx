@@ -30,8 +30,6 @@ import {
   isEvaluationStatusAnyPending,
   isEvaluationStatusEditableByEvaluator,
   isEvaluationStatusPending,
-  isEvaluationStatusPendingApproval1,
-  isEvaluationStatusPendingApproval2,
   isEvaluationStatusRejected,
   normalizeEvaluationStatus,
 } from "@/lib/evaluationStatus";
@@ -315,7 +313,7 @@ export function isReviewEditable(
   return isEvaluationRecordEditableByEvaluator(review, currentUserId);
 }
 
-/** Evaluator may open the edit flow (draft, pending with approver, or approval steps). */
+/** Evaluator may open the edit flow (draft, or pending with approver). */
 export function canEvaluatorOpenEvaluationEdit(
   review: EvaluationRecordReview,
   currentUserId: string | number | null | undefined,
@@ -342,7 +340,7 @@ export function isEvaluationRecordEditableByEvaluator(
   return isEvaluationStatusEditableByEvaluator(status, reviewHasApprover(review));
 }
 
-/** Evaluator sees a disabled Edit control for these statuses (cannot open edit flow). */
+/** Evaluator sees a disabled Edit control for rejected, or pending without approver. */
 export function isReviewEditDisabledForEvaluator(
   review: EvaluationRecordReview,
   currentUserId: string | number | null | undefined
@@ -352,7 +350,6 @@ export function isReviewEditDisabledForEvaluator(
   const status = normalizeEvaluationStatus(review.status);
   if (isEvaluationStatusRejected(status)) return true;
   if (isEvaluationStatusPending(status) && !reviewHasApprover(review)) return true;
-
   return false;
 }
 
@@ -1042,21 +1039,18 @@ export function EvalRecordRowActions({
       allowPendingEditByCurrentUser ||
       (isDraft && draftOwnedByCurrentUser));
   const showDisabledEdit =
-    onEditAction != null && editDisabledForEvaluator;
+    onEditAction != null &&
+    editDisabledForEvaluator;
   const editButtonTitle = editDisabledForEvaluator
     ? isEvaluationStatusRejected(review.status)
       ? "Editing is disabled while this evaluation is rejected"
       : "Editing is disabled for pending evaluations without an approver"
     : isDraft && draftOwnedByCurrentUser
       ? "Edit this draft evaluation"
-      : allowPendingEditByCurrentUser
+      : allowPendingEditByCurrentUser ||
+          (isEvaluationStatusPending(review.status) && reviewHasApprover(review))
         ? "Edit this pending evaluation"
-        : isEvaluationStatusPendingApproval1(review.status) ||
-            isEvaluationStatusPendingApproval2(review.status)
-          ? "Edit this evaluation while it is awaiting approval"
-          : isEvaluationStatusPending(review.status) && reviewHasApprover(review)
-            ? "Edit this pending evaluation"
-            : "Edit this evaluation";
+        : "Edit this evaluation";
 
   if (showApproverReviewActions) {
     return (
