@@ -380,6 +380,28 @@ export const apiService = {
     return response.data;
   },
 
+  /** Assigned approver accepts an evaluation in the approval workflow. */
+  acceptApprovalEvaluation: async (
+    evaluationId: number | string
+  ): Promise<any> => {
+    const response = await api.post(
+      `/acceptApprovalEvaluation/${evaluationId}`
+    );
+    return response.data;
+  },
+
+  /** Assigned approver rejects an evaluation in the approval workflow. */
+  rejectApprovalEvaluation: async (
+    evaluationId: number | string,
+    note: string
+  ): Promise<any> => {
+    const response = await api.post(
+      `/rejectApprovalEvaluation/${evaluationId}`,
+      { note: note.trim() }
+    );
+    return response.data;
+  },
+
   markNotificationAsRead: async (
     notificationId: string | number
   ): Promise<void> => {

@@ -31,6 +31,7 @@ import {
   isEvaluationStatusEditableByEvaluator,
   isEvaluationStatusPending,
   isEvaluationStatusRejected,
+  normalizeEvaluationStatus,
 } from "@/lib/evaluationStatus";
 import { cn } from "@/lib/utils";
 import {
@@ -251,14 +252,128 @@ export function isReviewDeletable(review: EvaluationRecordReview): boolean {
   return isEvaluationStatusPending(review.status);
 }
 
+function isPresentId(value: unknown): boolean {
+  if (value == null) return false;
+  const s = String(value).trim();
+  return s !== "" && s !== "0" && s.toLowerCase() !== "null";
+}
+
+/** True when the evaluation record has at least one assigned approver. */
+export function reviewHasApprover(review: EvaluationRecordReview): boolean {
+  const extended = review as EvaluationRecordReview & Record<string, unknown>;
+
+  const scalarCandidates = [
+    extended.approver_id,
+    extended.approverId,
+    extended.current_approver_id,
+    extended.currentApproverId,
+    extended.pending_approver_id,
+    extended.pendingApproverId,
+  ];
+
+  for (const value of scalarCandidates) {
+    if (isPresentId(value)) return true;
+  }
+
+  const objectCandidates = [
+    extended.approver,
+    extended.approver1,
+    extended.approver_1,
+    extended.approver2,
+    extended.approver_2,
+    extended.current_approver,
+    extended.currentApprover,
+    extended.pending_approver,
+    extended.pendingApprover,
+  ];
+
+  for (const value of objectCandidates) {
+    if (!value || typeof value !== "object") continue;
+    const record = value as Record<string, unknown>;
+    if (isPresentId(record.id ?? record.user_id ?? record.approver_id)) {
+      return true;
+    }
+  }
+
+  const arrayCandidates = [
+    extended.approvers,
+    extended.assigned_approver,
+    extended.assigned_approvers,
+    extended.assignedApprover,
+    extended.assignedApprovers,
+  ];
+
+  for (const value of arrayCandidates) {
+    if (!Array.isArray(value) || value.length === 0) continue;
+    for (const item of value) {
+      if (item == null) continue;
+      if (typeof item === "object") {
+        const record = item as Record<string, unknown>;
+        if (isPresentId(record.id ?? record.user_id ?? record.approver_id)) {
+          return true;
+        }
+        continue;
+      }
+      if (isPresentId(item)) return true;
+    }
+  }
+
+  return false;
+}
+
+export function getReviewApproverUserId(
+  review: EvaluationRecordReview,
+  slot: 1 | 2
+): string | null {
+  const extended = review as EvaluationRecordReview & Record<string, unknown>;
+  const value =
+    slot === 1
+      ? extended.approver1 ?? extended.approver_1
+      : extended.approver2 ?? extended.approver_2;
+
+  if (!value || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  const id = record.id ?? record.user_id ?? record.approver_id;
+  return isPresentId(id) ? String(id) : null;
+}
+
+export function getReviewApproverSlotForUser(
+  review: EvaluationRecordReview,
+  currentUserId: string | number | null | undefined
+): 1 | 2 | null {
+  const profileId = normalizeRecordUserId(currentUserId);
+  if (!profileId) return null;
+
+  if (getReviewApproverUserId(review, 1) === profileId) return 1;
+  if (getReviewApproverUserId(review, 2) === profileId) return 2;
+  return null;
+}
+
+/** Signed-in user is the active approver for this evaluation's current approval step. */
+export function isReviewApproverActionable(
+  review: EvaluationRecordReview,
+  currentUserId: string | number | null | undefined
+): boolean {
+  const slot = getReviewApproverSlotForUser(review, currentUserId);
+  if (!slot) return false;
+
+  const status = normalizeEvaluationStatus(review.status);
+  if (slot === 1 && status === "pending_approval_1") return true;
+  if (slot === 2 && status === "pending_approval_2") return true;
+  return false;
+}
+
 export function isReviewEditable(
   review: EvaluationRecordReview,
   currentUserId: string | number | null | undefined
 ): boolean {
-  return (
-    isEvaluationStatusEditableByEvaluator(review.status) &&
-    isReviewEvaluatorCurrentUser(review, currentUserId)
-  );
+  if (!isReviewEvaluatorCurrentUser(review, currentUserId)) return false;
+
+  const status = normalizeEvaluationStatus(review.status);
+  if (isEvaluationStatusEditableByEvaluator(status)) return true;
+  if (isEvaluationStatusPending(status) && !reviewHasApprover(review)) return true;
+
+  return false;
 }
 
 export function getEvaluationApiErrorMessage(
@@ -926,6 +1041,9 @@ export function EvalRecordRowActions({
   rejecting?: boolean;
 }) {
   const isDraft = isReviewDraft(review);
+  const showApproverReviewActions =
+    isReviewApproverActionable(review, currentUserId) &&
+    (onAcceptAction != null || onRejectAction != null);
   const showDraftOwnerActions =
     isDraft && draftOwnedByCurrentUser && onEditAction != null;
   const showDraftReviewActions =
@@ -938,6 +1056,66 @@ export function EvalRecordRowActions({
     (isReviewEditable(review, currentUserId) ||
       allowPendingEditByCurrentUser ||
       (isDraft && draftOwnedByCurrentUser));
+
+  if (showApproverReviewActions) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-1 sm:flex-row sm:justify-end lg:flex-wrap lg:justify-start lg:gap-1.5">
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          onClick={onViewAction}
+          aria-label="View evaluation"
+          className="h-8 w-8 shrink-0 cursor-pointer border-blue-700 bg-blue-600 text-white hover:bg-blue-700 hover:text-white lg:h-8 lg:w-auto lg:px-2 lg:transition-all lg:duration-200 lg:hover:-translate-y-0.5 lg:hover:shadow-md lg:active:translate-y-0"
+        >
+          <Eye className="h-4 w-4 lg:hidden" />
+          <span className="hidden lg:inline">☰ View</span>
+        </Button>
+        {onAcceptAction ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={onAcceptAction}
+            disabled={accepting || rejecting}
+            aria-label="Accept evaluation approval"
+            title="Accept this evaluation"
+            className="h-8 w-8 shrink-0 cursor-pointer border-green-300 bg-green-600 text-white hover:bg-green-700 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 lg:h-8 lg:w-auto lg:px-2 lg:transition-all lg:duration-200 lg:hover:-translate-y-0.5 lg:hover:shadow-md lg:active:translate-y-0"
+          >
+            {accepting ? (
+              <span className="text-xs lg:hidden">…</span>
+            ) : (
+              <Check className="h-4 w-4 lg:hidden" />
+            )}
+            <span className="hidden lg:inline">
+              {accepting ? "Accepting…" : "✓ Accept"}
+            </span>
+          </Button>
+        ) : null}
+        {onRejectAction ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={onRejectAction}
+            disabled={accepting || rejecting}
+            aria-label="Reject evaluation approval"
+            title="Reject this evaluation"
+            className="h-8 w-8 shrink-0 cursor-pointer border-red-300 bg-red-600 text-white hover:bg-red-700 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 lg:h-8 lg:w-auto lg:px-2 lg:transition-all lg:duration-200 lg:hover:-translate-y-0.5 lg:hover:shadow-md lg:active:translate-y-0"
+          >
+            {rejecting ? (
+              <span className="text-xs lg:hidden">…</span>
+            ) : (
+              <X className="h-4 w-4 lg:hidden" />
+            )}
+            <span className="hidden lg:inline">
+              {rejecting ? "Rejecting…" : "✕ Reject"}
+            </span>
+          </Button>
+        ) : null}
+      </div>
+    );
+  }
 
   if (showDraftOwnerActions) {
     return (

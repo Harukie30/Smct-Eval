@@ -79,6 +79,7 @@ import {
   hasEvaluatorSigned,
   isReviewEditable,
   isReviewDraft,
+  isReviewApproverActionable,
   isReviewEvaluatorCurrentUser,
   getViewEvaluationErrorMessage,
   getEvaluationApiErrorMessage,
@@ -134,6 +135,9 @@ export default function OverviewTab() {
   const [isRejectDraftModalOpen, setIsRejectDraftModalOpen] = useState(false);
   const [reviewToReject, setReviewToReject] = useState<Review | null>(null);
   const [rejectDraftNote, setRejectDraftNote] = useState("");
+  const [rejectModalKind, setRejectModalKind] = useState<"draft" | "approval">(
+    "draft"
+  );
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
   const [years, setYears] = useState<any[]>([]);
   const evaluationsInFlightKeyRef = useRef<string | null>(null);
@@ -409,6 +413,15 @@ export default function OverviewTab() {
 
   const openRejectDraftModal = (review: Review) => {
     if (!isReviewDraft(review)) return;
+    setRejectModalKind("draft");
+    setRejectDraftNote("");
+    setReviewToReject(review);
+    setIsRejectDraftModalOpen(true);
+  };
+
+  const openRejectApprovalModal = (review: Review) => {
+    if (!isReviewApproverActionable(review, user?.id)) return;
+    setRejectModalKind("approval");
     setRejectDraftNote("");
     setReviewToReject(review);
     setIsRejectDraftModalOpen(true);
@@ -418,6 +431,37 @@ export default function OverviewTab() {
     setIsRejectDraftModalOpen(false);
     setReviewToReject(null);
     setRejectDraftNote("");
+    setRejectModalKind("draft");
+  };
+
+  const handleAcceptApproval = async (review: Review) => {
+    if (
+      !isReviewApproverActionable(review, user?.id) ||
+      acceptingReviewId != null ||
+      rejectingReviewId != null
+    ) {
+      return;
+    }
+
+    setAcceptingReviewId(review.id);
+    try {
+      await apiService.acceptApprovalEvaluation(review.id);
+      await handleRefresh();
+      toastMessages.generic.success(
+        "Evaluation accepted",
+        "The evaluation has been approved for this step."
+      );
+    } catch (error) {
+      setEvaluationActionError({
+        title: "Unable to Accept Evaluation",
+        message: getEvaluationApiErrorMessage(
+          error,
+          "Failed to accept evaluation. Please try again."
+        ),
+      });
+    } finally {
+      setAcceptingReviewId(null);
+    }
   };
 
   const handleRejectDraft = async () => {
@@ -434,19 +478,33 @@ export default function OverviewTab() {
 
     setRejectingReviewId(reviewToReject.id);
     try {
-      await apiService.rejectDraftEvaluation(reviewToReject.id, note);
-      await handleRefresh();
-      toastMessages.generic.success(
-        "Draft rejected",
-        "The draft evaluation has been rejected."
-      );
+      if (rejectModalKind === "approval") {
+        await apiService.rejectApprovalEvaluation(reviewToReject.id, note);
+        await handleRefresh();
+        toastMessages.generic.success(
+          "Evaluation rejected",
+          "The evaluation has been rejected at this approval step."
+        );
+      } else {
+        await apiService.rejectDraftEvaluation(reviewToReject.id, note);
+        await handleRefresh();
+        toastMessages.generic.success(
+          "Draft rejected",
+          "The draft evaluation has been rejected."
+        );
+      }
       closeRejectDraftModal();
     } catch (error) {
       setEvaluationActionError({
-        title: "Unable to Reject Draft",
+        title:
+          rejectModalKind === "approval"
+            ? "Unable to Reject Evaluation"
+            : "Unable to Reject Draft",
         message: getEvaluationApiErrorMessage(
           error,
-          "Failed to reject draft evaluation. Please try again."
+          rejectModalKind === "approval"
+            ? "Failed to reject evaluation. Please try again."
+            : "Failed to reject draft evaluation. Please try again."
         ),
       });
       closeRejectDraftModal();
@@ -990,6 +1048,10 @@ export default function OverviewTab() {
                               const isOwnDraft =
                                 isReviewDraft(review) &&
                                 isReviewEvaluatorCurrentUser(review, user?.id);
+                              const showApproverActions = isReviewApproverActionable(
+                                review,
+                                user?.id
+                              );
 
                               return (
                                 <EvalRecordRowActions
@@ -999,14 +1061,18 @@ export default function OverviewTab() {
                                   onViewAction={() => handleViewEvaluation(review)}
                                   onEditAction={() => handleEditEvaluation(review)}
                                   onAcceptAction={
-                                    isReviewDraft(review) && !isOwnDraft
-                                      ? () => void handleAcceptDraft(review)
-                                      : undefined
+                                    showApproverActions
+                                      ? () => void handleAcceptApproval(review)
+                                      : isReviewDraft(review) && !isOwnDraft
+                                        ? () => void handleAcceptDraft(review)
+                                        : undefined
                                   }
                                   onRejectAction={
-                                    isReviewDraft(review) && !isOwnDraft
-                                      ? () => openRejectDraftModal(review)
-                                      : undefined
+                                    showApproverActions
+                                      ? () => openRejectApprovalModal(review)
+                                      : isReviewDraft(review) && !isOwnDraft
+                                        ? () => openRejectDraftModal(review)
+                                        : undefined
                                   }
                                   accepting={acceptingReviewId === review.id}
                                   rejecting={rejectingReviewId === review.id}
@@ -1054,10 +1120,14 @@ export default function OverviewTab() {
             <DialogHeader className="rounded-lg bg-red-50 pb-4">
               <DialogTitle className="flex items-center gap-2 text-red-800">
                 <span className="text-xl">⚠️</span>
-                Reject Draft Evaluation
+                {rejectModalKind === "approval"
+                  ? "Reject Evaluation Approval"
+                  : "Reject Draft Evaluation"}
               </DialogTitle>
               <DialogDescription className="text-red-700">
-                Are you sure you want to reject this draft evaluation for{" "}
+                Are you sure you want to reject this{" "}
+                {rejectModalKind === "approval" ? "evaluation" : "draft evaluation"}{" "}
+                for{" "}
                 {[
                   reviewToReject?.employee?.fname,
                   reviewToReject?.employee?.lname,
@@ -1081,7 +1151,11 @@ export default function OverviewTab() {
                     e.target.value.slice(0, REJECT_DRAFT_NOTE_MAX_LENGTH)
                   )
                 }
-                placeholder="Explain why this draft is being rejected (max 20 characters)..."
+                placeholder={
+                  rejectModalKind === "approval"
+                    ? "Explain why this evaluation is being rejected (max 20 characters)..."
+                    : "Explain why this draft is being rejected (max 20 characters)..."
+                }
                 rows={4}
                 maxLength={REJECT_DRAFT_NOTE_MAX_LENGTH}
                 className="resize-y min-h-[6rem]"
@@ -1096,8 +1170,9 @@ export default function OverviewTab() {
                       : "text-muted-foreground"
                 )}
               >
-                {rejectDraftNote.length}/{REJECT_DRAFT_NOTE_MAX_LENGTH}{" "}
-                characters maximum. A note is required to reject this draft.
+                {rejectDraftNote.length}/                {REJECT_DRAFT_NOTE_MAX_LENGTH}{" "}
+                characters maximum. A note is required to reject this{" "}
+                {rejectModalKind === "approval" ? "evaluation" : "draft"}.
               </p>
             </div>
 
