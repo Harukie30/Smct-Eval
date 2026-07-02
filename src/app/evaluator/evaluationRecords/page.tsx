@@ -995,6 +995,7 @@ export default function OverviewTab() {
                                 <EvalRecordRowActions
                                   review={review}
                                   currentUserId={user?.id}
+                                  draftOwnedByCurrentUser={isOwnDraft}
                                   onViewAction={() => handleViewEvaluation(review)}
                                   onEditAction={() => handleEditEvaluation(review)}
                                   onAcceptAction={

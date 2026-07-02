@@ -28,6 +28,7 @@ import {
   getEvaluationStatusBadgeClass,
   getEvaluationStatusRowAccentClass,
   isEvaluationStatusAnyPending,
+  isEvaluationStatusEditableByEvaluator,
   isEvaluationStatusPending,
   isEvaluationStatusRejected,
 } from "@/lib/evaluationStatus";
@@ -37,7 +38,6 @@ import {
   normalizeQuarterLabelForSchedule,
   QUARTER_EVALUATION_SCHEDULE_HINT,
 } from "@/lib/quarterUtils";
-import { isEmployeeHeadOffice } from "@/components/evaluation/employeeBranchLabel";
 
 export type EvaluationRecordReview = {
   id: number;
@@ -255,9 +255,10 @@ export function isReviewEditable(
   review: EvaluationRecordReview,
   currentUserId: string | number | null | undefined
 ): boolean {
-  if (!isReviewRejected(review)) return false;
-  if (!isEmployeeHeadOffice(review.employee)) return false;
-  return isReviewEvaluatorCurrentUser(review, currentUserId);
+  return (
+    isEvaluationStatusEditableByEvaluator(review.status) &&
+    isReviewEvaluatorCurrentUser(review, currentUserId)
+  );
 }
 
 export function getEvaluationApiErrorMessage(
@@ -935,7 +936,8 @@ export function EvalRecordRowActions({
   const canEdit =
     onEditAction != null &&
     (isReviewEditable(review, currentUserId) ||
-      allowPendingEditByCurrentUser);
+      allowPendingEditByCurrentUser ||
+      (isDraft && draftOwnedByCurrentUser));
 
   if (showDraftOwnerActions) {
     return (
@@ -1048,9 +1050,11 @@ export function EvalRecordRowActions({
           onClick={onEditAction}
           aria-label="Edit evaluation"
           title={
-            allowPendingEditByCurrentUser
-              ? "Edit this pending evaluation"
-              : "Edit this rejected HO evaluation"
+            isDraft && draftOwnedByCurrentUser
+              ? "Edit this draft evaluation"
+              : allowPendingEditByCurrentUser
+                ? "Edit this pending evaluation"
+                : "Edit this evaluation"
           }
           className="h-8 w-8 shrink-0 cursor-pointer border-amber-200 bg-amber-100 text-amber-800 hover:bg-amber-500 hover:text-white lg:h-8 lg:w-auto lg:px-2 lg:transition-all lg:duration-200 lg:hover:-translate-y-0.5 lg:hover:shadow-md lg:active:translate-y-0"
         >
