@@ -22,7 +22,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getQuarterColor } from "@/lib/quarterUtils";
-import { getReviewQuarterDisplay } from "@/components/evaluation/evaluationRecordsShared";
 import apiService from "@/lib/apiService";
 import {
   formatRatingDisplay,
@@ -34,8 +33,15 @@ import EvaluationsPagination from "@/components/paginationComponent";
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
 import {
   EvaluationApiErrorDialog,
+  EvalRecordStatusBadge,
+  getReviewQuarterDisplay,
+  getReviewRowClassName,
   getViewEvaluationErrorMessage,
 } from "@/components/evaluation/evaluationRecordsShared";
+import {
+  EVALUATION_STATUS_FILTER_OPTIONS,
+  getEvaluationStatusBadgeClass,
+} from "@/lib/evaluationStatus";
 import { cn } from "@/lib/utils";
 
 interface Review {
@@ -140,12 +146,23 @@ function formatListDate(createdAt: string): { short: string; full: string } {
   };
 }
 
-function formatStatusLabel(status: string): { short: string; full: string } {
-  const s = String(status ?? "").toLowerCase();
-  if (s === "completed") return { short: "✓ Done", full: "✓ Completed" };
-  if (s === "pending") return { short: "⏳ Pend.", full: "⏳ Pending" };
-  if (s === "draft") return { short: "📝 Draft", full: "📝 Draft" };
-  return { short: s, full: s };
+function EvaluationStatusLegendBadges() {
+  return (
+    <>
+      {EVALUATION_STATUS_FILTER_OPTIONS.map((option) => (
+        <div key={option.value} className="flex items-center gap-1">
+          <Badge
+            className={cn(
+              "text-xs",
+              getEvaluationStatusBadgeClass(option.value)
+            )}
+          >
+            {option.label}
+          </Badge>
+        </div>
+      ))}
+    </>
+  );
 }
 
 export default function OverviewTab() {
@@ -527,18 +544,7 @@ export default function OverviewTab() {
                       Recent
                     </Badge>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-2 h-2 bg-violet-50 border-l-2 border-l-violet-500 rounded"></div>
-                    <Badge className="bg-violet-200 text-violet-800 text-xs">
-                      Draft
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-2 h-2 bg-green-50 border-l-2 border-l-green-500 rounded"></div>
-                    <Badge className="bg-green-500 text-white text-xs">
-                      Approved
-                    </Badge>
-                  </div>
+                  <EvaluationStatusLegendBadges />
                 </div>
               </div>
               {/* Table structure visible in background */}
@@ -614,18 +620,7 @@ export default function OverviewTab() {
                       Recent
                     </Badge>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-2 h-2 bg-violet-50 border-l-2 border-l-violet-500 rounded"></div>
-                    <Badge className="bg-violet-200 text-violet-800 text-xs">
-                      Draft
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-2 h-2 bg-green-50 border-l-2 border-l-green-500 rounded"></div>
-                    <Badge className="bg-green-500 text-white text-xs">
-                      Approved
-                    </Badge>
-                  </div>
+                  <EvaluationStatusLegendBadges />
                 </div>
               </div>
 
@@ -710,31 +705,8 @@ export default function OverviewTab() {
                           (now.getTime() - submittedDate.getTime()) /
                           (1000 * 60 * 60);
                         const isNew = hoursDiff <= 24;
-                        const isRecent = hoursDiff > 24 && hoursDiff <= 168; // 7 days
-                        const isCompleted = review.status === "completed";
-                        const isPending = review.status === "pending";
-                        const isDraft =
-                          String(review.status ?? "").toLowerCase() === "draft";
-
-                        // Determine row background color
-                        let rowClassName =
-                          "hover:bg-gray-100 transition-colors";
-                        if (isDraft) {
-                          rowClassName =
-                            "bg-violet-50 hover:bg-violet-100 border-l-4 border-l-violet-500 transition-colors";
-                        } else if (isCompleted) {
-                          rowClassName =
-                            "bg-green-50 hover:bg-green-100 border-l-4 border-l-green-500 transition-colors";
-                        } else if (isNew) {
-                          rowClassName =
-                            "bg-yellow-50 hover:bg-yellow-100 border-l-4 border-l-yellow-500 transition-colors";
-                        } else if (isRecent) {
-                          rowClassName =
-                            "bg-blue-50 hover:bg-blue-100 border-l-4 border-l-blue-500 transition-colors";
-                        } else if (isPending) {
-                          rowClassName =
-                            "bg-orange-50 hover:bg-orange-100 border-l-4 border-l-orange-500 transition-colors";
-                        }
+                        const isRecent = hoursDiff > 24 && hoursDiff <= 168;
+                        const rowClassName = getReviewRowClassName(review);
                         const ratingBand = getPerformanceRatingBand(review.rating);
                         const {
                           label: ratingLabel,
@@ -742,7 +714,6 @@ export default function OverviewTab() {
                           textClassName,
                         } = ratingBand;
                         const reviewDate = formatListDate(review.created_at);
-                        const statusLabels = formatStatusLabel(review.status);
                         const quarterDisplay = getReviewQuarterDisplay(review);
 
                         return (
@@ -769,21 +740,9 @@ export default function OverviewTab() {
                                       🕐 Recent
                                     </Badge>
                                   )}
-                                  {isPending && (
-                                    <Badge className="bg-orange-100 px-1 py-0 text-[0.6rem] font-semibold text-orange-800 sm:text-xs">
-                                      ⏳ Pending
-                                    </Badge>
-                                  )}
-                                  {isDraft && (
-                                    <Badge className="bg-violet-100 px-1 py-0 text-[0.6rem] font-semibold text-violet-800 sm:text-xs">
-                                      📝 Draft
-                                    </Badge>
-                                  )}
-                                  {isCompleted && (
-                                    <Badge className="bg-green-100 px-1 py-0 text-[0.6rem] font-semibold text-green-800 sm:text-xs">
-                                      ✓ Completed
-                                    </Badge>
-                                  )}
+                                  <span className="hidden sm:inline-flex">
+                                    <EvalRecordStatusBadge review={review} />
+                                  </span>
                                 </div>
 
                                 <div className="mt-1.5 flex flex-wrap items-center gap-1 lg:hidden">
@@ -816,9 +775,7 @@ export default function OverviewTab() {
                                   <span className="text-[0.65rem] text-gray-600 sm:hidden">
                                     {reviewDate.short}
                                   </span>
-                                  <Badge className="bg-gray-100 text-[0.6rem] text-gray-800 sm:text-xs">
-                                    {statusLabels.short}
-                                  </Badge>
+                                  <EvalRecordStatusBadge review={review} />
                                 </div>
                               </div>
                             </TableCell>

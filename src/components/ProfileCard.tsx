@@ -120,7 +120,7 @@ export default function ProfileCard({
             className={
               compact
                 ? "h-9 w-9 shrink-0 bg-red-600 p-0 text-white hover:bg-red-700 cursor-pointer"
-                : "h-8 shrink-0 bg-red-600 px-2 text-xs text-white hover:bg-red-700 cursor-pointer sm:px-3"
+                : "h-8 shrink-0 bg-red-600 px-2 text-xs text-white hover:bg-red-700 hover:text-white cursor-pointer sm:px-3"
             }
             title="Logout"
             aria-label="Logout"
@@ -243,7 +243,7 @@ export default function ProfileCard({
             variant="outline"
             size="sm"
             onClick={handleLogout}
-            className="flex-1 bg-red-500/20 text-red-200 hover:bg-red-500/30 border-red-400/30 text-xs cursor-pointer"
+            className="flex-1 bg-red-500/20 text-red-200 hover:bg-red-500/30  border-red-400/30 text-xs cursor-pointer"
           >
             <LogOut className="w-3 h-3 mr-1" />
             Logout

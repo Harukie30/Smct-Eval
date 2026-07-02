@@ -39,6 +39,7 @@ import { apiService } from "@/lib/apiService";
 import EvaluationsPagination from "@/components/paginationComponent";
 import NotFoundEmptyState from "@/components/NotFoundEmptyState";
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
+import { EvalRecordStatusBadge } from "@/components/evaluation/evaluationRecordsShared";
 import {
   EvaluationApiErrorDialog,
   getEvaluationApiErrorMessage,
@@ -931,20 +932,9 @@ export default function PerformanceReviews() {
                                 <TableCell className="w-1/5 font-medium pl-4">
                                   <div className="flex items-center gap-2">
                                     {supervisorName || "—"}
-                                    {submission.status && (
-                                      <Badge
-                                        variant="secondary"
-                                        className={`${
-                                          submission.status === "completed"
-                                            ? "bg-green-200 text-green-800"
-                                            : "bg-amber-100 text-orange-800"
-                                        } text-xs`}
-                                      >
-                                        {submission.status === "completed"
-                                          ? "approved"
-                                          : "pending"}
-                                      </Badge>
-                                    )}
+                                    {submission.status ? (
+                                      <EvalRecordStatusBadge review={submission} />
+                                    ) : null}
                                   </div>
                                 </TableCell>
                                 <TableCell className="w-1/5 text-right font-semibold pr-4">

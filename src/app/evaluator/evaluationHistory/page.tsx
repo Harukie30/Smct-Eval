@@ -31,6 +31,8 @@ import NotFoundEmptyState from "@/components/NotFoundEmptyState";
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
 import {
   EvaluationApiErrorDialog,
+  EvalRecordStatusBadge,
+  getReviewRowClassName,
   getEvaluationApiErrorMessage,
   getViewEvaluationErrorMessage,
 } from "@/components/evaluation/evaluationRecordsShared";
@@ -847,8 +849,7 @@ export default function OverviewTab() {
                         (1000 * 60 * 60);
                       const isNew = hoursDiff <= 24;
                       const isRecent = hoursDiff > 24 && hoursDiff <= 168; // 7 days
-                      const isCompleted = submission.status === "completed";
-                      const isPending = submission.status === "pending";
+                      const rowClassName = getReviewRowClassName(submission);
                       const supervisorName = [
                         submission.evaluator?.fname,
                         submission.evaluator?.lname,
@@ -865,21 +866,6 @@ export default function OverviewTab() {
                         textClassName,
                       } = ratingBand;
 
-                      // Determine row background color
-                      let rowClassName = "hover:bg-gray-100 transition-colors";
-                      if (isCompleted) {
-                        rowClassName =
-                          "bg-green-50 hover:bg-green-100 border-l-4 border-l-green-500 transition-colors";
-                      } else if (isNew) {
-                        rowClassName =
-                          "bg-yellow-50 hover:bg-yellow-100 border-l-4 border-l-yellow-500 transition-colors";
-                      } else if (isRecent) {
-                        rowClassName =
-                          "bg-blue-50 hover:bg-blue-100 border-l-4 border-l-blue-500 transition-colors";
-                      } else if (isPending) {
-                        rowClassName =
-                          "bg-orange-50 hover:bg-orange-100 border-l-4 border-l-orange-500 transition-colors";
-                      }
                       return (
                         <TableRow key={submission.id} className={rowClassName}>
                           <TableCell className="w-1/6 text-center pr-4">
@@ -937,15 +923,7 @@ export default function OverviewTab() {
 
                           <TableCell className="w-1/6">
                             <div className="flex justify-center">
-                              {submission.status === "completed" ? (
-                                <Badge className="bg-green-100 text-green-800">
-                                  ✓ Approved
-                                </Badge>
-                              ) : (
-                                <Badge className="text-white bg-orange-500 border-orange-300">
-                                  Pending
-                                </Badge>
-                              )}
+                              <EvalRecordStatusBadge review={submission} />
                             </div>
                           </TableCell>
                           <TableCell className="w-1/6 text-center">

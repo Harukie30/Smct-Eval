@@ -23,6 +23,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { TableCell, TableRow } from "@/components/ui/table";
+import {
+  formatEvaluationStatusLabel,
+  getEvaluationStatusBadgeClass,
+  getEvaluationStatusRowAccentClass,
+  isEvaluationStatusAnyPending,
+  isEvaluationStatusPending,
+  isEvaluationStatusRejected,
+} from "@/lib/evaluationStatus";
 import { cn } from "@/lib/utils";
 import {
   isQuarterLateByStaticPeriod,
@@ -159,16 +167,11 @@ export function formatReviewStatusLabel(status: string): {
   short: string;
   full: string;
 } {
-  const s = String(status ?? "").toLowerCase();
-  if (s === "completed") return { short: "✓ Done", full: "✓ completed" };
-  if (s === "pending") return { short: "⏳ Pend.", full: "⏳ pending" };
-  if (s === "draft") return { short: "📝 Draft", full: "📝 draft" };
-  if (s === "rejected") return { short: "✕ Rej.", full: "✕ rejected" };
-  return { short: s, full: s };
+  return formatEvaluationStatusLabel(status);
 }
 
 export function isReviewRejected(review: EvaluationRecordReview): boolean {
-  return String(review.status ?? "").toLowerCase() === "rejected";
+  return isEvaluationStatusRejected(review.status);
 }
 
 export function getReviewRejectionNote(
@@ -238,16 +241,14 @@ export function isReviewPendingEditableByEvaluator(
   review: EvaluationRecordReview,
   currentUserId: string | number | null | undefined
 ): boolean {
-  const status = String(review.status ?? "").toLowerCase();
   return (
-    status === "pending" &&
+    isEvaluationStatusPending(review.status) &&
     isReviewEvaluatorCurrentUser(review, currentUserId)
   );
 }
 
 export function isReviewDeletable(review: EvaluationRecordReview): boolean {
-  const status = String(review.status ?? "").toLowerCase();
-  return status === "pending";
+  return isEvaluationStatusPending(review.status);
 }
 
 export function isReviewEditable(
@@ -614,12 +615,7 @@ export function shouldShowHrSignPending(
 }
 
 function getReviewStatusBadgeClass(status: string): string {
-  const s = String(status ?? "").toLowerCase();
-  if (s === "completed") return "bg-green-100 text-green-800";
-  if (s === "pending") return "bg-yellow-100 text-yellow-800";
-  if (s === "draft") return "bg-violet-100 text-violet-800";
-  if (s === "rejected") return "bg-red-100 text-red-800";
-  return "bg-gray-100 text-gray-800";
+  return getEvaluationStatusBadgeClass(status);
 }
 
 export const REJECTED_STATUS_HOVER_HINT =
@@ -832,33 +828,26 @@ export function getReviewRowClassName(review: EvaluationRecordReview): string {
     (now.getTime() - submittedDate.getTime()) / (1000 * 60 * 60);
   const isNew = hoursDiff <= 24;
   const isRecent = hoursDiff > 24 && hoursDiff <= 168;
-  const isCompleted = review.status === "completed";
-  const isPending = review.status === "pending";
-  const isDraft = isReviewDraft(review);
   const isQuarterLate = isReviewQuarterLate(review);
 
   if (isQuarterLate) {
     return `${QUARTER_LATE_ROW_CLASS} transition-colors`;
   }
 
-  if (isDraft) {
+  if (isReviewDraft(review)) {
     return "bg-violet-50 hover:bg-violet-200 border-l-4 border-l-violet-600 transition-colors";
   }
 
-  if (isReviewRejected(review)) {
-    return "bg-gray-200 hover:bg-gray-300 border-l-4 border-l-gray-600 transition-colors";
-  }
+  const statusAccent = getEvaluationStatusRowAccentClass(review.status);
+  if (statusAccent) return statusAccent;
 
-  if (isCompleted) {
-    return "bg-green-50 hover:bg-green-100 border-l-4 border-l-green-500 transition-colors";
-  }
   if (isNew) {
     return "bg-yellow-50 hover:bg-yellow-100 border-l-4 border-l-yellow-500 transition-colors";
   }
   if (isRecent) {
     return "bg-blue-50 hover:bg-blue-100 border-l-4 border-l-blue-500 transition-colors";
   }
-  if (isPending) {
+  if (isEvaluationStatusAnyPending(review.status)) {
     return "bg-orange-50 hover:bg-orange-100 border-l-4 border-l-orange-500 transition-colors";
   }
   return "hover:bg-gray-100 transition-colors";

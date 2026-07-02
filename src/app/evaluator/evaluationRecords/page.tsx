@@ -48,6 +48,10 @@ import { useMobileViewport } from "@/hooks/useMobileViewport";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 import { toastMessages } from "@/lib/toastMessages";
 import { Loader2 } from "lucide-react";
+import {
+  EVALUATION_STATUS_FILTER_OPTIONS,
+  getEvaluationStatusBadgeClass,
+} from "@/lib/evaluationStatus";
 import { cn } from "@/lib/utils";
 import { useBranchesForEvaluation } from "@/hooks/useBranchesForEvaluation";
 import { getEmployeeBranchCodeDisplay } from "@/components/evaluation/employeeBranchLabel";
@@ -544,13 +548,11 @@ export default function OverviewTab() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="0">All Status</SelectItem>
-                    <SelectItem value="pending">
-                      Pending Verification
-                    </SelectItem>
-                    <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="completed">
-                      All parties approved
-                    </SelectItem>
+                    {EVALUATION_STATUS_FILTER_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -687,26 +689,52 @@ export default function OverviewTab() {
                 </Badge>
               </div>
               <div className="flex items-center gap-1">
-                <div className="w-2 h-2 bg-red-50 border-l-2 border-l-red-500 rounded"></div>
-                <Badge className="bg-orange-300 text-orange-800 text-xs">
+                <div className="w-2 h-2 bg-orange-50 border-l-2 border-l-orange-500 rounded"></div>
+                <Badge className="bg-yellow-200 text-yellow-800 text-xs">
                   Pending
                 </Badge>
               </div>
               <div className="flex items-center gap-1">
-                <div className="w-2 h-2 bg-violet-50 border-l-2 border-l-violet-500 rounded"></div>
-                <Badge className="bg-violet-200 text-violet-800 text-xs">
-                  Draft
+                <div className="w-2 h-2 bg-amber-50 border-l-2 border-l-amber-500 rounded"></div>
+                <Badge
+                  className={cn(
+                    "text-xs",
+                    getEvaluationStatusBadgeClass("pending_approval_1")
+                  )}
+                >
+                  Pending Approval 1
+                </Badge>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 bg-blue-50 border-l-2 border-l-blue-500 rounded"></div>
+                <Badge
+                  className={cn(
+                    "text-xs",
+                    getEvaluationStatusBadgeClass("pending_approval_2")
+                  )}
+                >
+                  Pending Approval 2
                 </Badge>
               </div>
               <div className="flex items-center gap-1">
                 <div className="w-2 h-2 bg-gray-50 border-l-2 border-l-gray-500 rounded"></div>
-                <Badge className="bg-red-100 text-red-800 text-xs">
+                <Badge
+                  className={cn(
+                    "text-xs",
+                    getEvaluationStatusBadgeClass("rejected")
+                  )}
+                >
                   Rejected
                 </Badge>
               </div>
               <div className="flex items-center gap-1">
                 <div className="w-2 h-2 bg-green-50 border-l-2 border-l-green-500 rounded"></div>
-                <Badge className="bg-green-500 text-white text-xs">
+                <Badge
+                  className={cn(
+                    "text-xs",
+                    getEvaluationStatusBadgeClass("completed")
+                  )}
+                >
                   Completed
                 </Badge>
               </div>
