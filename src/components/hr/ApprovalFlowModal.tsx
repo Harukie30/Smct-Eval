@@ -119,7 +119,7 @@ function extractRequiresApproval(raw: unknown): RequiresApprovalValue {
   const assigned = extractAssignedApprovers(raw);
   if (assigned.length > 0) return "yes";
 
-  return "";
+  return "no";
 }
 
 function mergeApproverOptions(...lists: ApproverOption[][]): ApproverOption[] {
@@ -153,6 +153,7 @@ function parseApprovalFlowResponse(raw: unknown): {
 }
 
 const APPROVAL_FLOW_SUCCESS_AUTO_CLOSE_MS = 2800;
+const MAX_APPROVERS = 2;
 
 export interface ApprovalFlowModalProps {
   open: boolean;
@@ -180,12 +181,9 @@ function normalizeApproverOption(raw: Record<string, unknown>): ApproverOption |
   const id = raw.id ?? raw.user_id ?? pivot?.approver_id;
   if (id == null || fullName === "") return null;
 
-  const role = getDisplayRole(raw.roles);
-  const email = String(raw.email ?? "").trim();
-
   return {
     value: String(id),
-    label: email ? `${fullName} (${email}) · ${role}` : `${fullName} · ${role}`,
+    label: fullName,
   };
 }
 
@@ -203,7 +201,7 @@ export default function ApprovalFlowModal({
   const [successMessage, setSuccessMessage] = useState("");
 
   const resetApprovalForm = useCallback(() => {
-    setRequiresApproval("");
+    setRequiresApproval("no");
     setApproverRows([createApproverRow()]);
     setLoadingApprovers(false);
     setSaving(false);
@@ -247,7 +245,7 @@ export default function ApprovalFlowModal({
           parsed.assignedApprovers.length > 0
         ) {
           setApproverRows(
-            parsed.assignedApprovers.map((approver, index) =>
+            parsed.assignedApprovers.slice(0, MAX_APPROVERS).map((approver, index) =>
               createApproverRow(approver.value, `saved-${approver.value}-${index}`)
             )
           );
@@ -326,7 +324,10 @@ export default function ApprovalFlowModal({
   }, []);
 
   const handleAddApproverRow = useCallback(() => {
-    setApproverRows((prev) => [...prev, createApproverRow()]);
+    setApproverRows((prev) => {
+      if (prev.length >= MAX_APPROVERS) return prev;
+      return [...prev, createApproverRow()];
+    });
   }, []);
 
   const handleRemoveApproverRow = useCallback((rowKey: string) => {
@@ -500,7 +501,7 @@ export default function ApprovalFlowModal({
                 variant="outline"
                 aria-label="Add approver"
                 title="Add approver"
-                disabled={comboboxDisabled}
+                disabled={comboboxDisabled || approverRows.length >= MAX_APPROVERS}
                 className="h-8 w-8 shrink-0 cursor-pointer border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700 hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 disabled:hover:translate-y-0 disabled:hover:shadow-none"
                 onClick={handleAddApproverRow}
               >
@@ -511,6 +512,18 @@ export default function ApprovalFlowModal({
             <div className="space-y-2">
               {approverRows.map((row, index) => (
                 <div key={row.key} className="flex items-start gap-2">
+                  <div
+                    className={cn(
+                      "mt-2 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs font-semibold",
+                      requiresApproval === "yes"
+                        ? "border-emerald-600 bg-emerald-50 text-emerald-700"
+                        : "border-slate-300 bg-slate-100 text-slate-500"
+                    )}
+                    aria-label={`Approver ${index + 1}`}
+                    title={`Approver ${index + 1}`}
+                  >
+                    {index + 1}
+                  </div>
                   <div className="relative min-w-0 flex-1">
                     <Combobox
                       options={getOptionsForRow(row.key, row.value)}
