@@ -197,7 +197,6 @@ export function isSubmissionResubmitAllowed(
 
   const status = normalizeEvaluationStatus(record.status);
   if (status === "draft") return true;
-  if (status === "rejected") return false;
 
   return isEvaluationStatusEditableByEvaluator(status, recordHasApprover(record));
 }

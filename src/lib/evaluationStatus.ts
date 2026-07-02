@@ -93,13 +93,14 @@ export function isEvaluationStatusAnyPending(status: unknown): boolean {
   );
 }
 
-/** Evaluator cannot edit non-draft evaluation statuses from this table. */
+/** Evaluator may edit rejected, or pending without an assigned approver. */
 export function isEvaluationStatusEditableByEvaluator(
   status: unknown,
   hasApprover = false
 ): boolean {
-  void status;
-  void hasApprover;
+  const s = normalizeEvaluationStatus(status);
+  if (s === "rejected") return true;
+  if (s === "pending" && !hasApprover) return true;
   return false;
 }
 

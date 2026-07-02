@@ -340,16 +340,15 @@ export function isEvaluationRecordEditableByEvaluator(
   return isEvaluationStatusEditableByEvaluator(status, reviewHasApprover(review));
 }
 
-/** Evaluator sees a disabled Edit control for rejected, or pending without approver. */
+/** Evaluator currently has no status that should render disabled Edit. */
 export function isReviewEditDisabledForEvaluator(
   review: EvaluationRecordReview,
   currentUserId: string | number | null | undefined
 ): boolean {
   if (!isReviewEvaluatorCurrentUser(review, currentUserId)) return false;
 
-  const status = normalizeEvaluationStatus(review.status);
-  if (isEvaluationStatusRejected(status)) return true;
-  if (isEvaluationStatusPending(status) && !reviewHasApprover(review)) return true;
+  const _status = normalizeEvaluationStatus(review.status);
+  void _status;
   return false;
 }
 
