@@ -3,7 +3,7 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import clientDataService, { apiService } from "@/lib/apiService";
 import EvaluationsPagination from "@/components/paginationComponent";
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import {
   Card,
   CardContent,
@@ -51,6 +51,7 @@ import { Loader2 } from "lucide-react";
 import {
   EVALUATION_STATUS_FILTER_OPTIONS,
   getEvaluationStatusBadgeClass,
+  normalizeEvaluationStatus,
 } from "@/lib/evaluationStatus";
 import { cn } from "@/lib/utils";
 import { useBranchesForEvaluation } from "@/hooks/useBranchesForEvaluation";
@@ -89,6 +90,67 @@ import {
 } from "@/components/evaluation/evaluationRecordsShared";
 
 type Review = EvaluationRecordReview;
+
+const EVALUATION_RECORDS_TABS = [
+  { id: "all", label: "All Records" },
+  { id: "approvals", label: "Pending Approval" },
+] as const;
+
+type EvaluationRecordsTabId =
+  (typeof EVALUATION_RECORDS_TABS)[number]["id"];
+
+const PENDING_APPROVAL_TAB_STATUSES = new Set([
+  "pending_approval_1",
+  "pending_approval_2",
+  "rejected",
+]);
+
+function isAllStatusFilter(value: string): boolean {
+  return value === "" || value === "0";
+}
+
+function isStatusOnPendingApprovalTab(status: unknown): boolean {
+  return PENDING_APPROVAL_TAB_STATUSES.has(normalizeEvaluationStatus(status));
+}
+
+function isStatusOnAllRecordsTab(status: unknown): boolean {
+  return !isStatusOnPendingApprovalTab(status);
+}
+
+function isStatusAllowedOnTab(
+  status: string,
+  tab: EvaluationRecordsTabId
+): boolean {
+  if (isAllStatusFilter(status)) return true;
+  const normalized = normalizeEvaluationStatus(status);
+  return tab === "approvals"
+    ? isStatusOnPendingApprovalTab(normalized)
+    : isStatusOnAllRecordsTab(normalized);
+}
+
+function matchesDisplayedEvaluation(
+  review: Review,
+  tab: EvaluationRecordsTabId,
+  statusFilter: string
+): boolean {
+  const status = normalizeEvaluationStatus(review.status);
+
+  if (!isAllStatusFilter(statusFilter)) {
+    return status === normalizeEvaluationStatus(statusFilter);
+  }
+
+  return tab === "approvals"
+    ? isStatusOnPendingApprovalTab(status)
+    : isStatusOnAllRecordsTab(status);
+}
+
+function getEvaluatorRecordsTotal(response: unknown): number {
+  if (!response || typeof response !== "object") return 0;
+  const paginator = (response as { myEval_as_Evaluator?: { total?: unknown } })
+    .myEval_as_Evaluator;
+  const total = Number(paginator?.total);
+  return Number.isFinite(total) && total > 0 ? total : 0;
+}
 
 const REJECT_DRAFT_NOTE_MAX_LENGTH = 20;
 
@@ -140,11 +202,42 @@ export default function OverviewTab() {
   const [rejectModalKind, setRejectModalKind] = useState<"draft" | "approval">(
     "draft"
   );
+  const [activeRecordsTab, setActiveRecordsTab] =
+    useState<EvaluationRecordsTabId>("all");
+  const [tabRecordCounts, setTabRecordCounts] = useState({
+    all: 0,
+    approvals: 0,
+  });
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
   const [years, setYears] = useState<any[]>([]);
   const evaluationsInFlightKeyRef = useRef<string | null>(null);
   const evaluationsInFlightPromiseRef = useRef<Promise<void> | null>(null);
   const prevFilterSnapshotForPageRef = useRef<string | null>(null);
+  const prevActiveRecordsTabRef = useRef<EvaluationRecordsTabId>("all");
+
+  const statusFilterOptionsForTab = useMemo(() => {
+    if (activeRecordsTab === "approvals") {
+      return EVALUATION_STATUS_FILTER_OPTIONS.filter((option) =>
+        isStatusOnPendingApprovalTab(option.value)
+      );
+    }
+
+    return EVALUATION_STATUS_FILTER_OPTIONS.filter((option) =>
+      isStatusOnAllRecordsTab(option.value)
+    );
+  }, [activeRecordsTab]);
+
+  const displayedEvaluations = useMemo(
+    () =>
+      evaluations.filter((review) =>
+        matchesDisplayedEvaluation(
+          review,
+          activeRecordsTab,
+          debouncedStatusFilter
+        )
+      ),
+    [evaluations, activeRecordsTab, debouncedStatusFilter]
+  );
 
   const hasActiveDebouncedFilters = useMemo(() => {
     if (debouncedSearchTerm.trim() !== "") return true;
@@ -237,6 +330,64 @@ export default function OverviewTab() {
     await requestPromise;
   };
 
+  const loadTabRecordCounts = useCallback(
+    async (searchValue: string, quarter: string, year: string) => {
+      const yearNum = Number(year) || 0;
+
+      try {
+        const [approval1Res, approval2Res, rejectedRes, allRes] =
+          await Promise.all([
+            apiService.getEvalAuthEvaluator(
+              searchValue,
+              1,
+              1,
+              "pending_approval_1",
+              quarter,
+              yearNum
+            ),
+            apiService.getEvalAuthEvaluator(
+              searchValue,
+              1,
+              1,
+              "pending_approval_2",
+              quarter,
+              yearNum
+            ),
+            apiService.getEvalAuthEvaluator(
+              searchValue,
+              1,
+              1,
+              "rejected",
+              quarter,
+              yearNum
+            ),
+            apiService.getEvalAuthEvaluator(
+              searchValue,
+              1,
+              1,
+              "",
+              quarter,
+              yearNum
+            ),
+          ]);
+
+        const approvalsCount =
+          getEvaluatorRecordsTotal(approval1Res) +
+          getEvaluatorRecordsTotal(approval2Res) +
+          getEvaluatorRecordsTotal(rejectedRes);
+        const grandTotal = getEvaluatorRecordsTotal(allRes);
+
+        setTabRecordCounts({
+          approvals: approvalsCount,
+          all: Math.max(0, grandTotal - approvalsCount),
+        });
+      } catch (error) {
+        console.error("Error loading tab record counts:", error);
+      }
+    },
+    []
+  );
+
   useEffect(() => {
     const mount = async () => {
       try {
@@ -273,6 +424,17 @@ export default function OverviewTab() {
 
     return () => clearTimeout(handler);
   }, [searchTerm, statusFilter, quarterFilter, yearFilter]);
+
+  useEffect(() => {
+    if (prevActiveRecordsTabRef.current === activeRecordsTab) return;
+
+    prevActiveRecordsTabRef.current = activeRecordsTab;
+    setCurrentPage(1);
+
+    if (!isStatusAllowedOnTab(statusFilter, activeRecordsTab)) {
+      setStatusFilter("0");
+    }
+  }, [activeRecordsTab, statusFilter]);
 
   // Track when page change started
   const pageChangeStartTimeRef = useRef<number | null>(null);
@@ -312,6 +474,20 @@ export default function OverviewTab() {
     debouncedStatusFilter,
     debouncedQuarterFilter,
     debouncedYearFilter,
+    activeRecordsTab,
+  ]);
+
+  useEffect(() => {
+    void loadTabRecordCounts(
+      debouncedSearchTerm,
+      debouncedQuarterFilter,
+      debouncedYearFilter
+    );
+  }, [
+    debouncedSearchTerm,
+    debouncedQuarterFilter,
+    debouncedYearFilter,
+    loadTabRecordCounts,
   ]);
 
   const handleRefresh = async () => {
@@ -321,6 +497,11 @@ export default function OverviewTab() {
       await loadEvaluations(
         debouncedSearchTerm,
         debouncedStatusFilter,
+        debouncedQuarterFilter,
+        debouncedYearFilter
+      );
+      await loadTabRecordCounts(
+        debouncedSearchTerm,
         debouncedQuarterFilter,
         debouncedYearFilter
       );
@@ -544,12 +725,56 @@ export default function OverviewTab() {
             <CardTitle className="flex flex-wrap items-center gap-2 text-base sm:text-lg">
               All Evaluation Records
               <Badge variant="outline" className="text-[0.65rem] font-normal sm:text-xs">
-                {overviewTotal} Total Records
+                {displayedEvaluations.length} Records on this page
               </Badge>
             </CardTitle>
             <CardDescription className="text-xs sm:text-sm">
               Complete evaluation history with advanced filtering
             </CardDescription>
+            <div
+              className="mt-4 flex flex-wrap gap-2"
+              role="tablist"
+              aria-label="Evaluation records views"
+            >
+              {EVALUATION_RECORDS_TABS.map((tab) => {
+                const isActive = activeRecordsTab === tab.id;
+                const tabCount =
+                  tab.id === "approvals"
+                    ? tabRecordCounts.approvals
+                    : tabRecordCounts.all;
+                return (
+                  <Button
+                    key={tab.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={isActive}
+                    variant={isActive ? "default" : "outline"}
+                    className={cn(
+                      "cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0",
+                      isActive
+                        ? "bg-blue-600 text-white hover:bg-blue-700 hover:text-white"
+                        : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                    )}
+                    onClick={() => setActiveRecordsTab(tab.id)}
+                  >
+                    <span className="flex items-center gap-2">
+                      {tab.label}
+                      <span
+                        className={cn(
+                          "inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-semibold tabular-nums",
+                          isActive
+                            ? "bg-white/20 text-white"
+                            : "bg-slate-100 text-slate-700"
+                        )}
+                        aria-label={`${tabCount} records`}
+                      >
+                        {tabCount}
+                      </span>
+                    </span>
+                  </Button>
+                );
+              })}
+            </div>
           </CardHeader>
           <CardContent>
             <div className="mb-6 flex flex-col flex-wrap gap-4 lg:flex-row lg:items-end">
@@ -612,7 +837,7 @@ export default function OverviewTab() {
                   Approval Status
                 </Label>
                 <Select
-                  value={statusFilter}
+                  value={statusFilter || "0"}
                   onValueChange={(value) => setStatusFilter(value)}
                 >
                   <SelectTrigger
@@ -623,7 +848,7 @@ export default function OverviewTab() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="0">All Status</SelectItem>
-                    {EVALUATION_STATUS_FILTER_OPTIONS.map((option) => (
+                    {statusFilterOptionsForTab.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
                       </SelectItem>
@@ -728,7 +953,7 @@ export default function OverviewTab() {
             <div className="flex items-center gap-2">
               {(() => {
                 const now = new Date();
-                const newCount = evaluations?.filter((review) => {
+                const newCount = displayedEvaluations?.filter((review) => {
                   const hoursDiff =
                     (now.getTime() - new Date(review.created_at).getTime()) /
                     (1000 * 60 * 60);
@@ -746,7 +971,9 @@ export default function OverviewTab() {
 
           {/* Indicator Legend */}
           <div className="mb-3 rounded-lg border border-gray-200 bg-gray-50 p-2.5 sm:mb-4 sm:p-3">
-            <EvalRecordRejectedHoverHintBanner />
+            {activeRecordsTab === "approvals" ? (
+              <EvalRecordRejectedHoverHintBanner />
+            ) : null}
             <div className="flex flex-wrap gap-2 text-[0.65rem] sm:gap-3 sm:text-xs md:gap-4">
               <span className="mr-1 w-full text-xs font-medium text-gray-700 sm:mr-2 sm:w-auto sm:text-sm">
                 Indicators:
@@ -769,50 +996,55 @@ export default function OverviewTab() {
                   Pending
                 </Badge>
               </div>
-              <div className="flex items-center gap-1">
-                <div className="w-2 h-2 bg-amber-50 border-l-2 border-l-amber-500 rounded"></div>
-                <Badge
-                  className={cn(
-                    "text-xs",
-                    getEvaluationStatusBadgeClass("pending_approval_1")
-                  )}
-                >
-                  Pending Approval 1
-                </Badge>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-2 h-2 bg-blue-50 border-l-2 border-l-blue-500 rounded"></div>
-                <Badge
-                  className={cn(
-                    "text-xs",
-                    getEvaluationStatusBadgeClass("pending_approval_2")
-                  )}
-                >
-                  Pending Approval 2
-                </Badge>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-2 h-2 bg-gray-50 border-l-2 border-l-gray-500 rounded"></div>
-                <Badge
-                  className={cn(
-                    "text-xs",
-                    getEvaluationStatusBadgeClass("rejected")
-                  )}
-                >
-                  Rejected
-                </Badge>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-2 h-2 bg-green-50 border-l-2 border-l-green-500 rounded"></div>
-                <Badge
-                  className={cn(
-                    "text-xs",
-                    getEvaluationStatusBadgeClass("completed")
-                  )}
-                >
-                  Completed
-                </Badge>
-              </div>
+              {activeRecordsTab === "approvals" ? (
+                <>
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-amber-50 border-l-2 border-l-amber-500 rounded"></div>
+                    <Badge
+                      className={cn(
+                        "text-xs",
+                        getEvaluationStatusBadgeClass("pending_approval_1")
+                      )}
+                    >
+                      Pending Approval 1
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-blue-50 border-l-2 border-l-blue-500 rounded"></div>
+                    <Badge
+                      className={cn(
+                        "text-xs",
+                        getEvaluationStatusBadgeClass("pending_approval_2")
+                      )}
+                    >
+                      Pending Approval 2
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-gray-50 border-l-2 border-l-gray-500 rounded"></div>
+                    <Badge
+                      className={cn(
+                        "text-xs",
+                        getEvaluationStatusBadgeClass("rejected")
+                      )}
+                    >
+                      Rejected
+                    </Badge>
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-green-50 border-l-2 border-l-green-500 rounded"></div>
+                  <Badge
+                    className={cn(
+                      "text-xs",
+                      getEvaluationStatusBadgeClass("completed")
+                    )}
+                  >
+                    Completed
+                  </Badge>
+                </div>
+              )}
               <span className="mr-1 mt-1 w-full text-xs font-medium text-gray-700 sm:mr-2 sm:mt-0 sm:w-auto sm:text-sm">
                 Rating:
               </span>
@@ -940,7 +1172,7 @@ export default function OverviewTab() {
                         </TableCell>
                       </TableRow>
                     ))
-                  ) : evaluations?.length === 0 || !evaluations ? (
+                  ) : displayedEvaluations.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={10} className="py-10 text-center sm:py-12">
                         <div className="flex flex-col items-center justify-center gap-4">
@@ -972,8 +1204,9 @@ export default function OverviewTab() {
                                   No evaluation records to display
                                 </p>
                                 <p className="text-xs text-gray-400 sm:text-sm">
-                                  Records will appear here when evaluations are
-                                  submitted
+                                  {activeRecordsTab === "approvals"
+                                    ? "Pending approval records will appear here when assigned to you"
+                                    : "Records will appear here when evaluations are submitted"}
                                 </p>
                               </>
                             )}
@@ -982,7 +1215,7 @@ export default function OverviewTab() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    evaluations.map((review) => {
+                    displayedEvaluations.map((review) => {
                       const rowClassName = getReviewRowClassName(review);
                       const reviewDate = formatReviewListDate(review.created_at);
                       const quarterDisplay = getReviewQuarterDisplay(review);
