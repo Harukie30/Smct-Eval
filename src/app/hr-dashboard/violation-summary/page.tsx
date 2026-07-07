@@ -30,6 +30,25 @@ import {
 import { cn } from "@/lib/utils";
 import SmctLoadingOverlay from "@/components/SmctLoadingOverlay";
 import apiService from "@/lib/apiService";
+import { createInFlightDeduper } from "@/lib/referenceDataCache";
+
+const getMemorandumViolationsDeduped = createInFlightDeduper(
+  (params: {
+    search?: string;
+    per_page?: number;
+    month?: string | number;
+    year?: string | number;
+    page?: number;
+  }) => apiService.getMemorandumViolations(params),
+  (params) =>
+    JSON.stringify({
+      search: params.search ?? "",
+      per_page: params.per_page ?? 0,
+      month: params.month ?? "",
+      year: params.year ?? "",
+      page: params.page ?? 1,
+    })
+);
 import { toastMessages } from "@/lib/toastMessages";
 import { FileType, FileWarning, Loader2, RefreshCw, Search } from "lucide-react";
 import EvaluationsPagination from "@/components/paginationComponent";
@@ -462,7 +481,7 @@ export default function ViolationSummaryPage() {
       if (!soft) setLoading(true);
       else setRefreshing(true);
       try {
-        const raw = await apiService.getMemorandumViolations({
+        const raw = await getMemorandumViolationsDeduped({
           search: debouncedSearch,
           per_page: TABLE_PAGE_SIZE,
           month: monthFilter,

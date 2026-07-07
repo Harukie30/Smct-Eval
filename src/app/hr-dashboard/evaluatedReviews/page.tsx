@@ -2,6 +2,7 @@
 
 import { Skeleton } from "@/components/ui/skeleton";
 import clientDataService, { apiService } from "@/lib/apiService";
+import { getCachedYears, getCachedBranches } from "@/lib/referenceDataCache";
 import EvaluationsPagination from "@/components/paginationComponent";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { ChevronDown, Loader2, Search } from "lucide-react";
@@ -551,8 +552,8 @@ export default function OverviewTab() {
       setRefreshing(true);
       try {
         const [years, branches] = await Promise.all([
-          apiService.getAllYears(),
-          apiService.getBranches(),
+          getCachedYears(),
+          getCachedBranches(),
         ]);
         setYears(years);
         setBranchesData(branches);

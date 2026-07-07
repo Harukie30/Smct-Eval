@@ -22,6 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiService } from "@/lib/apiService";
+import { getCachedEmployeeDashboard } from "@/lib/referenceDataCache";
 import EvaluationsPagination from "@/components/paginationComponent";
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
 import {
@@ -190,11 +191,13 @@ export default function OverviewTab() {
   };
 
   useEffect(() => {
-    // Reset to first page when filter changes
     setCurrentPage(1);
+  }, [selectedQuarter, selectedYear]);
+
+  useEffect(() => {
     const loadDashboard = async () => {
       try {
-        const dashboard = await apiService.employeeDashboard();
+        const dashboard = await getCachedEmployeeDashboard();
 
         // Add safety checks to prevent "Cannot read properties of undefined" error
         if (!dashboard) {
@@ -217,7 +220,7 @@ export default function OverviewTab() {
       }
     };
     loadDashboard();
-  }, [selectedQuarter, selectedYear]);
+  }, []);
 
   useEffect(() => {
     const handler = setTimeout(() => {

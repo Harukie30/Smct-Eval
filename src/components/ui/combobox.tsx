@@ -28,6 +28,7 @@ interface ComboboxProps {
   emptyText?: string;
   className?: string;
   disabled?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function Combobox({
@@ -39,9 +40,18 @@ export function Combobox({
   emptyText = "No option found.",
   className,
   disabled = false,
+  onOpenChange,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState("");
+
+  const handleOpenChange = React.useCallback(
+    (nextOpen: boolean) => {
+      setOpen(nextOpen);
+      onOpenChange?.(nextOpen);
+    },
+    [onOpenChange]
+  );
 
   // Helper function to get option display text
   const getOptionText = (option: any) => {
@@ -72,7 +82,7 @@ export function Combobox({
 
   return (
     <>
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={handleOpenChange}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"

@@ -36,6 +36,7 @@ import {
   getPerformanceRatingBand,
 } from "@/lib/performanceRatingDisplay";
 import { apiService } from "@/lib/apiService";
+import { getCachedEmployeeDashboard } from "@/lib/referenceDataCache";
 import EvaluationsPagination from "@/components/paginationComponent";
 import NotFoundEmptyState from "@/components/NotFoundEmptyState";
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
@@ -217,7 +218,7 @@ export default function PerformanceReviews() {
   useEffect(() => {
     const loadDashboard = async () => {
       try {
-        const dashboard = await apiService.employeeDashboard();
+        const dashboard = await getCachedEmployeeDashboard();
 
         // Add safety checks to prevent "Cannot read properties of undefined" error
         if (!dashboard) {

@@ -38,6 +38,7 @@ import {
   getPerformanceRatingBand,
 } from "@/lib/performanceRatingDisplay";
 import { apiService } from "@/lib/apiService";
+import { getCachedEmployeeDashboard } from "@/lib/referenceDataCache";
 import EvaluationsPagination from "@/components/paginationComponent";
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
 import {
@@ -165,7 +166,7 @@ export default function PerformanceReviews() {
   // Initial load
   useEffect(() => {
     const loadDashboard = async () => {
-      const dashboard = await apiService.employeeDashboard();
+      const dashboard = await getCachedEmployeeDashboard();
       setTotalEvaluations(dashboard.total_evaluations);
       setAverage(dashboard.average);
       setRecentEvaluation(dashboard.recent_evaluation);

@@ -55,6 +55,12 @@ import EditUserModal from "@/components/EditUserModal";
 import AddEmployeeModal from "@/components/AddEmployeeModal";
 import { toastMessages } from "@/lib/toastMessages";
 import apiService from "@/lib/apiService";
+import {
+  getCachedPositions,
+  getCachedBranches,
+  getCachedDepartments,
+  getCachedRoles,
+} from "@/lib/referenceDataCache";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 import EvaluationsPagination from "@/components/paginationComponent";
 import ViewEmployeeModal from "@/components/ViewEmployeeModal";
@@ -630,11 +636,11 @@ export default function UserManagementTab() {
     await requestPromise;
   };
 
-  const refreshReferenceData = async () => {
+  const refreshReferenceData = async (options?: { force?: boolean }) => {
     const [positions, branches, departments] = await Promise.all([
-      apiService.getPositions(),
-      apiService.getBranches(),
-      apiService.getDepartments(),
+      getCachedPositions(options),
+      getCachedBranches(options),
+      getCachedDepartments(options),
     ]);
     setPositionData(positions);
     setBranchesData(branches);
@@ -647,7 +653,7 @@ export default function UserManagementTab() {
       setRefresh(true);
       try {
         await refreshReferenceData();
-        const roles = await apiService.getAllRoles();
+        const roles = await getCachedRoles();
         setRoles(roles);
       } catch (error) {
         console.error("Error refreshing data:", error);
@@ -3766,7 +3772,10 @@ export default function UserManagementTab() {
           setIsBulkUploadProcessing(false);
           setIsBulkUploadSuccessModalOpen(true);
           try {
-            await Promise.all([refreshUserData(false), refreshReferenceData()]);
+            await Promise.all([
+              refreshUserData(false),
+              refreshReferenceData({ force: true }),
+            ]);
           } catch (error) {
             console.error("Error refreshing data after bulk upload:", error);
           }

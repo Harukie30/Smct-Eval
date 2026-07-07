@@ -22,6 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiService } from "@/lib/apiService";
+import { getCachedEmployeeDashboard } from "@/lib/referenceDataCache";
 import {
   formatRatingDisplay,
   getPerformanceRatingBand,
@@ -79,7 +80,7 @@ export default function OverviewTab() {
 
   const loadDashboardStats = async () => {
     try {
-      const dashboard = await apiService.employeeDashboard();
+      const dashboard = await getCachedEmployeeDashboard();
 
       if (!dashboard) {
         console.error("Dashboard API response is undefined");

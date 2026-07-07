@@ -605,12 +605,25 @@ export default function OverviewTab() {
                 )
               );
 
-          await loadTabRecordCounts(
-            debouncedSearchTerm,
-            debouncedQuarterFilter,
-            debouncedYearFilter,
-            { grandTotal }
-          );
+          const scheduleTabCounts = () => {
+            void loadTabRecordCounts(
+              debouncedSearchTerm,
+              debouncedQuarterFilter,
+              debouncedYearFilter,
+              { grandTotal }
+            );
+          };
+
+          if (
+            typeof window !== "undefined" &&
+            "requestIdleCallback" in window
+          ) {
+            window.requestIdleCallback(() => scheduleTabCounts(), {
+              timeout: 1500,
+            });
+          } else {
+            setTimeout(scheduleTabCounts, 100);
+          }
         }
       } catch (error) {
         console.error("Error fetching data:", error);

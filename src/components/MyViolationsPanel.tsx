@@ -406,7 +406,8 @@ export default function MyViolationsPanel() {
   }, [viewFileUrl]);
 
   const [availableMonths, setAvailableMonths] = useState<string[]>([]);
-  const [monthsLoading, setMonthsLoading] = useState(true);
+  const [monthsLoading, setMonthsLoading] = useState(false);
+  const monthsLoadedRef = useRef(false);
   const loadRequestIdRef = useRef(0);
   const clientActivityAtRef = useRef<Map<string, number>>(new Map());
   const previousRowsByIdRef = useRef<Map<string, string>>(new Map());
@@ -417,6 +418,10 @@ export default function MyViolationsPanel() {
   const showInitialSkeleton = loading && !refreshing;
 
   const fetchAvailableMonths = useCallback(async (options?: { force?: boolean }) => {
+    if (options?.force) {
+      monthsLoadedRef.current = false;
+    }
+    monthsLoadedRef.current = true;
     setMonthsLoading(true);
     try {
       const ymSet = new Set<string>();
@@ -453,9 +458,23 @@ export default function MyViolationsPanel() {
     }
   }, []);
 
-  useEffect(() => {
+  const ensureMonthsLoaded = useCallback(() => {
+    if (monthsLoadedRef.current) return;
     void fetchAvailableMonths();
   }, [fetchAvailableMonths]);
+
+  useEffect(() => {
+    if (rows.length === 0) return;
+
+    setAvailableMonths((prev) => {
+      const ymSet = new Set(prev);
+      for (const row of rows) {
+        const ym = violationDateToYearMonth(row.violation_date);
+        if (ym) ymSet.add(ym);
+      }
+      return Array.from(ymSet).sort((a, b) => b.localeCompare(a));
+    });
+  }, [rows]);
 
   const monthOptions = useMemo(() => {
     const opts: { value: string; label: string }[] = [
@@ -666,6 +685,9 @@ export default function MyViolationsPanel() {
                   options={monthOptions}
                   value={monthFilter}
                   onValueChangeAction={(v) => setMonthFilter(String(v))}
+                  onOpenChange={(open) => {
+                    if (open) ensureMonthsLoaded();
+                  }}
                   placeholder={
                     monthsLoading ? "Loading months…" : "Pick a month"
                   }
@@ -686,6 +708,7 @@ export default function MyViolationsPanel() {
                   variant="outline"
                   disabled={listBusy}
                   onClick={() => {
+                    monthsLoadedRef.current = false;
                     void fetchAvailableMonths({ force: true });
                     load({ softRefresh: true });
                   }}

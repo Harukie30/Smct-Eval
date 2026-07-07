@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/dialog";
 import { RefreshCw, Check, X } from "lucide-react";
 import apiService from "@/lib/apiService";
+import { getCachedDepartments } from "@/lib/referenceDataCache";
 import { useToast } from "@/hooks/useToast";
 import EvaluationsPagination from "@/components/paginationComponent";
 import { useBranchesForEvaluation } from "@/hooks/useBranchesForEvaluation";
@@ -257,7 +258,7 @@ export default function SignatureResetRequestsTab() {
     let cancelled = false;
     void (async () => {
       try {
-        const departments = await apiService.getDepartments();
+        const departments = await getCachedDepartments();
         if (!cancelled) {
           setDepartmentOptions(departments);
         }

@@ -15,6 +15,18 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { toastMessages } from "@/lib/toastMessages";
 import { apiService } from "@/lib/apiService";
+import { createInFlightDeduper } from "@/lib/referenceDataCache";
+
+const getEvaluatorsDeduped = createInFlightDeduper(
+  (params: { page?: number; per_page?: number; search?: string }) =>
+    apiService.getAllEvaluators(params),
+  (params) =>
+    JSON.stringify({
+      page: params?.page ?? 1,
+      per_page: params?.per_page ?? 0,
+      search: params?.search ?? "",
+    })
+);
 import { pickApiTimestamp } from "@/lib/parseApiTimestamp";
 import { Eye, Plus, RefreshCw, Users2, X } from "lucide-react";
 import EvaluationsPagination from "@/components/paginationComponent";
@@ -418,7 +430,7 @@ export default function HRSubordinatesPage() {
         setRefreshing(true);
       }
       try {
-        const response = await apiService.getAllEvaluators({
+        const response = await getEvaluatorsDeduped({
           page,
           per_page: SUBORDINATES_TABLE_PER_PAGE,
           search: debouncedSearch || undefined,
