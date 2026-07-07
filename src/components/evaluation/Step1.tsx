@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
@@ -128,6 +128,13 @@ export default function Step1({
   const [isLoadingQuarters, setIsLoadingQuarters] = useState(false);
   const [coverageError, setCoverageError] = useState("");
   const [isOthersCustomEnabled, setIsOthersCustomEnabled] = useState(false);
+  // The review type this record already had (edit flow). Its own quarter must
+  // stay selectable even though it exists in the DB "taken" list.
+  const originalReviewTypeCapturedRef = useRef(false);
+  const [originalReviewType, setOriginalReviewType] = useState<{
+    probationary: number | "";
+    regular: string;
+  }>({ probationary: "", regular: "" });
   const { user } = useAuth();
 
   // Check if employee being evaluated is HO (Head Office)
@@ -252,6 +259,28 @@ export default function Step1({
     checkQuarterlyReviews();
   }, [employee?.id]);
 
+  // Capture the record's own review type once (edit flow prefill). This lets us
+  // keep that quarter selectable even though it exists in the "already taken" list.
+  useEffect(() => {
+    if (originalReviewTypeCapturedRef.current) return;
+
+    const hasRegular =
+      typeof data.reviewTypeRegular === "string" &&
+      data.reviewTypeRegular !== "";
+    const hasProbationary =
+      data.reviewTypeProbationary === 3 || data.reviewTypeProbationary === 5;
+
+    if (hasRegular || hasProbationary) {
+      originalReviewTypeCapturedRef.current = true;
+      setOriginalReviewType({
+        probationary: hasProbationary
+          ? (data.reviewTypeProbationary as number)
+          : "",
+        regular: hasRegular ? data.reviewTypeRegular : "",
+      });
+    }
+  }, [data.reviewTypeRegular, data.reviewTypeProbationary]);
+
   // Validate coverage dates whenever they change
   useEffect(() => {
     if (data.coverageFrom && data.coverageTo) {
@@ -324,6 +353,15 @@ export default function Step1({
     return "Unsatisfactory";
   };
 
+  // A quarter is "taken" only when the DB reports it AND it is not this record's
+  // own original quarter (edit flow), so evaluators can keep their own selection.
+  const takenProb3 = probitionary3 && originalReviewType.probationary !== 3;
+  const takenProb5 = probitionary5 && originalReviewType.probationary !== 5;
+  const takenQ1 = regular1 && originalReviewType.regular !== "Q1";
+  const takenQ2 = regular2 && originalReviewType.regular !== "Q2";
+  const takenQ3 = regular3 && originalReviewType.regular !== "Q3";
+  const takenQ4 = regular4 && originalReviewType.regular !== "Q4";
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -385,7 +423,7 @@ export default function Step1({
                     className="rounded cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"
                     checked={data.reviewTypeProbationary === 3}
                     disabled={
-                      probitionary3 ||
+                      takenProb3 ||
                       data.reviewTypeRegular !== "" ||
                       isOthersSelected()
                     }
@@ -405,9 +443,9 @@ export default function Step1({
                   <label
                     htmlFor="prob3"
                     className={`text-sm ${
-                      probitionary3 ? "line-through" : ""
+                      takenProb3 ? "line-through" : ""
                     } ${
-                      probitionary3 ||
+                      takenProb3 ||
                       isOthersSelected() ||
                       data.reviewTypeRegular !== ""
                         ? "text-gray-400 "
@@ -415,7 +453,7 @@ export default function Step1({
                     }`}
                   >
                     3 months
-                    {probitionary3 && (
+                    {takenProb3 && (
                       <span className="ml-2 text-xs text-red-500 font-medium">
                         (Already exists for {getCurrentYear()})
                       </span>
@@ -430,7 +468,7 @@ export default function Step1({
                     className="rounded cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"
                     checked={data.reviewTypeProbationary === 5}
                     disabled={
-                      probitionary5 ||
+                      takenProb5 ||
                       data.reviewTypeRegular !== "" ||
                       isOthersSelected()
                     }
@@ -450,9 +488,9 @@ export default function Step1({
                   <label
                     htmlFor="prob5"
                     className={`text-sm ${
-                      probitionary5 ? "line-through" : ""
+                      takenProb5 ? "line-through" : ""
                     } ${
-                      probitionary5 ||
+                      takenProb5 ||
                       isOthersSelected() ||
                       data.reviewTypeRegular !== ""
                         ? "text-gray-400 "
@@ -460,7 +498,7 @@ export default function Step1({
                     }`}
                   >
                     5 months
-                    {probitionary5 && (
+                    {takenProb5 && (
                       <span className="ml-2 text-xs text-red-500 font-medium">
                         (Already exists for {getCurrentYear()})
                       </span>
@@ -487,7 +525,7 @@ export default function Step1({
                     className="rounded cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"
                     checked={data.reviewTypeRegular === "Q1"}
                     disabled={
-                      regular1 ||
+                      takenQ1 ||
                       data.reviewTypeProbationary !== "" ||
                       isOthersSelected()
                     }
@@ -506,8 +544,8 @@ export default function Step1({
                   />
                   <label
                     htmlFor="q1"
-                    className={`text-sm ${regular1 ? "line-through" : ""} ${
-                      regular1 ||
+                    className={`text-sm ${takenQ1 ? "line-through" : ""} ${
+                      takenQ1 ||
                       isOthersSelected() ||
                       data.reviewTypeRegular !== ""
                         ? "text-gray-400 "
@@ -515,7 +553,7 @@ export default function Step1({
                     }`}
                   >
                     Q1 review
-                    {regular1 && (
+                    {takenQ1 && (
                       <span className="ml-2 text-xs text-red-500 font-medium">
                         (Already exists for {getCurrentYear()})
                       </span>
@@ -530,7 +568,7 @@ export default function Step1({
                     className="rounded cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"
                     checked={data.reviewTypeRegular === "Q2"}
                     disabled={
-                      regular2 ||
+                      takenQ2 ||
                       data.reviewTypeProbationary !== "" ||
                       isOthersSelected()
                     }
@@ -549,8 +587,8 @@ export default function Step1({
                   />
                   <label
                     htmlFor="q2"
-                    className={`text-sm ${regular2 ? "line-through" : ""} ${
-                      regular2 ||
+                    className={`text-sm ${takenQ2 ? "line-through" : ""} ${
+                      takenQ2 ||
                       isOthersSelected() ||
                       data.reviewTypeRegular !== ""
                         ? "text-gray-400 "
@@ -558,7 +596,7 @@ export default function Step1({
                     }`}
                   >
                     Q2 review
-                    {regular2 && (
+                    {takenQ2 && (
                       <span className="ml-2 text-xs text-red-500 font-medium">
                         (Already exists for {getCurrentYear()})
                       </span>
@@ -573,7 +611,7 @@ export default function Step1({
                     className="rounded cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"
                     checked={data.reviewTypeRegular === "Q3"}
                     disabled={
-                      regular3 ||
+                      takenQ3 ||
                       data.reviewTypeProbationary !== "" ||
                       isOthersSelected()
                     }
@@ -592,8 +630,8 @@ export default function Step1({
                   />
                   <label
                     htmlFor="q3"
-                    className={`text-sm ${regular3 ? "line-through" : ""} ${
-                      regular3 ||
+                    className={`text-sm ${takenQ3 ? "line-through" : ""} ${
+                      takenQ3 ||
                       isOthersSelected() ||
                       data.reviewTypeRegular !== ""
                         ? "text-gray-400 "
@@ -601,7 +639,7 @@ export default function Step1({
                     }`}
                   >
                     Q3 review
-                    {regular3 && (
+                    {takenQ3 && (
                       <span className="ml-2 text-xs text-red-500 font-medium">
                         (Already exists for {getCurrentYear()})
                       </span>
@@ -616,7 +654,7 @@ export default function Step1({
                     className="rounded cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"
                     checked={data.reviewTypeRegular === "Q4"}
                     disabled={
-                      regular4 ||
+                      takenQ4 ||
                       data.reviewTypeProbationary !== "" ||
                       isOthersSelected()
                     }
@@ -635,8 +673,8 @@ export default function Step1({
                   />
                   <label
                     htmlFor="q4"
-                    className={`text-sm ${regular4 ? "line-through" : ""} ${
-                      regular4 ||
+                    className={`text-sm ${takenQ4 ? "line-through" : ""} ${
+                      takenQ4 ||
                       isOthersSelected() ||
                       data.reviewTypeRegular !== ""
                         ? "text-gray-400 "
@@ -644,7 +682,7 @@ export default function Step1({
                     }`}
                   >
                     Q4 review
-                    {regular4 && (
+                    {takenQ4 && (
                       <span className="ml-2 text-xs text-red-500 font-medium">
                         (Already exists for {getCurrentYear()})
                       </span>
