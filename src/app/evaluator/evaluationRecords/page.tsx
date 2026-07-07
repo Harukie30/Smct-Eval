@@ -53,6 +53,7 @@ import {
   getEvaluationStatusBadgeClass,
   normalizeEvaluationStatus,
 } from "@/lib/evaluationStatus";
+import { getCachedYears } from "@/lib/referenceDataCache";
 import { cn } from "@/lib/utils";
 import { useBranchesForEvaluation } from "@/hooks/useBranchesForEvaluation";
 import { getEmployeeBranchCodeDisplay } from "@/components/evaluation/employeeBranchLabel";
@@ -152,6 +153,25 @@ function getEvaluatorRecordsTotal(response: unknown): number {
   return Number.isFinite(total) && total > 0 ? total : 0;
 }
 
+function getGrandTotalCacheKey(
+  searchValue: string,
+  quarter: string,
+  year: string | number
+): string {
+  return JSON.stringify({
+    searchValue,
+    quarter,
+    year: Number(year) || 0,
+  });
+}
+
+type EvaluationsCacheEntry = {
+  evaluations: Review[];
+  overviewTotal: number;
+  totalPages: number;
+  perPage: number;
+};
+
 const REJECT_DRAFT_NOTE_MAX_LENGTH = 20;
 
 export default function OverviewTab() {
@@ -212,6 +232,16 @@ export default function OverviewTab() {
   const [years, setYears] = useState<any[]>([]);
   const evaluationsInFlightKeyRef = useRef<string | null>(null);
   const evaluationsInFlightPromiseRef = useRef<Promise<void> | null>(null);
+  const evaluationsCacheRef = useRef<Map<string, EvaluationsCacheEntry>>(
+    new Map()
+  );
+  const tabCountsCacheRef = useRef<
+    Map<string, { all: number; approvals: number }>
+  >(new Map());
+  const tabCountsInFlightKeyRef = useRef<string | null>(null);
+  const tabCountsInFlightPromiseRef = useRef<Promise<void> | null>(null);
+  const grandTotalCacheRef = useRef<Map<string, number>>(new Map());
+  const prevTabCountFilterKeyRef = useRef<string | null>(null);
   const prevFilterSnapshotForPageRef = useRef<string | null>(null);
   const prevActiveRecordsTabRef = useRef<EvaluationRecordsTabId>("all");
 
@@ -257,8 +287,9 @@ export default function OverviewTab() {
     searchValue: string,
     status: string,
     quarter: string,
-    year: string
-  ) => {
+    year: string,
+    options?: { force?: boolean }
+  ): Promise<number> => {
     const requestKey = JSON.stringify({
       searchValue,
       currentPage,
@@ -268,12 +299,32 @@ export default function OverviewTab() {
       year: Number(year) || 0,
     });
 
+    if (!options?.force) {
+      const cached = evaluationsCacheRef.current.get(requestKey);
+      if (cached) {
+        setEvaluations(cached.evaluations);
+        setOverviewTotal(cached.overviewTotal);
+        setTotalPages(cached.totalPages);
+        setPerPage(cached.perPage);
+
+        if (isAllStatusFilter(status)) {
+          grandTotalCacheRef.current.set(
+            getGrandTotalCacheKey(searchValue, quarter, year),
+            cached.overviewTotal
+          );
+        }
+
+        return cached.overviewTotal;
+      }
+    }
+
     if (
       evaluationsInFlightKeyRef.current === requestKey &&
       evaluationsInFlightPromiseRef.current
     ) {
       await evaluationsInFlightPromiseRef.current;
-      return;
+      const cached = evaluationsCacheRef.current.get(requestKey);
+      return cached?.overviewTotal ?? 0;
     }
 
     const requestPromise = (async () => {
@@ -295,20 +346,35 @@ export default function OverviewTab() {
           setOverviewTotal(0);
           setTotalPages(1);
           setPerPage(itemsPerPage);
-          return;
+          return 0;
         }
 
-        // getEvalAuthEvaluator returns { myEval_as_Evaluator: { data, total, last_page, per_page } }
-        setEvaluations(response.myEval_as_Evaluator.data || []);
-        setOverviewTotal(response.myEval_as_Evaluator.total || 0);
-        setTotalPages(response.myEval_as_Evaluator.last_page || 1);
-        setPerPage(response.myEval_as_Evaluator.per_page || itemsPerPage);
+        const nextEvaluations = response.myEval_as_Evaluator.data || [];
+        const nextOverviewTotal = response.myEval_as_Evaluator.total || 0;
+        const nextTotalPages = response.myEval_as_Evaluator.last_page || 1;
+        const nextPerPage =
+          response.myEval_as_Evaluator.per_page || itemsPerPage;
 
-        console.log("Evaluation Records loaded:", {
-          count: (response.myEval_as_Evaluator.data || []).length,
-          total: response.myEval_as_Evaluator.total || 0,
-          currentPage: response.myEval_as_Evaluator.last_page || 1
+        setEvaluations(nextEvaluations);
+        setOverviewTotal(nextOverviewTotal);
+        setTotalPages(nextTotalPages);
+        setPerPage(nextPerPage);
+
+        evaluationsCacheRef.current.set(requestKey, {
+          evaluations: nextEvaluations,
+          overviewTotal: nextOverviewTotal,
+          totalPages: nextTotalPages,
+          perPage: nextPerPage,
         });
+
+        if (isAllStatusFilter(status)) {
+          grandTotalCacheRef.current.set(
+            getGrandTotalCacheKey(searchValue, quarter, year),
+            nextOverviewTotal
+          );
+        }
+
+        return nextOverviewTotal;
       } catch (error) {
         console.error("Error loading evaluations:", error);
         // Set default values on error
@@ -316,6 +382,7 @@ export default function OverviewTab() {
         setOverviewTotal(0);
         setTotalPages(1);
         setPerPage(itemsPerPage);
+        return 0;
       } finally {
         setIsLoadingEvaluations(false);
         if (evaluationsInFlightKeyRef.current === requestKey) {
@@ -327,16 +394,46 @@ export default function OverviewTab() {
 
     evaluationsInFlightKeyRef.current = requestKey;
     evaluationsInFlightPromiseRef.current = requestPromise;
-    await requestPromise;
+    return requestPromise;
   };
 
   const loadTabRecordCounts = useCallback(
-    async (searchValue: string, quarter: string, year: string) => {
+    async (
+      searchValue: string,
+      quarter: string,
+      year: string,
+      options?: { force?: boolean; grandTotal?: number }
+    ) => {
       const yearNum = Number(year) || 0;
+      const cacheKey = JSON.stringify({
+        searchValue,
+        quarter,
+        year: yearNum,
+      });
+      const grandTotalKey = getGrandTotalCacheKey(searchValue, quarter, year);
+      const knownGrandTotal =
+        options?.grandTotal ??
+        grandTotalCacheRef.current.get(grandTotalKey);
 
-      try {
-        const [approval1Res, approval2Res, rejectedRes, allRes] =
-          await Promise.all([
+      if (!options?.force) {
+        const cached = tabCountsCacheRef.current.get(cacheKey);
+        if (cached) {
+          setTabRecordCounts(cached);
+          return;
+        }
+      }
+
+      if (
+        tabCountsInFlightKeyRef.current === cacheKey &&
+        tabCountsInFlightPromiseRef.current
+      ) {
+        await tabCountsInFlightPromiseRef.current;
+        return;
+      }
+
+      const requestPromise = (async () => {
+        try {
+          const approvalRequests = [
             apiService.getEvalAuthEvaluator(
               searchValue,
               1,
@@ -361,37 +458,74 @@ export default function OverviewTab() {
               quarter,
               yearNum
             ),
-            apiService.getEvalAuthEvaluator(
-              searchValue,
-              1,
-              1,
-              "",
-              quarter,
-              yearNum
-            ),
-          ]);
+          ] as const;
 
-        const approvalsCount =
-          getEvaluatorRecordsTotal(approval1Res) +
-          getEvaluatorRecordsTotal(approval2Res) +
-          getEvaluatorRecordsTotal(rejectedRes);
-        const grandTotal = getEvaluatorRecordsTotal(allRes);
+          let grandTotal = knownGrandTotal;
+          let approval1Res: unknown;
+          let approval2Res: unknown;
+          let rejectedRes: unknown;
 
-        setTabRecordCounts({
-          approvals: approvalsCount,
-          all: Math.max(0, grandTotal - approvalsCount),
-        });
-      } catch (error) {
-        console.error("Error loading tab record counts:", error);
-      }
+          if (grandTotal === undefined) {
+            const [nextApproval1Res, nextApproval2Res, nextRejectedRes, allRes] =
+              await Promise.all([
+                ...approvalRequests,
+                apiService.getEvalAuthEvaluator(
+                  searchValue,
+                  1,
+                  1,
+                  "",
+                  quarter,
+                  yearNum
+                ),
+              ]);
+            approval1Res = nextApproval1Res;
+            approval2Res = nextApproval2Res;
+            rejectedRes = nextRejectedRes;
+            grandTotal = getEvaluatorRecordsTotal(allRes);
+            grandTotalCacheRef.current.set(grandTotalKey, grandTotal);
+          } else {
+            [approval1Res, approval2Res, rejectedRes] =
+              await Promise.all(approvalRequests);
+          }
+
+          const approvalsCount =
+            getEvaluatorRecordsTotal(approval1Res) +
+            getEvaluatorRecordsTotal(approval2Res) +
+            getEvaluatorRecordsTotal(rejectedRes);
+          const nextCounts = {
+            approvals: approvalsCount,
+            all: Math.max(0, grandTotal - approvalsCount),
+          };
+
+          tabCountsCacheRef.current.set(cacheKey, nextCounts);
+          setTabRecordCounts(nextCounts);
+        } catch (error) {
+          console.error("Error loading tab record counts:", error);
+        } finally {
+          if (tabCountsInFlightKeyRef.current === cacheKey) {
+            tabCountsInFlightKeyRef.current = null;
+            tabCountsInFlightPromiseRef.current = null;
+          }
+        }
+      })();
+
+      tabCountsInFlightKeyRef.current = cacheKey;
+      tabCountsInFlightPromiseRef.current = requestPromise;
+      await requestPromise;
     },
     []
   );
 
+  const clearRecordsCaches = useCallback(() => {
+    evaluationsCacheRef.current.clear();
+    tabCountsCacheRef.current.clear();
+    grandTotalCacheRef.current.clear();
+  }, []);
+
   useEffect(() => {
     const mount = async () => {
       try {
-        const years = await apiService.getAllYears();
+        const years = await getCachedYears();
         setYears(years);
       } catch (error) {
         console.log(error);
@@ -442,13 +576,42 @@ export default function OverviewTab() {
   // Fetch API whenever debounced search term changes
   useEffect(() => {
     const fetchData = async () => {
+      const tabCountFilterKey = JSON.stringify({
+        debouncedSearchTerm,
+        debouncedQuarterFilter,
+        debouncedYearFilter,
+      });
+      const shouldRefreshTabCounts =
+        prevTabCountFilterKeyRef.current !== tabCountFilterKey;
+
       try {
-        await loadEvaluations(
+        const loadedTotal = await loadEvaluations(
           debouncedSearchTerm,
           debouncedStatusFilter,
           debouncedQuarterFilter,
           debouncedYearFilter
         );
+
+        if (shouldRefreshTabCounts) {
+          prevTabCountFilterKeyRef.current = tabCountFilterKey;
+
+          const grandTotal = isAllStatusFilter(debouncedStatusFilter)
+            ? loadedTotal
+            : grandTotalCacheRef.current.get(
+                getGrandTotalCacheKey(
+                  debouncedSearchTerm,
+                  debouncedQuarterFilter,
+                  debouncedYearFilter
+                )
+              );
+
+          await loadTabRecordCounts(
+            debouncedSearchTerm,
+            debouncedQuarterFilter,
+            debouncedYearFilter,
+            { grandTotal }
+          );
+        }
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
@@ -474,36 +637,37 @@ export default function OverviewTab() {
     debouncedStatusFilter,
     debouncedQuarterFilter,
     debouncedYearFilter,
-    activeRecordsTab,
-  ]);
-
-  useEffect(() => {
-    void loadTabRecordCounts(
-      debouncedSearchTerm,
-      debouncedQuarterFilter,
-      debouncedYearFilter
-    );
-  }, [
-    debouncedSearchTerm,
-    debouncedQuarterFilter,
-    debouncedYearFilter,
-    loadTabRecordCounts,
   ]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      await loadEvaluations(
+      clearRecordsCaches();
+      prevTabCountFilterKeyRef.current = null;
+
+      const loadedTotal = await loadEvaluations(
         debouncedSearchTerm,
         debouncedStatusFilter,
         debouncedQuarterFilter,
-        debouncedYearFilter
+        debouncedYearFilter,
+        { force: true }
       );
+
+      prevTabCountFilterKeyRef.current = JSON.stringify({
+        debouncedSearchTerm,
+        debouncedQuarterFilter,
+        debouncedYearFilter,
+      });
+
+      const grandTotal = isAllStatusFilter(debouncedStatusFilter)
+        ? loadedTotal
+        : undefined;
+
       await loadTabRecordCounts(
         debouncedSearchTerm,
         debouncedQuarterFilter,
-        debouncedYearFilter
+        debouncedYearFilter,
+        { force: true, grandTotal }
       );
     } catch (error) {
       console.error("Error refreshing data:", error);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import apiService from "@/lib/apiService";
+import { getCachedBranches } from "@/lib/referenceDataCache";
 import type { BranchOption } from "@/components/evaluation/employeeBranchLabel";
 
 /**
@@ -20,7 +20,7 @@ export function useBranchesForEvaluation(): {
     (async () => {
       setIsLoading(true);
       try {
-        const data = await apiService.getBranches();
+        const data = await getCachedBranches();
         if (!cancelled && Array.isArray(data)) {
           setBranchOptions(data as BranchOption[]);
         }
