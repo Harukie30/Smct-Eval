@@ -1043,7 +1043,7 @@ export function EvalRecordRowActions({
   const editButtonTitle = editDisabledForEvaluator
     ? isEvaluationStatusRejected(review.status)
       ? "Editing is disabled while this evaluation is rejected"
-      : "Editing is disabled for pending evaluations without an approver"
+      : "Editing is disabled for this evaluation status"
     : isDraft && draftOwnedByCurrentUser
       ? "Edit this draft evaluation"
       : allowPendingEditByCurrentUser ||

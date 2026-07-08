@@ -93,14 +93,14 @@ export function isEvaluationStatusAnyPending(status: unknown): boolean {
   );
 }
 
-/** Evaluator may edit rejected, or pending without an assigned approver. */
+/** Evaluator may edit rejected, or pending (with or without an assigned approver). */
 export function isEvaluationStatusEditableByEvaluator(
   status: unknown,
-  hasApprover = false
+  _hasApprover = false
 ): boolean {
   const s = normalizeEvaluationStatus(status);
   if (s === "rejected") return true;
-  if (s === "pending" && !hasApprover) return true;
+  if (s === "pending") return true;
   return false;
 }
 
