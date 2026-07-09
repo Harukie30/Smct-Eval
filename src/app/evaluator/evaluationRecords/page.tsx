@@ -47,7 +47,7 @@ import { useAuth } from "@/contexts/UserContext";
 import { useMobileViewport } from "@/hooks/useMobileViewport";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 import { toastMessages } from "@/lib/toastMessages";
-import { Loader2 } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import {
   EVALUATION_STATUS_FILTER_OPTIONS,
   getEvaluationStatusBadgeClass,
@@ -1674,7 +1674,18 @@ export default function OverviewTab() {
               }
             }}
           >
-            <DialogContent className="max-w-7xl max-h-[101vh] overflow-hidden p-0 evaluation-container">
+            <DialogContent className="relative max-w-7xl max-h-[101vh] overflow-hidden p-0 evaluation-container">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => void closeEditEvaluationModal()}
+                aria-label="Close evaluation edit"
+                title="Close"
+                className="absolute right-3 top-3 z-50 h-9 w-9 rounded-full border-slate-200 bg-white/95 text-slate-700 shadow-md hover:bg-slate-100 hover:text-slate-900 sm:right-4 sm:top-4"
+              >
+                <X className="h-4 w-4" />
+              </Button>
               {isLoadingEditEvaluation ? (
                 <div className="flex min-h-[12rem] items-center justify-center p-8">
                   <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
