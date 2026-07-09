@@ -1682,12 +1682,12 @@ export default function OverviewTab() {
                 onClick={() => void closeEditEvaluationModal()}
                 aria-label="Close evaluation edit"
                 title="Close"
-                className="absolute right-3 top-3 z-50 h-9 w-9 rounded-full border-slate-200 bg-white/95 text-slate-700 shadow-md hover:bg-slate-100 hover:text-slate-900 sm:right-4 sm:top-4"
+                className="absolute right-3 top-3 z-50 h-9 w-9 rounded-full cursor-pointer border-slate-200 bg-white/95 text-slate-700 shadow-md hover:bg-slate-100 hover:text-slate-900 sm:right-4 sm:top-4"
               >
                 <X className="h-4 w-4" />
               </Button>
               {isLoadingEditEvaluation ? (
-                <div className="flex min-h-[12rem] items-center justify-center p-8">
+                <div className="flex min-h-[12rem] cursor-pointer items-center justify-center p-8">
                   <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
                 </div>
               ) : selectedSubmissionForEdit ? (
