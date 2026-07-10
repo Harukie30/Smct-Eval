@@ -540,6 +540,18 @@ export const apiService = {
     return response.data;
   },
 
+  /**
+   * Delete an existing memorandum violation (HR / authorized).
+   * POST `deleteMemorandumViolation/{id}`
+   */
+  deleteMemorandumViolation: async (
+    id: string | number
+  ): Promise<any> => {
+    const routeId = encodeURIComponent(String(id));
+    const response = await api.post(`/deleteMemorandumViolation/${routeId}`);
+    return response.data;
+  },
+
   /*
    * Logged-in employee: list memorandum violations recorded against them.
    * Query: search (title etc.), month (YYYY-MM, optional), page, per_page.

@@ -2708,6 +2708,7 @@ export default function UserManagementTab() {
         dialogAnimationClass={dialogAnimationClass}
         employee={employeeForMemorandumViolation}
         branchFilterForEmployeePicker={memorandumPickerBranchId}
+        allowDeleteViolation
       />
 
       {/* Employee Average Modal */}

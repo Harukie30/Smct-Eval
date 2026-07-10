@@ -7,6 +7,7 @@ import {
   X,
   Eye,
   Pencil,
+  Trash2,
   ExternalLink,
   RefreshCw,
   Calendar,
@@ -108,6 +109,8 @@ export interface MemorandumViolationModalProps {
   shouldHideAdminUsers?: boolean;
   /** Hide "Add Violation" button for read-only usage. */
   hideAddViolationButton?: boolean;
+  /** Show delete action in the violations table (HR dashboard only). */
+  allowDeleteViolation?: boolean;
 }
 
 /** When total rows exceed this, paginate at `VIOLATIONS_PAGE_SIZE` per page. */
@@ -317,6 +320,7 @@ export default function MemorandumViolationModal({
   branchFilterForEmployeePicker,
   shouldHideAdminUsers = true,
   hideAddViolationButton = false,
+  allowDeleteViolation = false,
 }: MemorandumViolationModalProps) {
   const [pickerUsers, setPickerUsers] = useState<User[]>([]);
   const [loadingPicker, setLoadingPicker] = useState(false);
@@ -344,6 +348,11 @@ export default function MemorandumViolationModal({
   const [editSummaryDraft, setEditSummaryDraft] = useState("");
   const [editSanctionDraft, setEditSanctionDraft] = useState("");
   const [savingSummaryEdit, setSavingSummaryEdit] = useState(false);
+  const [violationToDelete, setViolationToDelete] =
+    useState<MemorandumSessionRow | null>(null);
+  const [deletingViolationId, setDeletingViolationId] = useState<string | null>(
+    null
+  );
 
   const clientActivityAtRef = useRef<Map<string, number>>(new Map());
   const previousRowsByIdRef = useRef<Map<string, string>>(new Map());
@@ -391,6 +400,8 @@ export default function MemorandumViolationModal({
     setEditSummaryDraft("");
     setEditSanctionDraft("");
     setSavingSummaryEdit(false);
+    setViolationToDelete(null);
+    setDeletingViolationId(null);
   }, [onOpenChangeAction, resetAddForm]);
 
   const violationsUsePagination = sessionRows.length > VIOLATIONS_PAGE_SIZE;
@@ -651,6 +662,60 @@ export default function MemorandumViolationModal({
   };
 
   const canEditSummary = !hideAddViolationButton;
+  const canDeleteViolation = allowDeleteViolation && canEditSummary;
+
+  const isDeletableViolationId = (id: string): boolean => {
+    const trimmed = id.trim();
+    return trimmed !== "" && !trimmed.startsWith("tmp-");
+  };
+
+  const openDeleteConfirm = (row: MemorandumSessionRow) => {
+    if (!isDeletableViolationId(String(row.id))) return;
+    setViolationToDelete(row);
+  };
+
+  const handleDeleteViolation = async () => {
+    if (!violationToDelete || !effectiveFetchUserId) return;
+    const violationId = String(violationToDelete.id);
+    if (!isDeletableViolationId(violationId)) return;
+
+    setDeletingViolationId(violationId);
+    try {
+      await apiService.deleteMemorandumViolation(violationId);
+
+      if (
+        editingSummaryRow &&
+        String(editingSummaryRow.id) === violationId
+      ) {
+        resetEditViolationForm();
+      }
+      if (viewingRow && String(viewingRow.id) === violationId) {
+        setViewingRow(null);
+      }
+
+      setSessionRows((prev) =>
+        prev.filter((r) => String(r.id) !== violationId)
+      );
+      await fetchViolationsForUser(effectiveFetchUserId);
+      setViolationToDelete(null);
+      toastMessages.generic.success(
+        "Violation deleted",
+        "The memorandum violation has been removed."
+      );
+    } catch (e: unknown) {
+      const err = e as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      const msg =
+        err.response?.data?.message ||
+        err.message ||
+        "Could not delete the violation.";
+      toastMessages.generic.error("Delete failed", msg);
+    } finally {
+      setDeletingViolationId(null);
+    }
+  };
 
   const openEditSummary = (row: MemorandumSessionRow) => {
     setEditingSummaryRow(row);
@@ -942,7 +1007,7 @@ export default function MemorandumViolationModal({
                       <TableHead className="hidden min-w-[5rem] font-semibold lg:table-cell">
                         <SanctionTableHeadLabel theme="amber" />
                       </TableHead>
-                      <TableHead className="w-[1%] min-w-[4.5rem] whitespace-nowrap text-right font-semibold text-amber-900">
+                      <TableHead className="w-[1%] min-w-[6.5rem] whitespace-nowrap text-right font-semibold text-amber-900">
                         Action
                       </TableHead>
                     </TableRow>
@@ -1043,7 +1108,7 @@ export default function MemorandumViolationModal({
                           >
                             {sanctionPreview}
                           </TableCell>
-                          <TableCell className="w-[1%] min-w-[4.5rem] whitespace-nowrap text-right align-middle">
+                          <TableCell className="w-[1%] min-w-[6.5rem] whitespace-nowrap text-right align-middle">
                             <div className="inline-flex flex-nowrap items-center justify-end gap-1.5">
                               {canEditSummary ? (
                                 <Button
@@ -1056,6 +1121,28 @@ export default function MemorandumViolationModal({
                                   onClick={() => openEditSummary(row)}
                                 >
                                   <Pencil className="h-4 w-4" aria-hidden />
+                                </Button>
+                              ) : null}
+                              {canDeleteViolation &&
+                              isDeletableViolationId(String(row.id)) ? (
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="icon"
+                                  className="h-8 w-8 shrink-0 cursor-pointer border-red-200 bg-red-50 text-red-700 hover:bg-red-500 hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
+                                  aria-label="Delete violation"
+                                  title="Delete violation"
+                                  disabled={deletingViolationId === String(row.id)}
+                                  onClick={() => openDeleteConfirm(row)}
+                                >
+                                  {deletingViolationId === String(row.id) ? (
+                                    <Loader2
+                                      className="h-4 w-4 animate-spin"
+                                      aria-hidden
+                                    />
+                                  ) : (
+                                    <Trash2 className="h-4 w-4" aria-hidden />
+                                  )}
                                 </Button>
                               ) : null}
                               <Button
@@ -1790,6 +1877,67 @@ export default function MemorandumViolationModal({
               onClick={() => setViewingRow(null)}
             >
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete violation confirmation */}
+      <Dialog
+        open={!!violationToDelete}
+        onOpenChangeAction={(next) => {
+          if (!next && !deletingViolationId) {
+            setViolationToDelete(null);
+          }
+        }}
+      >
+        <DialogContent
+          className={cn("max-w-md p-6", dialogAnimationClass)}
+        >
+          <DialogHeader className="pb-4 text-left">
+            <DialogTitle className="flex items-center gap-2 text-red-800">
+              <Trash2 className="h-5 w-5 shrink-0" aria-hidden />
+              Delete violation
+            </DialogTitle>
+            <DialogDescription className="text-red-700">
+              This action cannot be undone. Are you sure you want to permanently
+              delete this memorandum violation?
+            </DialogDescription>
+          </DialogHeader>
+
+          {violationToDelete ? (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+              <p className="font-medium">{violationToDelete.title}</p>
+              <p className="mt-1 text-red-800">
+                {formatViolationDateCell(violationToDelete)}
+              </p>
+            </div>
+          ) : null}
+
+          <DialogFooter className="flex flex-col-reverse gap-2 border-t border-gray-200 pt-4 sm:flex-row sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!!deletingViolationId}
+              className="cursor-pointer w-full sm:w-auto"
+              onClick={() => setViolationToDelete(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={!!deletingViolationId}
+              className="cursor-pointer w-full bg-red-600 text-white hover:bg-red-700 sm:w-auto"
+              onClick={() => void handleDeleteViolation()}
+            >
+              {deletingViolationId ? (
+                <>
+                  <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
+                  Deleting…
+                </>
+              ) : (
+                "Delete violation"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
