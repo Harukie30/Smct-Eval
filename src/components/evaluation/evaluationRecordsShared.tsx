@@ -1223,7 +1223,7 @@ export function EvalRecordRowActions({
           disabled={showDisabledEdit}
           aria-label="Edit evaluation"
           title={editButtonTitle}
-          className="h-8 w-8 shrink-0 border-amber-200 bg-amber-100 text-amber-800 hover:bg-amber-500 hover:text-white disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 disabled:hover:bg-slate-100 disabled:hover:text-slate-400 lg:h-8 lg:w-auto lg:px-2 lg:transition-all lg:duration-200 lg:hover:-translate-y-0.5 lg:hover:shadow-md lg:active:translate-y-0 disabled:lg:hover:translate-y-0 disabled:lg:hover:shadow-none"
+          className="h-8 w-8 shrink-0 cursor-pointer border-amber-200 bg-amber-100 text-amber-800 hover:bg-amber-500 hover:text-white disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 disabled:hover:bg-slate-100 disabled:hover:text-slate-400 lg:h-8 lg:w-auto lg:px-2 lg:transition-all lg:duration-200 lg:hover:-translate-y-0.5 lg:hover:shadow-md lg:active:translate-y-0 disabled:lg:hover:translate-y-0 disabled:lg:hover:shadow-none"
         >
           <Pencil className="h-4 w-4 lg:hidden" />
           <span className="hidden lg:inline">✏️ Edit</span>

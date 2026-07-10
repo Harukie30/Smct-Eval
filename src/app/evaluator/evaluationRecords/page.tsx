@@ -1687,7 +1687,7 @@ export default function OverviewTab() {
                 <X className="h-4 w-4" />
               </Button>
               {isLoadingEditEvaluation ? (
-                <div className="flex min-h-[12rem] cursor-pointer items-center justify-center p-8">
+                <div className="flex min-h-[12rem] items-center justify-center p-8">
                   <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
                 </div>
               ) : selectedSubmissionForEdit ? (

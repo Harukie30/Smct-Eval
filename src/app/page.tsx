@@ -610,9 +610,9 @@ function LandingLoginPage() {
                   className="h-10 w-auto"
                 />
               </div>
-              <p className="text-white">
-                Making performance evaluations meaningful and efficient for
-                organizations of all sizes.
+              <p className="text-white text-justify ">
+              Empowering SMCT with a modern performance evaluation system <br />
+              that drives growth, accountability, and continuous improvement. <br />
               </p>
             </div>
 
