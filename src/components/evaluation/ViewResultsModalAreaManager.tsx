@@ -202,7 +202,7 @@ const getQuarterFromDate = (dateString: string): string => {
 export default function ViewResultsModalAreaManager({
   isOpen,
   onCloseAction,
-  submission = null,
+  submission,
   onApprove,
   isApproved = false,
   approvalData = null,
@@ -1529,6 +1529,9 @@ export default function ViewResultsModalAreaManager({
   // Area Manager evaluation: no Customer Service, fixed weights
   // Weights: Job Knowledge 22%, Quality of Work 30%, Adaptability 3%, Teamwork 10%, Reliability 10%, Ethical 3%, Managerial Skills 22%
 
+  if (!submission) {
+    return null;
+  }
   const overallAssessment = useMemo(
     () => computeOverallAssessmentFromSubmission(submission, "areaManager"),
     [submission]
