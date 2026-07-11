@@ -202,7 +202,7 @@ const getQuarterFromDate = (dateString: string): string => {
 export default function ViewResultsModalAreaManager({
   isOpen,
   onCloseAction,
-  submission,
+  submission = null,
   onApprove,
   isApproved = false,
   approvalData = null,
