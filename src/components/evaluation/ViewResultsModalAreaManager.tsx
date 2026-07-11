@@ -1371,6 +1371,14 @@ export default function ViewResultsModalAreaManager({
     }
   };
 
+  // Area Manager evaluation: no Customer Service, fixed weights
+  // Weights: Job Knowledge 22%, Quality of Work 30%, Adaptability 3%, Teamwork 10%, Reliability 10%, Ethical 3%, Managerial Skills 22%
+  const overallAssessment = useMemo(
+    () =>
+         computeOverallAssessmentFromSubmission(submission, "areaManager")
+    ,[submission]
+  );
+
   if (!submission) return null;
 
   // Check if the evaluated employee is a branch employee (not HO)
@@ -1525,17 +1533,6 @@ export default function ViewResultsModalAreaManager({
      submission.quality_of_works.some((item: any) => item.question_number >= 6 && item.question_number <= 12));
   
   const shouldShowDetailedJobTargets = hasJobTargetData;
-
-  // Area Manager evaluation: no Customer Service, fixed weights
-  // Weights: Job Knowledge 22%, Quality of Work 30%, Adaptability 3%, Teamwork 10%, Reliability 10%, Ethical 3%, Managerial Skills 22%
-
-  if (!submission) {
-    return null;
-  }
-  const overallAssessment = useMemo(
-    () => computeOverallAssessmentFromSubmission(submission, "areaManager"),
-    [submission]
-  );
 
   const finalRatingRounded = overallAssessment.overallWeightedScore;
   const finalPercentage = overallAssessment.overallPercentage;
