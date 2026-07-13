@@ -347,8 +347,23 @@ export default function OverviewTab() {
     }
   };
 
-  const approvalStatusTooltip = useMemo(
-    () => <ApprovalStatusTooltipContent stats={approvalStatusStats} />,
+  const pendingApprovalTooltip = useMemo(
+    () => (
+      <ApprovalStatusTooltipContent
+        stats={approvalStatusStats}
+        variant="pending"
+      />
+    ),
+    [approvalStatusStats]
+  );
+
+  const approvedStatusTooltip = useMemo(
+    () => (
+      <ApprovalStatusTooltipContent
+        stats={approvalStatusStats}
+        variant="approved"
+      />
+    ),
     [approvalStatusStats]
   );
 
@@ -370,7 +385,7 @@ export default function OverviewTab() {
           subtitle="Needs review"
           valueClassName="text-orange-600"
           cardClassName="border-orange-200/90 bg-orange-50/90"
-          tooltip={approvalStatusTooltip}
+          tooltip={pendingApprovalTooltip}
         />
         <DashboardStatCard
           emoji="✅"
@@ -379,7 +394,7 @@ export default function OverviewTab() {
           subtitle="Completed reviews"
           valueClassName="text-green-600"
           cardClassName="border-green-200/90 bg-green-50/90"
-          tooltip={approvalStatusTooltip}
+          tooltip={approvedStatusTooltip}
         />
         <DashboardStatCard
           emoji="👥"
