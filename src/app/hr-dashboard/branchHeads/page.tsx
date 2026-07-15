@@ -646,12 +646,18 @@ export default function BranchHeadsTab() {
           </div>
         </CardHeader>
         <CardContent className="relative">
-          {branchHeadsRefreshing && (
-            <SmctLoadingOverlay label="Refreshing branch heads..." />
+          {(loadingBranchHeads || branchHeadsRefreshing) && (
+            <SmctLoadingOverlay
+              label={
+                branchHeadsRefreshing && !loadingBranchHeads
+                  ? "Refreshing branch heads..."
+                  : "Loading branch heads..."
+              }
+            />
           )}
           {/* Search Bar */}
           <div
-            className={`mb-6 ${branchHeadsRefreshing ? "pointer-events-none opacity-40" : ""}`}
+            className={`mb-6 ${loadingBranchHeads || branchHeadsRefreshing ? "pointer-events-none opacity-40" : ""}`}
           >
             <div className="relative w-full md:w-1/3">
               <Label
@@ -705,7 +711,7 @@ export default function BranchHeadsTab() {
             </div>
           </div>
           <div
-            className={`relative max-h-[600px] min-h-[280px] overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 ${branchHeadsRefreshing ? "border-blue-100 bg-gray-50/40" : ""}`}
+            className={`relative max-h-[600px] min-h-[280px] overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 ${loadingBranchHeads || branchHeadsRefreshing ? "border-blue-100 bg-gray-50/40" : ""}`}
           >
             <Table>
               <TableHeader className="sticky top-0 z-10 bg-white shadow-sm [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600">
