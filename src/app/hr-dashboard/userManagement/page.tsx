@@ -255,13 +255,9 @@ export default function UserManagementTab() {
     return false;
   };
   
-  const [pendingRegistrations, setPendingRegistrations] = useState<User[]>([]);
-
   const [activeRegistrations, setActiveRegistrations] = useState<User[]>([]);
-  const [tab, setTab] = useState<"active" | "new">("active");
   const [roles, setRoles] = useState<RoleType[]>([]);
   const [activeTotalItems, setActiveTotalItems] = useState(0);
-  const [pendingTotalItems, setPendingTotalItems] = useState(0);
 
   //data
   const [departmentData, setDepartmentData] = useState<any[]>([]);
@@ -401,7 +397,6 @@ export default function UserManagementTab() {
   const [userToEdit, setUserToEdit] = useState<any>(null);
   const [employeeToDelete, setEmployeeToDelete] = useState<User | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
-  const [rejectingUserId, setRejectingUserId] = useState<number | null>(null);
   const [recentlyUpdatedIds, setRecentlyUpdatedIds] = useState<Set<number>>(new Set());
 
   //filters for active users
@@ -414,20 +409,11 @@ export default function UserManagementTab() {
   const [debouncedActiveBranchFilter, setDebouncedActiveBranchFilter] =
     useState(activeBranchFilter);
   const [showActiveFilterHighlight, setShowActiveFilterHighlight] = useState(false);
-  //filters for pending users
-  const [pendingSearchTerm, setPendingSearchTerm] = useState("");
-  const [debouncedPendingSearchTerm, setDebouncedPendingSearchTerm] =
-    useState(pendingSearchTerm);
-  const [statusFilter, setStatusFilter] = useState("");
-  const [debouncedStatusFilter, setDebouncedStatusFilter] =
-    useState(statusFilter);
   //pagination
   const [currentPageActive, setCurrentPageActive] = useState(1);
-  const [currentPagePending, setCurrentPagePending] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(6);
   const [totalItems, setTotalItems] = useState(0);
   const [totalActivePages, setTotalActivePages] = useState(1);
-  const [totalPendingPages, setTotalPendingPages] = useState(1);
   const [perPage, setPerPage] = useState(0);
   //data to view
   const [employeeToView, setEmployeeToView] = useState<User | null>(null);
@@ -526,44 +512,6 @@ export default function UserManagementTab() {
   >(undefined);
   const [isDeletingEmployee, setIsDeletingEmployee] = useState(false);
   const activeFilterHighlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Track when page change started for pending users
-  const pendingPageChangeStartTimeRef = useRef<number | null>(null);
-
-  const loadPendingUsers = async (
-    searchValue: string,
-    statusFilter: string
-  ) => {
-    try {
-      const response = await apiService.getPendingRegistrations(
-        searchValue,
-        statusFilter,
-        currentPagePending,
-        itemsPerPage
-      );
-
-      setPendingRegistrations(
-        dedupeUsersById(Array.isArray(response.data) ? response.data : [])
-      );
-      setPendingTotalItems(response.total);
-      setTotalPendingPages(response.last_page);
-      setPerPage(response.per_page);
-    } catch (error) {
-      console.error("Error loading pending users:", error);
-    } finally {
-      // If this was a page change, ensure minimum display time (2 seconds)
-      if (pendingPageChangeStartTimeRef.current !== null) {
-        const elapsed = Date.now() - pendingPageChangeStartTimeRef.current;
-        const minDisplayTime = 2000; // 2 seconds
-        const remainingTime = Math.max(0, minDisplayTime - elapsed);
-
-        setTimeout(() => {
-          setIsPageLoading(false);
-          pendingPageChangeStartTimeRef.current = null;
-        }, remainingTime);
-      }
-    }
-  };
 
   // Track when page change started for active users
   const activePageChangeStartTimeRef = useRef<number | null>(null);
@@ -668,14 +616,12 @@ export default function UserManagementTab() {
   //mount every activeSearchTerm, roleFilter, or branchFilter changes
   useEffect(() => {
     const handler = setTimeout(() => {
-      if (tab === "active") {
-        if (activeSearchTerm.trim() !== "") {
-          setCurrentPageActive(1);
-        }
-        setDebouncedActiveSearchTerm(activeSearchTerm);
-        setDebouncedRoleFilter(roleFilter);
-        setDebouncedActiveBranchFilter(activeBranchFilter);
+      if (activeSearchTerm.trim() !== "") {
+        setCurrentPageActive(1);
       }
+      setDebouncedActiveSearchTerm(activeSearchTerm);
+      setDebouncedRoleFilter(roleFilter);
+      setDebouncedActiveBranchFilter(activeBranchFilter);
     }, 500);
 
     return () => clearTimeout(handler);
@@ -712,63 +658,26 @@ export default function UserManagementTab() {
   // Fetch API whenever debounced active search term changes
   useEffect(() => {
     const fetchData = async () => {
-      if (tab === "active") {
-        await loadActiveUsers(
-          debouncedActiveSearchTerm,
-          debouncedRoleFilter,
-          debouncedActiveBranchFilter
-        );
-      }
+      await loadActiveUsers(
+        debouncedActiveSearchTerm,
+        debouncedRoleFilter,
+        debouncedActiveBranchFilter
+      );
     };
 
     fetchData();
   }, [
-    tab,
     debouncedActiveSearchTerm,
     debouncedRoleFilter,
     debouncedActiveBranchFilter,
     currentPageActive,
   ]);
 
-  //mount every pendingSearchTerm changes and statusFilter
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      if (tab === "new") {
-        if (pendingSearchTerm.trim() !== "") {
-          setCurrentPagePending(1);
-        }
-        setDebouncedPendingSearchTerm(pendingSearchTerm);
-        setDebouncedStatusFilter(statusFilter);
-      }
-    }, 500);
-
-    return () => clearTimeout(handler);
-  }, [pendingSearchTerm, statusFilter]);
-
-  // Fetch API whenever debounced pending search term changes
-  useEffect(() => {
-    const fetchData = async () => {
-      if (tab === "new") {
-        await loadPendingUsers(
-          debouncedPendingSearchTerm,
-          debouncedStatusFilter
-        );
-      }
-    };
-
-    fetchData();
-  }, [tab, debouncedPendingSearchTerm, debouncedStatusFilter, currentPagePending]);
-
   // Function to refresh user data
   const refreshUserData = async (showLoading = false) => {
     try {
       setRefresh(true);
-      if (tab === "new") {
-        await loadPendingUsers(pendingSearchTerm, statusFilter);
-      }
-      if (tab === "active") {
-        await loadActiveUsers(activeSearchTerm, roleFilter, activeBranchFilter);
-      }
+      await loadActiveUsers(activeSearchTerm, roleFilter, activeBranchFilter);
 
       if (showLoading) {
         await new Promise((resolve) => setTimeout(resolve, 800));
@@ -1441,54 +1350,6 @@ export default function UserManagementTab() {
     }
   };
 
-  const handleApproveRegistration = async (
-    registrationId: number,
-    registrationName: string
-  ) => {
-    try {
-      await apiService.approveRegistration(registrationId);
-      await loadPendingUsers(pendingSearchTerm, statusFilter);
-      toastMessages.user.approved(registrationName);
-    } catch (error) {
-      console.error("Error approving registration:", error);
-      toastMessages.generic.error(
-        "Approval Error",
-        "An error occurred while approving the registration. Please try again."
-      );
-    }
-  };
-
-  const handleRejectRegistration = async (
-    registrationId: number,
-    registrationName: string
-  ) => {
-    try {
-      // Set rejecting state to show red highlight
-      setRejectingUserId(registrationId);
-      
-      // Wait for visual feedback (500ms delay)
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Delete the account when rejected
-      await apiService.deleteUser(registrationId);
-      
-      // Remove from list after deletion
-      await loadPendingUsers(pendingSearchTerm, statusFilter);
-      
-      // Clear rejecting state
-      setRejectingUserId(null);
-      
-      toastMessages.user.rejected(registrationName);
-    } catch (error) {
-      console.error("Error rejecting registration:", error);
-      setRejectingUserId(null);
-      toastMessages.generic.error(
-        "Rejection Error",
-        "An error occurred while rejecting the registration. Please try again."
-      );
-    }
-  };
-
   const handleAddUser = async (newUser: any) => {
     try {
       // Convert plain object to FormData - matching register page pattern
@@ -1536,13 +1397,6 @@ export default function UserManagementTab() {
     setCurrentPageActive(page);
   };
 
-  // Handle page change for pending users
-  const handlePendingPageChange = (page: number) => {
-    setIsPageLoading(true);
-    pendingPageChangeStartTimeRef.current = Date.now();
-    setCurrentPagePending(page);
-  };
-
   // Get role color based on role name
   const getRoleColor = (roleName: string | undefined): string => {
     if (!roleName)
@@ -1560,76 +1414,18 @@ export default function UserManagementTab() {
     }
   };
 
-  // Handle tab change with refresh
-  const handleTabChange = async (tab: "active" | "new") => {
-    try {
-      setTab(tab);
-      await refreshUserData(true);
-    } catch (error) {
-      console.log(error);
-    } finally {
-      setRefresh(false);
-    }
-  };
-
   const userTableBusy = refresh || isPageLoading;
 
   return (
     <div className="relative min-h-[400px] overflow-y-auto pr-0 sm:pr-2">
-      <Card>
-        <CardHeader className="space-y-1 p-4 sm:p-6">
-          <CardTitle className="text-base sm:text-lg">User Management</CardTitle>
-          <CardDescription className="text-xs leading-relaxed sm:text-sm">
-            Manage system users and permissions
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
-          {/* Tab Navigation */}
-          <div
-            className="mb-4 flex max-w-full flex-wrap items-center gap-2 sm:mb-6 sm:gap-1.5"
-            role="tablist"
-            aria-label="User management views"
-          >
-            <Button
-              type="button"
-              role="tab"
-              aria-selected={tab === "active"}
-              variant={tab === "active" ? "default" : "outline"}
-              onClick={() => handleTabChange("active")}
-              className="h-9 w-auto max-w-full shrink-0 cursor-pointer gap-1.5 px-3 text-sm whitespace-nowrap sm:gap-2"
-            >
-              <span className="shrink-0" aria-hidden>
-                👥
-              </span>
-              <span className="tabular-nums">
-                Active Users ({activeTotalItems})
-              </span>
-            </Button>
-            <Button
-              type="button"
-              role="tab"
-              aria-selected={tab === "new"}
-              variant={tab === "new" ? "default" : "outline"}
-              onClick={() => handleTabChange("new")}
-              className="h-9 w-auto max-w-full shrink-0 cursor-pointer gap-1.5 px-3 text-sm whitespace-nowrap sm:gap-2"
-            >
-              <span className="shrink-0" aria-hidden>
-                🆕
-              </span>
-              <span className="tabular-nums">
-                New Registrations ({pendingTotalItems})
-              </span>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Active Users Tab */}
-      {tab === "active" && (
-        <Card className="mt-4">
+      {/* Active Users */}
+      <Card className="mt-0">
           <CardHeader>
-            <CardTitle>Approved Registrations</CardTitle>
-            <CardDescription>List of Active Users</CardDescription>
+            <CardTitle>User Management</CardTitle>
+            <CardDescription>
+              Manage active system users and permissions ({activeTotalItems}{" "}
+              active)
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -2158,7 +1954,7 @@ export default function UserManagementTab() {
                 </Table>
               </div>
               <div>
-                {tab === "active" && !userTableBusy && (
+                {!userTableBusy && (
                   <div>
                     <EvaluationsPagination
                       currentPage={currentPageActive}
@@ -2173,395 +1969,6 @@ export default function UserManagementTab() {
             </div>
           </CardContent>
         </Card>
-      )}
-
-      {/* New Registrations Tab Content */}
-      {tab === "new" && (
-        <div className="relative mt-4">
-          <Card className="mt-4">
-            <CardHeader>
-              <CardTitle>New Registrations</CardTitle>
-              <CardDescription>
-                Review and approve new user registrations
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                  <div className="flex min-w-0 w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-4">
-                    <div className="relative min-w-0 w-full max-w-full sm:max-w-md sm:flex-1">
-                      <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                        <svg
-                          className="h-5 w-5 text-gray-400"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          viewBox="0 0 24 24"
-                        >
-                          <circle cx="11" cy="11" r="8"></circle>
-                          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                        </svg>
-                      </span>
-                      <Input
-                        placeholder="Search new registrations..."
-                        className="w-full min-w-0 pl-10 pr-10"
-                        value={pendingSearchTerm}
-                        onChange={(e) => setPendingSearchTerm(e.target.value)}
-                      />
-
-                      {pendingSearchTerm && (
-                        <button
-                          onClick={() => setPendingSearchTerm("")}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-600 transition-colors"
-                          aria-label="Clear search"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-6 w-6"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                        </button>
-                      )}
-                    </div>
-                    <div className="w-full min-w-0 sm:w-auto">
-                      <Select
-                        value={statusFilter}
-                        onValueChange={(value) => setStatusFilter(value)}
-                      >
-                        <SelectTrigger className="w-full min-w-[10rem] cursor-pointer sm:w-48">
-                          <SelectValue placeholder="Filter by status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="0">All Status</SelectItem>
-                          <SelectItem value="pending">
-                            Pending Verification
-                          </SelectItem>
-                          <SelectItem value="declined">Rejected</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="flex shrink-0 flex-wrap gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => refreshUserData(true)}
-                      disabled={userTableBusy}
-                      className="flex items-center gap-2 cursor-pointer bg-blue-600 text-white hover:bg-blue-700 hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-70 disabled:hover:translate-y-0"
-                    >
-                      {userTableBusy ? (
-                        <span className="flex items-center gap-2">
-                          <span className="relative h-8 w-8 shrink-0">
-                            <span className="absolute inset-0 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                            <span className="absolute inset-0 flex items-center justify-center">
-                              <img
-                                src="/smct.png"
-                                alt=""
-                                className="h-4 w-4 object-contain opacity-95"
-                                width={16}
-                                height={16}
-                                decoding="async"
-                              />
-                            </span>
-                          </span>
-                          <span>
-                            {refresh
-                              ? "Refreshing..."
-                              : "Loading page..."}
-                          </span>
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-2">
-                          <RefreshCw className="h-5 w-5 shrink-0" aria-hidden />
-                          Refresh
-                        </span>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Status Color Indicator */}
-                <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg border border-gray-200 mb-4">
-                  <span className="text-sm font-medium text-gray-700">
-                    Status Indicators:
-                  </span>
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <Badge
-                      variant="outline"
-                      className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border-yellow-300"
-                    >
-                      ⚡ New (≤24h)
-                    </Badge>
-                    <Badge
-                      variant="outline"
-                      className="bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-300"
-                    >
-                      🕐 Recent (24-48h)
-                    </Badge>
-                    <Badge
-                      variant="outline"
-                      className="bg-red-100 text-red-800 hover:bg-red-200 border-red-300"
-                    >
-                      ✗ Rejected
-                    </Badge>
-                  </div>
-                </div>
-
-                <div
-                  className={cn(
-                    "relative max-h-[500px] overflow-y-auto overflow-x-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100",
-                    userTableBusy &&
-                      "min-h-[280px] border-blue-100 bg-gray-50/40"
-                  )}
-                >
-                  {userTableBusy ? (
-                    <SmctLoadingOverlay
-                      label={
-                        isPageLoading && !refresh
-                          ? "Loading page..."
-                          : "Updating users..."
-                      }
-                    />
-                  ) : null}
-                  <Table>
-                    <TableHeader className="sticky top-0 z-10 border-b border-gray-200 bg-white shadow-sm [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600">
-                      <TableRow>
-                        <TableHead className="px-6 py-3">Name</TableHead>
-                        <TableHead className="px-6 py-3">Email</TableHead>
-                        <TableHead className="px-6 py-3">Position</TableHead>
-                        <TableHead className="px-6 py-3">
-                          Registration Date
-                        </TableHead>
-                        <TableHead className="px-6 py-3">Status</TableHead>
-                        <TableHead className="px-6 py-3">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody className="divide-y divide-gray-200">
-                      {userTableBusy ? (
-                        Array.from({ length: itemsPerPage }).map((_, index) => (
-                          <TableRow key={`skeleton-${index}`}>
-                            <TableCell className="px-6 py-3">
-                              <Skeleton className="h-6 w-24" />
-                            </TableCell>
-                            <TableCell className="px-6 py-3">
-                              <Skeleton className="h-6 w-24" />
-                            </TableCell>
-                            <TableCell className="px-6 py-3">
-                              <Skeleton className="h-6 w-24" />
-                            </TableCell>
-                            <TableCell className="px-6 py-3">
-                              <Skeleton className="h-6 w-24" />
-                            </TableCell>
-                            <TableCell className="px-6 py-3">
-                              <Skeleton className="h-6 w-24" />
-                            </TableCell>
-                            <TableCell className="px-6 py-3">
-                              <Skeleton className="h-6 w-24" />
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      ) : pendingRegistrations.length === 0 ? (
-                        <TableRow>
-                          <TableCell
-                            colSpan={6}
-                            className="text-center py-8 text-gray-500"
-                          >
-                            <div className="flex flex-col items-center justify-center gap-4">
-                              <img
-                                src="/not-found.gif"
-                                alt="No data"
-                                className="w-25 h-25 object-contain"
-                                style={{
-                                  imageRendering: "auto",
-                                  willChange: "auto",
-                                  transform: "translateZ(0)",
-                                  backfaceVisibility: "hidden",
-                                  WebkitBackfaceVisibility: "hidden",
-                                }}
-                              />
-                              <div className="text-gray-500">
-                                {pendingSearchTerm ? (
-                                  <>
-                                    <p className="text-base font-medium mb-1">
-                                      No results found
-                                    </p>
-                                    <p className="text-sm text-gray-400">
-                                      Try adjusting your search or filters
-                                    </p>
-                                  </>
-                                ) : (
-                                  <>
-                                    <p className="text-base font-medium mb-1">
-                                      No new registrations
-                                    </p>
-                                    <p className="text-sm text-gray-400">
-                                      New registrations will appear here
-                                    </p>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ) : pendingRegistrations &&
-                        Array.isArray(pendingRegistrations) &&
-                        pendingRegistrations.length > 0 ? (
-                        pendingRegistrations
-                          .filter((account) => {
-                            if (shouldHideAdminUsers && userHasAdminRole(account)) {
-                              return false;
-                            }
-                            return true;
-                          })
-                          .map((account) => {
-                          // Check if registration is new (within 24 hours) or recent (24-48 hours)
-                          if (!account.created_at) return null;
-                          const registrationDate = new Date(account.created_at);
-                          const now = new Date();
-                          const hoursDiff =
-                            (now.getTime() - registrationDate.getTime()) /
-                            (1000 * 60 * 60);
-                          const isNew = hoursDiff <= 24;
-                          const isRecent = hoursDiff > 24 && hoursDiff <= 48;
-                          const isRejected = account.is_active === "declined";
-                          const isBeingRejected = rejectingUserId === account.id;
-
-                          return (
-                            <TableRow
-                              key={account.id}
-                              className={
-                                isBeingRejected
-                                  ? "bg-red-200 border-l-4 border-l-red-600 animate-pulse transition-all duration-500"
-                                  : isRejected
-                                  ? "bg-red-50 border-l-4 border-l-red-500 hover:bg-red-100"
-                                  : isNew
-                                  ? "bg-yellow-50 border-l-4 border-l-yellow-500 hover:bg-yellow-100"
-                                  : isRecent
-                                  ? "bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100"
-                                  : "hover:bg-gray-50"
-                              }
-                            >
-                              <TableCell className="px-6 py-3 font-medium">
-                                <div className="flex items-center gap-2">
-                                  <span>
-                                    {account.fname + " " + account.lname}
-                                  </span>
-                                  {!isRejected && isNew && (
-                                    <Badge className="bg-yellow-500 text-white text-xs px-2 py-0.5 font-semibold">
-                                      ⚡ New
-                                    </Badge>
-                                  )}
-                                  {!isRejected && isRecent && !isNew && (
-                                    <Badge className="bg-blue-500 text-white text-xs px-2 py-0.5 font-semibold">
-                                      🕐 Recent
-                                    </Badge>
-                                  )}
-                                </div>
-                              </TableCell>
-                              <TableCell className="px-6 py-3">
-                                {account.email}
-                              </TableCell>
-                              <TableCell className="px-6 py-3">
-                                {account.positions?.label || "N/A"}
-                              </TableCell>
-                              <TableCell className="px-6 py-3">
-                                {new Date(
-                                  account.created_at
-                                ).toLocaleDateString()}
-                              </TableCell>
-                              <TableCell className="px-6 py-3">
-                                <Badge
-                                  className={
-                                    account.is_active === "declined"
-                                      ? "bg-red-100 text-red-800 hover:bg-red-200"
-                                      : "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
-                                  }
-                                >
-                                  {account.is_active === "declined"
-                                    ? "REJECTED"
-                                    : "PENDING VERIFICATION"}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="px-6 py-3">
-                                <div className="flex space-x-2">
-                                  {account.is_active === "pending" && (
-                                    <>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="text-white bg-blue-600 hover:text-white hover:bg-blue-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
-                                        onClick={() =>
-                                          handleApproveRegistration(
-                                            Number(account.id),
-                                            account.fname
-                                          )
-                                        }
-                                      >
-                                        Approve
-                                      </Button>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="text-white bg-red-600 hover:bg-red-700 hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
-                                        onClick={() =>
-                                          handleRejectRegistration(
-                                            Number(account.id),
-                                            account.fname
-                                          )
-                                        }
-                                      >
-                                        Reject
-                                      </Button>
-                                    </>
-                                  )}
-                                  {account.is_active === "declined" && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="text-green-600 hover:text-green-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"
-                                      onClick={() =>
-                                        handleApproveRegistration(
-                                          Number(account.id),
-                                          account.fname
-                                        )
-                                      }
-                                    >
-                                      Approve
-                                    </Button>
-                                  )}
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })
-                      ) : null}
-                    </TableBody>
-                  </Table>
-                </div>
-                <div>
-                  {tab === "new" && !userTableBusy && (
-                    <div>
-                      <EvaluationsPagination
-                        currentPage={currentPagePending}
-                        totalPages={totalPendingPages}
-                        total={pendingTotalItems}
-                        perPage={perPage}
-                        onPageChange={handlePendingPageChange}
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
 
       {/* Edit User Modal */}
       <EditUserModal
