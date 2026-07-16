@@ -5,7 +5,9 @@ import apiService from "@/lib/apiService";
 import {
   getEvaluatorDisplayName,
   pickSupervisorFromEmployee,
+  pickSupervisorFromSubmission,
   pickSupervisorWithApproverPriority,
+  submissionHasStoredApprovers,
 } from "@/lib/supervisorDisplay";
 import ViewResultsModalBranchRankNfile from "./ViewResultsModalBranchRankNfile";
 import ViewResultsModalBranchManager from "./ViewResultsModalBranchManager";
@@ -226,13 +228,18 @@ export default function ViewResultsModalRouter({
     }
 
     const fallback = getEvaluatorDisplayName(submission.evaluator);
+    const fromSubmission = pickSupervisorFromSubmission(submission);
     const syncName =
-      pickSupervisorWithApproverPriority(submission)?.name ??
+      fromSubmission?.name ??
       (submission.employee
         ? pickSupervisorFromEmployee(submission.employee)?.name
         : null) ??
       fallback;
     setSupervisorName(syncName);
+
+    if (submissionHasStoredApprovers(submission) || fromSubmission) {
+      return;
+    }
 
     const employeeId = submission.employee?.id;
     if (!employeeId) return;

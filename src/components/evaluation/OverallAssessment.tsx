@@ -27,6 +27,7 @@ import {
   getCurrentYear,
 } from "@/lib/quarterlyReviewUtils";
 import { useAuth, User as UserType } from "@/contexts/UserContext";
+import { usePrioritizedSupervisorName } from "@/hooks/usePrioritizedSupervisorName";
 import { CONFIG } from "../../../config/config";
 import {
   Dialog,
@@ -93,6 +94,7 @@ export default function OverallAssessment({
     remarks: false,
   });
   const { user } = useAuth();
+  const supervisorName = usePrioritizedSupervisorName(employee, user);
 
   // Only show PASS/FAIL indicators for probationary reviews (M3 / M5)
   const showPassFailIndicators =
@@ -273,7 +275,7 @@ export default function OverallAssessment({
                         <div class="print-value">${
                           employee?.branches[0]?.branch_name || "Branch: N/A"
                         } | ${
-      user?.fname + " " + user?.lname || "Sup: N/A"
+      supervisorName || "Sup: N/A"
     }</div>
                     </div>
                     <div class="print-field">
@@ -905,7 +907,7 @@ export default function OverallAssessment({
               <div>
                 <Label className="font-medium">Immediate Supervisor:</Label>
                 <Input
-                  value={user?.fname + " " + user?.lname || ""}
+                  value={supervisorName}
                   className="mt-1 bg-gray-50"
                   placeholder="Enter supervisor name"
                   disabled

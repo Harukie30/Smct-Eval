@@ -41,13 +41,16 @@ function pickSupervisorCandidate(raw: unknown): SupervisorDisplay | null {
   return extractSupervisorFromUnknown(raw);
 }
 
-function getRecordRoot(raw: unknown): Record<string, unknown> | null {
-  if (!raw || typeof raw !== "object") return null;
+/** Search both the raw object and nested `data` (API often splits fields across layers). */
+function getRecordSources(raw: unknown): Record<string, unknown>[] {
+  if (!raw || typeof raw !== "object") return [];
   const root = raw as Record<string, unknown>;
-  if (root.data && typeof root.data === "object" && !Array.isArray(root.data)) {
-    return root.data as Record<string, unknown>;
+  const sources: Record<string, unknown>[] = [root];
+  const data = root.data;
+  if (data && typeof data === "object" && !Array.isArray(data)) {
+    sources.push(data as Record<string, unknown>);
   }
-  return root;
+  return sources;
 }
 
 function coerceUnknownArray(value: unknown): unknown[] {
@@ -69,33 +72,32 @@ function getApproverBySequenceFromArray(
   raw: unknown,
   sequence: 1 | 2
 ): SupervisorDisplay | null {
-  const root = getRecordRoot(raw);
-  if (!root) return null;
-
   const arrays = [
-    root.assigned_approver,
-    root.assigned_approvers,
-    root.assigned_as_approvers,
-    root.assignedApprover,
-    root.assignedApprovers,
-    root.assignedAsApprovers,
-    root.assigned_evaluator,
-    root.assigned_evaluators,
-    root.assignedEvaluator,
-    root.assignedEvaluators,
-    root.approvers,
-  ];
+    "assigned_approver",
+    "assigned_approvers",
+    "assigned_as_approvers",
+    "assignedApprover",
+    "assignedApprovers",
+    "assignedAsApprovers",
+    "assigned_evaluator",
+    "assigned_evaluators",
+    "assignedEvaluator",
+    "assignedEvaluators",
+    "approvers",
+  ] as const;
 
-  for (const arr of arrays) {
-    for (const item of coerceUnknownArray(arr)) {
-      if (!item || typeof item !== "object") continue;
-      const record = item as Record<string, unknown>;
-      const nestedInfo = getApproverBySequenceFromArray(record, sequence);
-      if (nestedInfo) return nestedInfo;
+  for (const source of getRecordSources(raw)) {
+    for (const key of arrays) {
+      for (const item of coerceUnknownArray(source[key])) {
+        if (!item || typeof item !== "object") continue;
+        const record = item as Record<string, unknown>;
+        const nestedInfo = getApproverBySequenceFromArray(record, sequence);
+        if (nestedInfo) return nestedInfo;
 
-      if (getApproverSequence(record) !== sequence) continue;
-      const info = extractSupervisorFromUnknown(record);
-      if (info) return info;
+        if (getApproverSequence(record) !== sequence) continue;
+        const info = extractSupervisorFromUnknown(record);
+        if (info) return info;
+      }
     }
   }
   return null;
@@ -105,25 +107,35 @@ function getApproverFromFlatField(
   raw: unknown,
   sequence: 1 | 2
 ): SupervisorDisplay | null {
-  const root = getRecordRoot(raw);
-  if (!root) return null;
-
   const keys =
     sequence === 1
       ? ["approver_1", "approver1", "approver_1_user"]
       : ["approver_2", "approver2", "approver_2_user"];
 
-  for (const k of keys) {
-    const info = extractSupervisorFromUnknown(root[k]);
-    if (info) return info;
+  for (const source of getRecordSources(raw)) {
+    for (const k of keys) {
+      const info = extractSupervisorFromUnknown(source[k]);
+      if (info) return info;
+    }
   }
   return null;
 }
 
-function pickAssignedEvaluator(raw: unknown): SupervisorDisplay | null {
-  const root = getRecordRoot(raw);
-  if (!root) return null;
+function hasFlatApproverOnRecord(raw: unknown): boolean {
+  for (const source of getRecordSources(raw)) {
+    for (const k of [
+      "approver_1",
+      "approver1",
+      "approver_2",
+      "approver2",
+    ]) {
+      if (extractSupervisorFromUnknown(source[k])) return true;
+    }
+  }
+  return false;
+}
 
+function pickAssignedEvaluator(raw: unknown): SupervisorDisplay | null {
   const keys = [
     "assigned_evaluator",
     "assigned_evaluators",
@@ -132,9 +144,11 @@ function pickAssignedEvaluator(raw: unknown): SupervisorDisplay | null {
     "evaluator",
   ];
 
-  for (const k of keys) {
-    const info = pickSupervisorCandidate(root[k]);
-    if (info) return info;
+  for (const layer of getRecordSources(raw)) {
+    for (const k of keys) {
+      const info = pickSupervisorCandidate(layer[k]);
+      if (info) return info;
+    }
   }
   return null;
 }
@@ -143,20 +157,21 @@ function pickAssignedEvaluator(raw: unknown): SupervisorDisplay | null {
 export function pickSupervisorWithApproverPriority(
   raw: unknown
 ): SupervisorDisplay | null {
-  const root = getRecordRoot(raw);
-  if (!root) return null;
+  const layers = getRecordSources(raw);
+  if (layers.length === 0) return null;
 
-  const sources: Record<string, unknown>[] = [root];
-  for (const k of [
-    "assigned_evaluator",
-    "assigned_evaluators",
-    "assignedEvaluator",
-    "assignedEvaluators",
-    "evaluator",
-  ]) {
-    const nested = root[k];
-    if (nested && typeof nested === "object" && !Array.isArray(nested)) {
-      sources.push(nested as Record<string, unknown>);
+  const sources: Record<string, unknown>[] = [...layers];
+  for (const layer of layers) {
+    for (const k of [
+      "assigned_evaluator",
+      "assigned_evaluators",
+      "assignedEvaluator",
+      "assignedEvaluators",
+    ]) {
+      const nested = layer[k];
+      if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+        sources.push(nested as Record<string, unknown>);
+      }
     }
   }
 
@@ -174,7 +189,23 @@ export function pickSupervisorWithApproverPriority(
     if (seq1) return seq1;
   }
 
-  return pickAssignedEvaluator(root);
+  for (const layer of layers) {
+    const assigned = pickAssignedEvaluator(layer);
+    if (assigned) return assigned;
+  }
+
+  return null;
+}
+
+/** Saved evaluation submissions store approver1/approver2 on the record itself. */
+export function pickSupervisorFromSubmission(
+  submission: unknown
+): SupervisorDisplay | null {
+  return pickSupervisorWithApproverPriority(submission);
+}
+
+export function submissionHasStoredApprovers(submission: unknown): boolean {
+  return hasFlatApproverOnRecord(submission);
 }
 
 export function pickSupervisorFromEmployee(
