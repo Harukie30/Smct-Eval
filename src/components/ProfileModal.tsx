@@ -17,8 +17,13 @@ import LoadingAnimation from "@/components/LoadingAnimation";
 import apiService from "@/lib/apiService";
 import { dataURLtoFile } from "../utils/data-url-to-file";
 
-import { useAuth } from "@/contexts/UserContext";
+import { useAuth, type User as AuthUser } from "@/contexts/UserContext";
 import { cn } from "@/lib/utils";
+import {
+  getEmployeeBranchLabel,
+  employeeBranchNeedsLookup,
+} from "@/components/evaluation/employeeBranchLabel";
+import { useBranchesForEvaluation } from "@/hooks/useBranchesForEvaluation";
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -54,6 +59,8 @@ export default function ProfileModal({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const { success } = useToast();
   const { refreshUser } = useAuth();
+  const { branchOptions, isLoading: branchesLoading } =
+    useBranchesForEvaluation();
   const [open, setOpen] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSignatureDrawing, setIsSignatureDrawing] = useState(false);
@@ -61,6 +68,15 @@ export default function ProfileModal({
   const accountSettingsRef = useRef<HTMLDivElement>(null);
   const initializedProfileIdRef = useRef<string | number | null>(null); // Track which profile ID we've initialized
   const initialValuesRef = useRef<{ username?: string; email?: string } | null>(null); // Track initial values for comparison
+
+  const userForBranch = profile as AuthUser | null;
+  const resolvedBranch = getEmployeeBranchLabel(userForBranch, branchOptions);
+  const branchDisplay =
+    employeeBranchNeedsLookup(userForBranch) && branchesLoading
+      ? "Loading…"
+      : resolvedBranch === "N/A"
+        ? "Not Assigned"
+        : resolvedBranch;
   
   // Reset form data when modal opens or profile changes
   useEffect(() => {
@@ -456,12 +472,7 @@ export default function ProfileModal({
                     <Label htmlFor="branch" className="text-sm font-medium">
                       Branch
                     </Label>
-                    <Input
-                      value={
-                        profile?.branches[0]?.branch_name || "Not Assigned "
-                      }
-                      readOnly
-                    />
+                    <Input value={branchDisplay} readOnly />
                   </div>
                 </>
               )}
