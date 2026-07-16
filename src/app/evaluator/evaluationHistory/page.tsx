@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Eye, X } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -20,7 +20,17 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { apiService } from "@/lib/apiService";
 import { getCachedEmployeeDashboard } from "@/lib/referenceDataCache";
 import {
@@ -30,12 +40,25 @@ import {
 import EvaluationsPagination from "@/components/paginationComponent";
 import NotFoundEmptyState from "@/components/NotFoundEmptyState";
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
+import EvaluationEditRouter from "@/components/evaluation/EvaluationEditRouter";
+import ViewEvaluationMobileWarningModal from "@/components/evaluation/ViewEvaluationMobileWarningModal";
+import { useAuth } from "@/contexts/UserContext";
+import { useMobileViewport } from "@/hooks/useMobileViewport";
+import { useDialogAnimation } from "@/hooks/useDialogAnimation";
+import { toastMessages } from "@/lib/toastMessages";
+import { cn } from "@/lib/utils";
+import { isSubmissionResubmitAllowed } from "@/lib/evaluationSubmissionRecord";
 import {
+  type EvaluationRecordReview,
   EvaluationApiErrorDialog,
+  EvalRecordRowActions,
   EvalRecordStatusBadge,
   getReviewRowClassName,
   getEvaluationApiErrorMessage,
   getViewEvaluationErrorMessage,
+  canEvaluatorOpenEvaluationEdit,
+  isReviewApproverActionable,
+  isReviewDraftEditableByEvaluator,
 } from "@/components/evaluation/evaluationRecordsShared";
 import {
   Select,
@@ -45,20 +68,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-interface Review {
-  id: number;
-  employee: any;
-  evaluator: any;
-  reviewTypeProbationary: number | string;
-  reviewTypeRegular: number | string;
-  reviewTypeOthersImprovement?: boolean | number;
-  reviewTypeOthersCustom?: string;
-  created_at: string;
-  rating: number;
-  status: string;
-}
+type Review = EvaluationRecordReview;
+
+const REJECT_NOTE_MAX_LENGTH = 20;
 
 export default function OverviewTab() {
+  const { user } = useAuth();
+  const isMobileViewport = useMobileViewport();
+  const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
+
   const [isRefreshingOverview, setIsRefreshingOverview] = useState(false);
   const [isPaginate, setIsPaginate] = useState(false);
 
@@ -75,6 +93,21 @@ export default function OverviewTab() {
     title: string;
     message: string;
   } | null>(null);
+  const [isEditEvaluationModalOpen, setIsEditEvaluationModalOpen] =
+    useState(false);
+  const [selectedSubmissionForEdit, setSelectedSubmissionForEdit] =
+    useState<any>(null);
+  const [isLoadingEditEvaluation, setIsLoadingEditEvaluation] = useState(false);
+  const [bypassEditMobileWarning, setBypassEditMobileWarning] = useState(false);
+  const [acceptingReviewId, setAcceptingReviewId] = useState<number | null>(
+    null
+  );
+  const [rejectingReviewId, setRejectingReviewId] = useState<number | null>(
+    null
+  );
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+  const [reviewToReject, setReviewToReject] = useState<Review | null>(null);
+  const [rejectNote, setRejectNote] = useState("");
 
   const [myEvaluations, setMyEvaluations] = useState<any>([]);
   const [totalEvaluations, setTotalEvaluations] = useState<any>(0);
@@ -295,6 +328,133 @@ export default function OverviewTab() {
         title: "Unable to Open Evaluation",
         message: getViewEvaluationErrorMessage(error),
       });
+    }
+  };
+
+  const closeEditEvaluationModal = async () => {
+    setIsEditEvaluationModalOpen(false);
+    setSelectedSubmissionForEdit(null);
+    setBypassEditMobileWarning(false);
+    await refresh();
+  };
+
+  const handleEditEvaluation = async (review: Review) => {
+    if (!canEvaluatorOpenEvaluationEdit(review, user?.id)) return;
+
+    setIsLoadingEditEvaluation(true);
+    try {
+      const submission = await apiService.getSubmissionById(review.id);
+
+      if (submission) {
+        const draftEdit = isReviewDraftEditableByEvaluator(review, user?.id);
+        const stillEditable =
+          draftEdit ||
+          (canEvaluatorOpenEvaluationEdit(review, user?.id) &&
+            isSubmissionResubmitAllowed(submission));
+
+        if (!stillEditable) {
+          setEvaluationActionError({
+            title: "Unable to Edit Evaluation",
+            message:
+              "This evaluation can no longer be edited in its current status. Please refresh to view the latest updates.",
+          });
+          return;
+        }
+
+        setSelectedSubmissionForEdit(submission);
+        setIsEditEvaluationModalOpen(true);
+      } else {
+        setEvaluationActionError({
+          title: "Unable to Edit Evaluation",
+          message:
+            "Evaluation record was not found. Please refresh to view the latest updates.",
+        });
+      }
+    } catch (error) {
+      setEvaluationActionError({
+        title: "Unable to Edit Evaluation",
+        message: getViewEvaluationErrorMessage(error),
+      });
+    } finally {
+      setIsLoadingEditEvaluation(false);
+    }
+  };
+
+  const openRejectApprovalModal = (review: Review) => {
+    if (!isReviewApproverActionable(review, user?.id)) return;
+    setRejectNote("");
+    setReviewToReject(review);
+    setIsRejectModalOpen(true);
+  };
+
+  const closeRejectModal = () => {
+    setIsRejectModalOpen(false);
+    setReviewToReject(null);
+    setRejectNote("");
+  };
+
+  const handleAcceptApproval = async (review: Review) => {
+    if (
+      !isReviewApproverActionable(review, user?.id) ||
+      acceptingReviewId != null ||
+      rejectingReviewId != null
+    ) {
+      return;
+    }
+
+    setAcceptingReviewId(review.id);
+    try {
+      await apiService.acceptApprovalEvaluation(review.id);
+      await refresh();
+      toastMessages.generic.success(
+        "Evaluation accepted",
+        "The evaluation has been approved for this step."
+      );
+    } catch (error) {
+      setEvaluationActionError({
+        title: "Unable to Accept Evaluation",
+        message: getEvaluationApiErrorMessage(
+          error,
+          "Failed to accept evaluation. Please try again."
+        ),
+      });
+    } finally {
+      setAcceptingReviewId(null);
+    }
+  };
+
+  const handleRejectApproval = async () => {
+    const note = rejectNote.trim();
+    if (
+      !reviewToReject ||
+      note.length === 0 ||
+      note.length > REJECT_NOTE_MAX_LENGTH ||
+      rejectingReviewId != null ||
+      acceptingReviewId != null
+    ) {
+      return;
+    }
+
+    setRejectingReviewId(reviewToReject.id);
+    try {
+      await apiService.rejectApprovalEvaluation(reviewToReject.id, note);
+      await refresh();
+      toastMessages.generic.success(
+        "Evaluation rejected",
+        "The evaluation has been rejected at this approval step."
+      );
+      closeRejectModal();
+    } catch (error) {
+      setEvaluationActionError({
+        title: "Unable to Reject Evaluation",
+        message: getEvaluationApiErrorMessage(
+          error,
+          "Failed to reject evaluation. Please try again."
+        ),
+      });
+      closeRejectModal();
+    } finally {
+      setRejectingReviewId(null);
     }
   };
 
@@ -930,14 +1090,46 @@ export default function OverviewTab() {
                             </div>
                           </TableCell>
                           <TableCell className="w-1/6 text-center">
-                            <Button
-                              className="bg-blue-600 text-white hover:bg-blue-700 hover:text-white cursor-pointer"
-                              size="sm"
-                              onClick={() => handleViewEvaluation(submission)}
-                            >
-                              <Eye className="w-4 h-4" />
-                              View
-                            </Button>
+                            {(() => {
+                              const showApproverActions =
+                                isReviewApproverActionable(
+                                  submission,
+                                  user?.id
+                                );
+
+                              return (
+                                <div className="flex justify-center">
+                                  <EvalRecordRowActions
+                                    review={submission}
+                                    currentUserId={user?.id}
+                                    onViewAction={() =>
+                                      handleViewEvaluation(submission)
+                                    }
+                                    onEditAction={() =>
+                                      void handleEditEvaluation(submission)
+                                    }
+                                    onAcceptAction={
+                                      showApproverActions
+                                        ? () =>
+                                            void handleAcceptApproval(submission)
+                                        : undefined
+                                    }
+                                    onRejectAction={
+                                      showApproverActions
+                                        ? () =>
+                                            openRejectApprovalModal(submission)
+                                        : undefined
+                                    }
+                                    accepting={
+                                      acceptingReviewId === submission.id
+                                    }
+                                    rejecting={
+                                      rejectingReviewId === submission.id
+                                    }
+                                  />
+                                </div>
+                              );
+                            })()}
                           </TableCell>
                         </TableRow>
                       );
@@ -983,6 +1175,128 @@ export default function OverviewTab() {
           void handleClose();
         }}
       />
+
+      <Dialog
+        open={isRejectModalOpen}
+        onOpenChangeAction={(open) => {
+          if (!open) closeRejectModal();
+          else setIsRejectModalOpen(true);
+        }}
+      >
+        <DialogContent className={`max-w-md p-6 ${dialogAnimationClass}`}>
+          <DialogHeader className="rounded-lg bg-red-50 pb-4">
+            <DialogTitle className="flex items-center gap-2 text-red-800">
+              <span className="text-xl">⚠️</span>
+              Reject Evaluation Approval
+            </DialogTitle>
+            <DialogDescription className="text-red-700">
+              Are you sure you want to reject this evaluation?
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2 px-1 pt-2">
+            <Label htmlFor="history-reject-note" className="text-sm font-medium">
+              Rejection note <span className="text-red-600">*</span>
+            </Label>
+            <Textarea
+              id="history-reject-note"
+              value={rejectNote}
+              onChange={(e) =>
+                setRejectNote(e.target.value.slice(0, REJECT_NOTE_MAX_LENGTH))
+              }
+              placeholder="Explain why this evaluation is being rejected (max 20 characters)..."
+              rows={4}
+              maxLength={REJECT_NOTE_MAX_LENGTH}
+              className="min-h-[6rem] resize-y"
+            />
+            <p
+              className={cn(
+                "text-xs",
+                rejectNote.trim().length === 0
+                  ? "text-amber-700"
+                  : rejectNote.length >= REJECT_NOTE_MAX_LENGTH
+                    ? "text-red-600"
+                    : "text-muted-foreground"
+              )}
+            >
+              {rejectNote.length}/{REJECT_NOTE_MAX_LENGTH} characters maximum. A
+              note is required.
+            </p>
+          </div>
+
+          <DialogFooter className="pt-4">
+            <div className="flex w-full justify-end space-x-4">
+              <Button
+                variant="outline"
+                onClick={closeRejectModal}
+                className="cursor-pointer bg-blue-600 text-white hover:bg-blue-700 hover:text-white"
+              >
+                Cancel
+              </Button>
+              <Button
+                className="cursor-pointer bg-red-600 text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={() => void handleRejectApproval()}
+                disabled={
+                  rejectingReviewId !== null ||
+                  rejectNote.trim().length === 0 ||
+                  rejectNote.length > REJECT_NOTE_MAX_LENGTH
+                }
+              >
+                {rejectingReviewId === reviewToReject?.id ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Rejecting...</span>
+                  </div>
+                ) : (
+                  "Reject"
+                )}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {isEditEvaluationModalOpen &&
+      isMobileViewport &&
+      !bypassEditMobileWarning ? (
+        <ViewEvaluationMobileWarningModal
+          isOpen={isEditEvaluationModalOpen}
+          onCloseAction={closeEditEvaluationModal}
+          onViewAnywayAction={() => setBypassEditMobileWarning(true)}
+        />
+      ) : (
+        <Dialog
+          open={isEditEvaluationModalOpen}
+          onOpenChangeAction={(open) => {
+            if (!open) void closeEditEvaluationModal();
+          }}
+        >
+          <DialogContent className="evaluation-container relative max-h-[101vh] max-w-7xl overflow-hidden p-0">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() => void closeEditEvaluationModal()}
+              aria-label="Close evaluation edit"
+              title="Close"
+              className="absolute right-3 top-3 z-50 h-9 w-9 cursor-pointer rounded-full border-slate-200 bg-white/95 text-slate-700 shadow-md hover:bg-slate-100 hover:text-slate-900 sm:right-4 sm:top-4"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+            {isLoadingEditEvaluation ? (
+              <div className="flex min-h-[12rem] items-center justify-center p-8">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              </div>
+            ) : selectedSubmissionForEdit ? (
+              <EvaluationEditRouter
+                submission={selectedSubmissionForEdit}
+                onCloseAction={closeEditEvaluationModal}
+                onCancelAction={closeEditEvaluationModal}
+              />
+            ) : null}
+          </DialogContent>
+        </Dialog>
+      )}
     </>
   );
 }

@@ -269,15 +269,35 @@ export function getReviewApproverUserId(
   slot: 1 | 2
 ): string | null {
   const extended = review as EvaluationRecordReview & Record<string, unknown>;
-  const value =
+
+  const objectValue =
     slot === 1
       ? extended.approver1 ?? extended.approver_1
       : extended.approver2 ?? extended.approver_2;
 
-  if (!value || typeof value !== "object") return null;
-  const record = value as Record<string, unknown>;
-  const id = record.id ?? record.user_id ?? record.approver_id;
-  return isPresentId(id) ? String(id) : null;
+  if (objectValue && typeof objectValue === "object") {
+    const record = objectValue as Record<string, unknown>;
+    const id = record.id ?? record.user_id ?? record.approver_id;
+    if (isPresentId(id)) return String(id).trim();
+  }
+
+  // Some list payloads only include scalar approver ids.
+  const scalarValue =
+    slot === 1
+      ? extended.approver1_id ??
+        extended.approver_1_id ??
+        extended.approverId1 ??
+        (typeof objectValue === "string" || typeof objectValue === "number"
+          ? objectValue
+          : null)
+      : extended.approver2_id ??
+        extended.approver_2_id ??
+        extended.approverId2 ??
+        (typeof objectValue === "string" || typeof objectValue === "number"
+          ? objectValue
+          : null);
+
+  return isPresentId(scalarValue) ? String(scalarValue).trim() : null;
 }
 
 export function getReviewApproverSlotForUser(
