@@ -104,8 +104,14 @@ function getApproverBySequenceFromArray(
   const arrays = [
     root.assigned_approver,
     root.assigned_approvers,
+    root.assigned_as_approvers,
     root.assignedApprover,
     root.assignedApprovers,
+    root.assignedAsApprovers,
+    root.assigned_evaluator,
+    root.assigned_evaluators,
+    root.assignedEvaluator,
+    root.assignedEvaluators,
     root.approvers,
   ];
 
@@ -113,6 +119,9 @@ function getApproverBySequenceFromArray(
     for (const item of coerceUnknownArray(arr)) {
       if (!item || typeof item !== "object") continue;
       const record = item as Record<string, unknown>;
+      const nestedInfo = getApproverBySequenceFromArray(record, sequence);
+      if (nestedInfo) return nestedInfo;
+
       if (getApproverSequence(record) !== sequence) continue;
       const info = extractSupervisorFromUnknown(record);
       if (info) return info;
