@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Printer } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
+import { getEvaluatorDisplayName } from "@/lib/supervisorDisplay";
 import { CONFIG } from "../../../config/config";
 import apiService from "@/lib/apiService";
 import { getEmployeeBranchCodeDisplay } from "./employeeBranchLabel";
@@ -63,6 +64,7 @@ interface ViewResultsModalProps {
   currentUserName?: string;
   currentUserSignature?: string; // New prop for current user's signature
   showApprovalButton?: boolean; // New prop to control approval button visibility
+  supervisorName?: string;
 }
 
 // Helper functions for rating calculations
@@ -127,6 +129,7 @@ export default function ViewResultsModal({
   isApproved = false,
   approvalData = null,
   showApprovalButton = false,
+  supervisorName = "",
 }: ViewResultsModalProps) {
   const { user } = useUser();
   const [isApproving, setIsApproving] = useState(false);
@@ -2283,9 +2286,8 @@ export default function ViewResultsModal({
                         className="text-gray-900 print-value"
                         style={{ fontSize: "11px" }}
                       >
-                        {submission.evaluator.fname +
-                          " " +
-                          submission.evaluator.lname}
+                        {supervisorName ||
+                          getEvaluatorDisplayName(submission.evaluator)}
                       </p>
                     </div>
                     <div className="print-info-row">

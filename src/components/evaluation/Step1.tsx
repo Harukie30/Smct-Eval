@@ -18,8 +18,9 @@ import {
   getQuarterlyReviewStatus,
   getCurrentYear,
 } from "@/lib/quarterlyReviewUtils";
-import { User, useAuth } from "@/contexts/UserContext";
+import { User } from "@/contexts/UserContext";
 import apiService from "@/lib/apiService";
+import { pickSupervisorFromEmployee, pickSupervisorWithApproverPriority } from "@/lib/supervisorDisplay";
 import {
   getEmployeeBranchCodeDisplay,
   type BranchOption,
@@ -128,6 +129,7 @@ export default function Step1({
   const [isLoadingQuarters, setIsLoadingQuarters] = useState(false);
   const [coverageError, setCoverageError] = useState("");
   const [isOthersCustomEnabled, setIsOthersCustomEnabled] = useState(false);
+  const [supervisorName, setSupervisorName] = useState("");
   // The review type this record already had (edit flow). Its own quarter must
   // stay selectable even though it exists in the DB "taken" list.
   const originalReviewTypeCapturedRef = useRef(false);
@@ -135,8 +137,6 @@ export default function Step1({
     probationary: number | "";
     regular: string;
   }>({ probationary: "", regular: "" });
-  const { user } = useAuth();
-
   // Check if employee being evaluated is HO (Head Office)
   // This determines the header text based on the employee being evaluated
   const isEmployeeHO = () => {
@@ -218,6 +218,40 @@ export default function Step1({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [employee?.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!employee) {
+      setSupervisorName("");
+      return;
+    }
+
+    setSupervisorName(pickSupervisorFromEmployee(employee)?.name ?? "");
+
+    const loadSupervisor = async () => {
+      if (!employee?.id) return;
+      try {
+        const dashboard = await apiService.employeeDashboard2(Number(employee.id));
+        if (cancelled) return;
+        const prioritized =
+          pickSupervisorWithApproverPriority(dashboard)?.name ??
+          pickSupervisorFromEmployee(employee)?.name ??
+          "";
+        setSupervisorName(prioritized);
+      } catch (error) {
+        if (cancelled) return;
+        console.error("Error loading prioritized supervisor:", error);
+        setSupervisorName(pickSupervisorFromEmployee(employee)?.name ?? "");
+      }
+    };
+
+    loadSupervisor();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [employee]);
 
   // Check for existing quarterly reviews when employee changes
   useEffect(() => {
@@ -953,11 +987,7 @@ export default function Step1({
             </Label>
             <Input
               id="supervisor"
-              value={
-                user?.fname && user?.lname
-                  ? `${user.fname} ${user.lname}`
-                  : user?.fname || user?.lname || ""
-              }
+              value={supervisorName}
               readOnly
               className="bg-gray-100 border-gray-300 cursor-not-allowed"
             />

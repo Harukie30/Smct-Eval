@@ -1,6 +1,12 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import apiService from "@/lib/apiService";
+import {
+  getEvaluatorDisplayName,
+  pickSupervisorFromEmployee,
+  pickSupervisorWithApproverPriority,
+} from "@/lib/supervisorDisplay";
 import ViewResultsModalBranchRankNfile from "./ViewResultsModalBranchRankNfile";
 import ViewResultsModalBranchManager from "./ViewResultsModalBranchManager";
 import ViewResultsModalAreaManager from "./ViewResultsModalAreaManager";
@@ -61,6 +67,8 @@ export interface ViewResultsModalProps {
   currentUserName?: string;
   currentUserSignature?: string;
   showApprovalButton?: boolean;
+  /** Prioritized immediate supervisor; falls back to evaluator when unset. */
+  supervisorName?: string;
 }
 
 // Helper function to check if employee is HO (Head Office)
@@ -203,6 +211,7 @@ export default function ViewResultsModalRouter({
 }: ViewResultsModalProps) {
   const isMobileViewport = useMobileViewport();
   const [bypassMobileWarning, setBypassMobileWarning] = useState(false);
+  const [supervisorName, setSupervisorName] = useState("");
 
   useEffect(() => {
     if (!isOpen) {
@@ -210,7 +219,63 @@ export default function ViewResultsModalRouter({
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!submission) {
+      setSupervisorName("");
+      return;
+    }
+
+    const fallback = getEvaluatorDisplayName(submission.evaluator);
+    const syncName =
+      pickSupervisorWithApproverPriority(submission)?.name ??
+      (submission.employee
+        ? pickSupervisorFromEmployee(submission.employee)?.name
+        : null) ??
+      fallback;
+    setSupervisorName(syncName);
+
+    const employeeId = submission.employee?.id;
+    if (!employeeId) return;
+
+    let cancelled = false;
+    const loadSupervisor = async () => {
+      try {
+        const dashboard = await apiService.employeeDashboard2(Number(employeeId));
+        if (cancelled) return;
+        const prioritized =
+          pickSupervisorWithApproverPriority(dashboard)?.name ??
+          (submission.employee
+            ? pickSupervisorFromEmployee(submission.employee)?.name
+            : null) ??
+          fallback;
+        setSupervisorName(prioritized);
+      } catch (error) {
+        if (cancelled) return;
+        console.error("Failed to load prioritized supervisor:", error);
+        setSupervisorName(syncName);
+      }
+    };
+
+    loadSupervisor();
+    return () => {
+      cancelled = true;
+    };
+  }, [submission]);
+
   if (!submission) return null;
+
+  const modalProps = {
+    isOpen,
+    onCloseAction,
+    submission,
+    onApprove,
+    isApproved,
+    approvalData,
+    currentUserName,
+    currentUserSignature,
+    showApprovalButton,
+    supervisorName,
+  };
 
   if (isOpen && isMobileViewport && !bypassMobileWarning) {
     return (
@@ -281,15 +346,7 @@ export default function ViewResultsModalRouter({
       }
       return (
         <ViewResultsModalBranchRankNfile
-          isOpen={isOpen}
-          onCloseAction={onCloseAction}
-          submission={submission}
-          onApprove={onApprove}
-          isApproved={isApproved}
-          approvalData={approvalData}
-          currentUserName={currentUserName}
-          currentUserSignature={currentUserSignature}
-          showApprovalButton={showApprovalButton}
+          {...modalProps}
         />
       );
     }
@@ -307,15 +364,7 @@ export default function ViewResultsModalRouter({
       }
       return (
         <ViewResultsModalBasic
-          isOpen={isOpen}
-          onCloseAction={onCloseAction}
-          submission={submission}
-          onApprove={onApprove}
-          isApproved={isApproved}
-          approvalData={approvalData}
-          currentUserName={currentUserName}
-          currentUserSignature={currentUserSignature}
-          showApprovalButton={showApprovalButton}
+          {...modalProps}
         />
       );
     }
@@ -332,15 +381,7 @@ export default function ViewResultsModalRouter({
       }
       return (
         <ViewResultsModalDefault
-          isOpen={isOpen}
-          onCloseAction={onCloseAction}
-          submission={submission}
-          onApprove={onApprove}
-          isApproved={isApproved}
-          approvalData={approvalData}
-          currentUserName={currentUserName}
-          currentUserSignature={currentUserSignature}
-          showApprovalButton={showApprovalButton}
+          {...modalProps}
         />
       );
     }
@@ -356,15 +397,7 @@ export default function ViewResultsModalRouter({
       }
       return (
         <ViewResultsModalAreaManager
-          isOpen={isOpen}
-          onCloseAction={onCloseAction}
-          submission={submission}
-          onApprove={onApprove}
-          isApproved={isApproved}
-          approvalData={approvalData}
-          currentUserName={currentUserName}
-          currentUserSignature={currentUserSignature}
-          showApprovalButton={showApprovalButton}
+          {...modalProps}
         />
       );
     }
@@ -385,15 +418,7 @@ export default function ViewResultsModalRouter({
       }
       return (
         <ViewResultsModalAreaManager
-          isOpen={isOpen}
-          onCloseAction={onCloseAction}
-          submission={submission}
-          onApprove={onApprove}
-          isApproved={isApproved}
-          approvalData={approvalData}
-          currentUserName={currentUserName}
-          currentUserSignature={currentUserSignature}
-          showApprovalButton={showApprovalButton}
+          {...modalProps}
         />
       );
     }
@@ -410,15 +435,7 @@ export default function ViewResultsModalRouter({
       }
       return (
         <ViewResultsModalBranchManager
-          isOpen={isOpen}
-          onCloseAction={onCloseAction}
-          submission={submission}
-          onApprove={onApprove}
-          isApproved={isApproved}
-          approvalData={approvalData}
-          currentUserName={currentUserName}
-          currentUserSignature={currentUserSignature}
-          showApprovalButton={showApprovalButton}
+          {...modalProps}
         />
       );
     }
@@ -435,15 +452,7 @@ export default function ViewResultsModalRouter({
       }
       return (
         <ViewResultsModalBranchRankNfile
-          isOpen={isOpen}
-          onCloseAction={onCloseAction}
-          submission={submission}
-          onApprove={onApprove}
-          isApproved={isApproved}
-          approvalData={approvalData}
-          currentUserName={currentUserName}
-          currentUserSignature={currentUserSignature}
-          showApprovalButton={showApprovalButton}
+          {...modalProps}
         />
       );
     }
@@ -457,30 +466,14 @@ export default function ViewResultsModalRouter({
       // Basic HO - has Managerial Skills, no Customer Service
       return (
         <ViewResultsModalBasic
-          isOpen={isOpen}
-          onCloseAction={onCloseAction}
-          submission={submission}
-          onApprove={onApprove}
-          isApproved={isApproved}
-          approvalData={approvalData}
-          currentUserName={currentUserName}
-          currentUserSignature={currentUserSignature}
-          showApprovalButton={showApprovalButton}
+          {...modalProps}
         />
       );
     } else {
       // RankNfile HO - no Managerial Skills, no Customer Service
       return (
         <ViewResultsModalDefault
-          isOpen={isOpen}
-          onCloseAction={onCloseAction}
-          submission={submission}
-          onApprove={onApprove}
-          isApproved={isApproved}
-          approvalData={approvalData}
-          currentUserName={currentUserName}
-          currentUserSignature={currentUserSignature}
-          showApprovalButton={showApprovalButton}
+          {...modalProps}
         />
       );
     }
@@ -495,60 +488,28 @@ export default function ViewResultsModalRouter({
       if (isEmployeeAreaMgr && !hasCustomerService) {
         return (
           <ViewResultsModalAreaManager
-            isOpen={isOpen}
-            onCloseAction={onCloseAction}
-            submission={submission}
-            onApprove={onApprove}
-            isApproved={isApproved}
-            approvalData={approvalData}
-            currentUserName={currentUserName}
-            currentUserSignature={currentUserSignature}
-            showApprovalButton={showApprovalButton}
+            {...modalProps}
           />
         );
       }
       // BranchBasic - has Managerial Skills (branch manager)
       return (
         <ViewResultsModalBranchManager
-          isOpen={isOpen}
-          onCloseAction={onCloseAction}
-          submission={submission}
-          onApprove={onApprove}
-          isApproved={isApproved}
-          approvalData={approvalData}
-          currentUserName={currentUserName}
-          currentUserSignature={currentUserSignature}
-          showApprovalButton={showApprovalButton}
+          {...modalProps}
         />
       );
     } else if (hasCustomerService) {
       // BranchDefault - has Customer Service (branch rank and file)
       return (
         <ViewResultsModalBranchRankNfile
-          isOpen={isOpen}
-          onCloseAction={onCloseAction}
-          submission={submission}
-          onApprove={onApprove}
-          isApproved={isApproved}
-          approvalData={approvalData}
-          currentUserName={currentUserName}
-          currentUserSignature={currentUserSignature}
-          showApprovalButton={showApprovalButton}
+          {...modalProps}
         />
       );
     } else {
       // BranchRankNfile - no Customer Service, no Managerial Skills
       return (
         <ViewResultsModalBranchRankNfile
-          isOpen={isOpen}
-          onCloseAction={onCloseAction}
-          submission={submission}
-          onApprove={onApprove}
-          isApproved={isApproved}
-          approvalData={approvalData}
-          currentUserName={currentUserName}
-          currentUserSignature={currentUserSignature}
-          showApprovalButton={showApprovalButton}
+          {...modalProps}
         />
       );
     }
@@ -558,15 +519,7 @@ export default function ViewResultsModalRouter({
   // This is a safety fallback
   return (
     <ViewResultsModalDefault
-      isOpen={isOpen}
-      onCloseAction={onCloseAction}
-      submission={submission}
-      onApprove={onApprove}
-      isApproved={isApproved}
-      approvalData={approvalData}
-      currentUserName={currentUserName}
-      currentUserSignature={currentUserSignature}
-      showApprovalButton={showApprovalButton}
+      {...modalProps}
     />
   );
 }
