@@ -963,6 +963,45 @@ export const apiService = {
     return response.data;
   },
 
+  /**
+   * Pending Approval tab for the signed-in evaluator/approver.
+   * Backend: GET `/getPendingApprovalEvaluations`
+   *
+   * Expected query params (same style as getEvalAuthEvaluator):
+   * - search, page, per_page, quarter, year
+   * - status: "" | pending_approval_1 | pending_approval_2 | rejected
+   *
+   * Expected response (either key is accepted by the UI):
+   * {
+   *   pending_approvals: { data, total, last_page, per_page }
+   *   // or myEval_as_Evaluator: { data, total, last_page, per_page }
+   * }
+   *
+   * Backend should return only rows relevant to the current user as approver
+   * (pending_approval_1/2 assigned to them) plus rejected rows they should see
+   * (e.g. as original evaluator or rejecting approver).
+   */
+  getPendingApprovalEvaluations: async (
+    search: string,
+    page: number,
+    per_page: number,
+    status: string,
+    quarter: string,
+    year: number
+  ): Promise<any> => {
+    const response = await api.get("/getPendingApprovalEvaluations", {
+      params: {
+        search: search || "",
+        page: page || 1,
+        per_page: per_page || 10,
+        status: status || "",
+        quarter: quarter || "",
+        year: year || "",
+      },
+    });
+    return response.data;
+  },
+
   // Get evaluations by authenticated employee
   getMyEvalAuthEmployee: async (
     search: string,
