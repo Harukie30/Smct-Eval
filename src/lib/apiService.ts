@@ -980,6 +980,7 @@ export const apiService = {
    * Backend should return only rows relevant to the current user as approver
    * (pending_approval_1/2 assigned to them) plus rejected rows they should see
    * (e.g. as original evaluator or rejecting approver).
+   * Do NOT include plain `pending` drafts — those belong on All Records.
    */
   getPendingApprovalEvaluations: async (
     search: string,

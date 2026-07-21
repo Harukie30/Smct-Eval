@@ -101,7 +101,13 @@ function HRLayout({ children }: { children: React.ReactNode }) {
 
   const setActiveWithRefresh = (id: string) => {
     const item = sidebarItems.find((item) => item.id === id);
-    if (item) router.push(item.path);
+    if (!item) return;
+    // Re-clicking the active All Evaluations item should still refresh the table.
+    if (item.path === pathname && id === "evaluated-reviews") {
+      window.dispatchEvent(new Event("hr-evaluated-reviews-refresh"));
+      return;
+    }
+    router.push(item.path);
   };
 
   return (

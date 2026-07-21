@@ -204,7 +204,8 @@ export default function OverviewTab() {
   const { user } = useAuth();
   const isMobileViewport = useMobileViewport();
   const [evaluations, setEvaluations] = useState<Review[]>([]);
-  const [refreshing, setRefreshing] = useState(false);
+  /** True on open so the table refreshes whenever this page mounts. */
+  const [refreshing, setRefreshing] = useState(true);
   const [isPageLoading, setIsPageLoading] = useState(false);
   //filters
   const [searchTerm, setSearchTerm] = useState("");
@@ -549,7 +550,6 @@ export default function OverviewTab() {
 
   useEffect(() => {
     const mount = async () => {
-      setRefreshing(true);
       try {
         const [years, branches] = await Promise.all([
           getCachedYears(),
@@ -559,8 +559,6 @@ export default function OverviewTab() {
         setBranchesData(branches);
       } catch (error) {
         console.error("Error loading years/branches:", error);
-      } finally {
-        setRefreshing(false);
       }
     };
     mount();
@@ -605,7 +603,7 @@ export default function OverviewTab() {
   // Track when page change started
   const pageChangeStartTimeRef = useRef<number | null>(null);
 
-  // Fetch API whenever debounced search term changes
+  // Fetch API whenever debounced filters change, and on every page open (refreshing starts true)
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -620,6 +618,7 @@ export default function OverviewTab() {
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
+        setRefreshing(false);
         // If this was a page change, ensure minimum display time (2 seconds)
         if (pageChangeStartTimeRef.current !== null) {
           const elapsed = Date.now() - pageChangeStartTimeRef.current;
@@ -635,7 +634,7 @@ export default function OverviewTab() {
     };
 
     fetchData();
-  },   [
+  }, [
     debouncedSearchTerm,
     currentPage,
     debouncedStatusFilter,
@@ -663,6 +662,23 @@ export default function OverviewTab() {
       setRefreshing(false);
     }
   };
+
+  const handleRefreshRef = useRef(handleRefresh);
+  handleRefreshRef.current = handleRefresh;
+
+  // Sidebar re-click while already on this page (see hr-dashboard layout).
+  useEffect(() => {
+    const onSidebarRefresh = () => {
+      void handleRefreshRef.current();
+    };
+    window.addEventListener("hr-evaluated-reviews-refresh", onSidebarRefresh);
+    return () => {
+      window.removeEventListener(
+        "hr-evaluated-reviews-refresh",
+        onSidebarRefresh
+      );
+    };
+  }, []);
 
   const formatRatingDisplay = (rating: number | null): string => {
     if (rating === null) return "—";
