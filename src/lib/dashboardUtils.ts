@@ -41,6 +41,71 @@ export function getDashboardPath(role: unknown, fallback: string | null = null):
   return ROLE_DASHBOARD_MAP[normalizedRole] || fallback;
 }
 
+/** Pull a dashboard role string from login / profile / OTP API payloads. */
+export function resolveAuthRole(payload: unknown): string | null {
+  const asRoleString = (value: unknown): string | null => {
+    if (typeof value === "string" || typeof value === "number") {
+      const text = String(value).trim();
+      return text || null;
+    }
+    if (value && typeof value === "object") {
+      const record = value as {
+        name?: unknown;
+        role?: unknown;
+        slug?: unknown;
+      };
+      return asRoleString(record.name ?? record.role ?? record.slug);
+    }
+    return null;
+  };
+
+  if (payload == null) return null;
+  if (typeof payload === "string" || typeof payload === "number") {
+    return asRoleString(payload);
+  }
+  if (typeof payload !== "object") return null;
+
+  const root = payload as Record<string, unknown>;
+  const data =
+    root.data && typeof root.data === "object" && !Array.isArray(root.data)
+      ? (root.data as Record<string, unknown>)
+      : null;
+  const userCandidate =
+    (root.user && typeof root.user === "object"
+      ? (root.user as Record<string, unknown>)
+      : null) ||
+    (data?.user && typeof data.user === "object"
+      ? (data.user as Record<string, unknown>)
+      : null);
+
+  const candidates: unknown[] = [
+    root.role,
+    data?.role,
+    userCandidate?.role,
+    Array.isArray(userCandidate?.roles) ? userCandidate.roles[0] : null,
+    Array.isArray(root.roles) ? root.roles[0] : null,
+    Array.isArray(data?.roles) ? data.roles[0] : null,
+    userCandidate,
+    data,
+    root,
+  ];
+
+  for (const candidate of candidates) {
+    const role = asRoleString(candidate);
+    if (role) return role;
+  }
+
+  return null;
+}
+
+/** Resolve dashboard path from any auth/login/OTP response or user object. */
+export function getDashboardPathFromAuthPayload(
+  payload: unknown,
+  fallback: string | null = null
+): string | null {
+  return getDashboardPath(resolveAuthRole(payload), fallback);
+}
+
 /**
  * Gets the dashboard path for a user from UserProfile or AuthenticatedUser
  * @param profile - UserProfile object (optional)

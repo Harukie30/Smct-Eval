@@ -28,7 +28,8 @@ import ForgotPasswordModal from "@/components/ForgotPasswordModal";
 import { useUser } from "@/contexts/UserContext";
 import { useRouter } from "next/navigation";
 import { toastMessages } from "@/lib/toastMessages";
-import { getDashboardPath } from "@/lib/dashboardUtils";
+import { getDashboardPath, getDashboardPathFromAuthPayload } from "@/lib/dashboardUtils";
+import { apiService } from "@/lib/apiService";
 // Removed clientDataService import - forceRefreshAccounts is no longer needed with pure API approach
 import ContactDevsModal from "@/components/ContactDevsModal";
 import { HowItWorksModal } from "@/components/HowItWorksModal";
@@ -1188,23 +1189,43 @@ function LandingLoginPage() {
         isOpen={showForgotPasswordModal}
         onCloseAction={() => setShowForgotPasswordModal(false)}
         initialEmail={username}
-        onSuccessAction={async ({ role }) => {
+        onSuccessAction={async ({ role, result }) => {
           setShowForgotPasswordModal(false);
           setShowLoadingScreen(true);
           try {
-            await new Promise((resolve) => setTimeout(resolve, 800));
-            const dashboardPath = getDashboardPath(role) || "";
-            console.log("🚀 OTP login redirecting to:", dashboardPath);
-            await new Promise((resolve) => setTimeout(resolve, 300));
+            let dashboardPath =
+              getDashboardPathFromAuthPayload(result) ||
+              getDashboardPath(role) ||
+              "";
+
+            // Last resort: read role from the refreshed session profile.
+            if (!dashboardPath) {
+              try {
+                const profileRes = await apiService.authUser();
+                dashboardPath =
+                  getDashboardPathFromAuthPayload(profileRes) || "";
+              } catch (profileError) {
+                console.error("OTP redirect profile lookup failed:", profileError);
+              }
+            }
+
+            console.log("🚀 OTP login redirecting to:", dashboardPath, {
+              role,
+              result,
+            });
+
+            await new Promise((resolve) => setTimeout(resolve, 600));
+
             if (dashboardPath) {
               router.push(dashboardPath);
-            } else {
-              setShowLoadingScreen(false);
-              toastMessages.generic.info(
-                "Signed in",
-                "We couldn't determine your dashboard. Please try again or contact support."
-              );
+              return;
             }
+
+            setShowLoadingScreen(false);
+            toastMessages.generic.info(
+              "Signed in",
+              "We couldn't determine your dashboard role. Please refresh or contact support."
+            );
           } catch (error: any) {
             setShowLoadingScreen(false);
             toastMessages.generic.error(

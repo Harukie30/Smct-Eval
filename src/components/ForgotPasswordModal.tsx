@@ -29,7 +29,11 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/UserContext";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 import { apiService } from "@/lib/apiService";
-import { getDashboardPath } from "@/lib/dashboardUtils";
+import {
+  getDashboardPath,
+  getDashboardPathFromAuthPayload,
+  resolveAuthRole,
+} from "@/lib/dashboardUtils";
 import { toastMessages } from "@/lib/toastMessages";
 import { cn } from "@/lib/utils";
 
@@ -74,40 +78,6 @@ function getApiErrorMessage(err: unknown, fallback: string): string {
     error.message ||
     fallback
   );
-}
-
-function resolveLoginRole(result: any): string | null {
-  const candidates = [
-    result?.role,
-    result?.data?.role,
-    result?.user?.role,
-    result?.user?.roles?.[0]?.name,
-    result?.user?.roles?.[0],
-    result?.data?.user?.role,
-    result?.data?.user?.roles?.[0]?.name,
-    result?.data?.user?.roles?.[0],
-    result?.roles?.[0]?.name,
-    result?.roles?.[0],
-  ];
-
-  for (const candidate of candidates) {
-    if (candidate == null || candidate === "") continue;
-    if (typeof candidate === "string" || typeof candidate === "number") {
-      const value = String(candidate).trim();
-      if (value) return value;
-      continue;
-    }
-    if (typeof candidate === "object") {
-      const record = candidate as { name?: unknown; role?: unknown; slug?: unknown };
-      const nested = record.name ?? record.role ?? record.slug;
-      if (typeof nested === "string" || typeof nested === "number") {
-        const value = String(nested).trim();
-        if (value) return value;
-      }
-    }
-  }
-
-  return null;
 }
 
 const STEP_LABELS: Record<ForgotPasswordStep, string> = {
@@ -243,8 +213,9 @@ export default function ForgotPasswordModal({
           }
         });
 
-        const role = resolveLoginRole(result);
-        const dashboardPath = getDashboardPath(role);
+        const role = resolveAuthRole(result);
+        const dashboardPath =
+          getDashboardPathFromAuthPayload(result) || getDashboardPath(role);
 
         toastMessages.login.success(trimmed);
         onCloseAction();

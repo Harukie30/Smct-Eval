@@ -196,11 +196,30 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   // ⬇ OTP verify during forgot-password — backend logs user in (same session as login)
   const loginWithPasswordResetOtp = async (email: string, otp: string) => {
     try {
-      setIsLoading(true);
-
+      // Do not toggle global isLoading — that remounts the login page and can
+      // cancel the OTP modal redirect flow mid-request.
       const res = await apiService.verifyPasswordResetOtp(email, otp);
-      await refreshUser({ force: true });
-      return res;
+
+      let userData: any = null;
+      try {
+        const profileRes = await apiService.authUser();
+        userData = profileRes?.data || profileRes;
+        setUser(userData);
+      } catch (profileError) {
+        console.error("OTP login succeeded but profile refresh failed:", profileError);
+        await refreshUser({ force: true });
+      }
+
+      return {
+        ...(res && typeof res === "object" ? res : { data: res }),
+        user: userData,
+        role:
+          userData?.role ||
+          userData?.roles?.[0]?.name ||
+          res?.role ||
+          res?.data?.role ||
+          null,
+      };
     } catch (err: any) {
       const isServerUnreachable =
         err?.code === "ERR_NETWORK" ||
@@ -212,8 +231,6 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
           (isServerUnreachable ? "Server not found" : "Something went wrong"),
         isServerUnreachable: !!isServerUnreachable,
       };
-    } finally {
-      setIsLoading(false);
     }
   };
 
