@@ -1,6 +1,5 @@
 "use client";
-import { useEffect } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -108,7 +107,7 @@ function LandingLoginPage() {
     setShowLoadingScreen(true);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1200)); // Initial delay
+      await new Promise((resolve) => setTimeout(resolve, 800));
 
       const result = await login(username, password);
 
@@ -132,31 +131,41 @@ function LandingLoginPage() {
       }
 
       if (result) {
-        // Clear welcome modal session storage so it shows on dashboard
-        Object.keys(sessionStorage).forEach(key => {
-          if (key.startsWith('welcomeModal_')) {
+        Object.keys(sessionStorage).forEach((key) => {
+          if (key.startsWith("welcomeModal_")) {
             sessionStorage.removeItem(key);
           }
         });
-        
-        // All your success flow
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        toastMessages.login.success(username);
 
-        const dashboardPath = getDashboardPath(result?.role) || "";
-        console.log("🚀 Redirecting to:", dashboardPath);
+        let dashboardPath =
+          getDashboardPathFromAuthPayload(result) ||
+          getDashboardPath(result?.role) ||
+          "";
+
+        if (!dashboardPath) {
+          try {
+            const profileRes = await apiService.authUser();
+            dashboardPath = getDashboardPathFromAuthPayload(profileRes) || "";
+          } catch (profileError) {
+            console.error("Login redirect profile lookup failed:", profileError);
+          }
+        }
+
+        console.log("🚀 Redirecting to:", dashboardPath, { role: result?.role, result });
+        toastMessages.login.success(username);
         await new Promise((resolve) => setTimeout(resolve, 300));
+
         if (dashboardPath) {
           router.push(dashboardPath);
-        } else {
-          setShowLoadingScreen(false);
-          toastMessages.generic.info(
-            "Signed in",
-            "We couldn't determine your dashboard. Please try again or contact support."
-          );
+          return;
         }
+
+        setShowLoadingScreen(false);
+        toastMessages.generic.info(
+          "Signed in",
+          "We couldn't determine your dashboard role. Please refresh or contact support."
+        );
       } else {
-        // fallback
         setLoginError("Invalid Credentials");
         setShowLoadingScreen(false);
       }

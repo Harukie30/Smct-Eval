@@ -99,7 +99,15 @@ export default function ForgotPasswordModal({
   const [otp, setOtp] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [successEmail, setSuccessEmail] = useState("");
   const submittingRef = useRef(false);
+  const pendingSuccessRef = useRef<{
+    email: string;
+    role: string | null;
+    result: unknown;
+    dashboardPath: string | null;
+  } | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -108,6 +116,9 @@ export default function ForgotPasswordModal({
     setOtp("");
     setSubmitting(false);
     submittingRef.current = false;
+    setShowSuccessDialog(false);
+    setSuccessEmail("");
+    pendingSuccessRef.current = null;
     setResendCooldown(0);
   }, [isOpen, initialEmail]);
 
@@ -118,6 +129,70 @@ export default function ForgotPasswordModal({
     }, 1000);
     return () => window.clearInterval(timer);
   }, [resendCooldown]);
+
+  useEffect(() => {
+    if (!showSuccessDialog) return;
+
+    const styleId = "forgot-password-success-animations";
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement("style");
+      style.id = styleId;
+      style.textContent = `
+        @keyframes forgotSuccessScale {
+          0% { transform: scale(0); opacity: 0; }
+          50% { transform: scale(1.1); opacity: 1; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes forgotDrawCheckmark {
+          0% { stroke-dashoffset: 20; }
+          100% { stroke-dashoffset: 0; }
+        }
+        @keyframes forgotSuccessRipple {
+          0% { transform: scale(1); opacity: 0.45; }
+          100% { transform: scale(1.55); opacity: 0; }
+        }
+        .forgot-animate-success-scale {
+          animation: forgotSuccessScale 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+        .forgot-animate-draw-checkmark {
+          animation: forgotDrawCheckmark 0.5s ease-out 0.3s forwards;
+        }
+        .forgot-animate-success-ripple {
+          animation: forgotSuccessRipple 1s ease-out 0.2s;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    const timer = window.setTimeout(() => {
+      const pending = pendingSuccessRef.current;
+      setShowSuccessDialog(false);
+      if (!pending) return;
+
+      void (async () => {
+        if (onSuccessAction) {
+          await onSuccessAction({
+            email: pending.email,
+            role: pending.role,
+            result: pending.result,
+          });
+          return;
+        }
+
+        if (pending.dashboardPath) {
+          router.push(pending.dashboardPath);
+        } else {
+          toastMessages.generic.info(
+            "Signed in",
+            "Your account was verified. Redirecting to your dashboard."
+          );
+          router.push("/");
+        }
+      })();
+    }, 1800);
+
+    return () => window.clearTimeout(timer);
+  }, [showSuccessDialog, onSuccessAction, router]);
 
   const handleClose = () => {
     onCloseAction();
@@ -217,24 +292,15 @@ export default function ForgotPasswordModal({
         const dashboardPath =
           getDashboardPathFromAuthPayload(result) || getDashboardPath(role);
 
-        toastMessages.login.success(trimmed);
+        pendingSuccessRef.current = {
+          email: trimmed,
+          role,
+          result,
+          dashboardPath,
+        };
+        setSuccessEmail(trimmed);
         onCloseAction();
-
-        if (onSuccessAction) {
-          await onSuccessAction({ email: trimmed, role, result });
-          return;
-        }
-
-        // Fallback when used without a parent success handler.
-        if (dashboardPath) {
-          router.push(dashboardPath);
-        } else {
-          toastMessages.generic.info(
-            "Signed in",
-            "Your account was verified. Redirecting to your dashboard."
-          );
-          router.push("/");
-        }
+        setShowSuccessDialog(true);
       } catch (err: unknown) {
         toastMessages.generic.error(
           "Verification failed",
@@ -563,6 +629,66 @@ export default function ForgotPasswordModal({
                   className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500"
                   style={{ animationDelay: "300ms" }}
                 />
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showSuccessDialog} onOpenChangeAction={() => {}}>
+        <DialogContent
+          portalClassName="z-[110]"
+          className="max-w-[min(100%,22rem)] overflow-hidden border-green-200/80 p-0 shadow-2xl shadow-green-950/10 sm:max-w-md"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="relative overflow-hidden bg-gradient-to-b from-green-50/90 to-white px-6 py-8 sm:px-8 sm:py-10">
+            <div
+              className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-green-200/50 blur-2xl"
+              aria-hidden
+            />
+            <div className="relative flex flex-col items-center justify-center space-y-4 text-center">
+              <div className="relative">
+                <div className="forgot-animate-success-scale flex h-20 w-20 items-center justify-center rounded-full bg-green-100">
+                  <svg
+                    className="h-12 w-12 text-green-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={3}
+                      d="M5 13l4 4L19 7"
+                      strokeDasharray="20"
+                      strokeDashoffset="20"
+                      className="forgot-animate-draw-checkmark"
+                    />
+                  </svg>
+                </div>
+                <div className="forgot-animate-success-ripple absolute inset-0 rounded-full bg-green-200 opacity-0" />
+              </div>
+
+              <div className="space-y-2">
+                <DialogTitle className="text-2xl font-bold text-gray-900">
+                  Login Successful!
+                </DialogTitle>
+                <DialogDescription className="text-base text-gray-600">
+                  Welcome back
+                  {successEmail ? (
+                    <>
+                      ,{" "}
+                      <span className="font-semibold text-gray-800">
+                        {successEmail}
+                      </span>
+                    </>
+                  ) : null}
+                  . Redirecting you to your dashboard…
+                </DialogDescription>
+                <p className="pt-1 text-sm text-gray-500">
+                  Closing automatically...
+                </p>
               </div>
             </div>
           </div>

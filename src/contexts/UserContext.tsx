@@ -174,11 +174,30 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   // ⬇ Login using Sanctum
   const login = async (username: string, password: string) => {
     try {
-      setIsLoading(true);
-
+      // Avoid global isLoading here — the login page already shows its own
+      // authenticating screen, and flipping isLoading remounts that page mid-login.
       const res = await apiService.login(username, password);
-      await refreshUser({ force: true });
-      return res;
+
+      let userData: any = null;
+      try {
+        const profileRes = await apiService.authUser();
+        userData = profileRes?.data || profileRes;
+        setUser(userData);
+      } catch (profileError) {
+        console.error("Login succeeded but profile refresh failed:", profileError);
+        await refreshUser({ force: true });
+      }
+
+      return {
+        ...(res && typeof res === "object" ? res : { data: res }),
+        user: userData,
+        role:
+          userData?.role ||
+          userData?.roles?.[0]?.name ||
+          res?.role ||
+          res?.data?.role ||
+          null,
+      };
     } catch (err: any) {
       const isServerUnreachable =
         err?.code === "ERR_NETWORK" ||
@@ -188,8 +207,6 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         error: err.response?.data?.message || (isServerUnreachable ? "Server not found" : "Something went wrong"),
         isServerUnreachable: !!isServerUnreachable,
       };
-    } finally {
-      setIsLoading(false);
     }
   };
 
