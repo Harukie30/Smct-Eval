@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -67,6 +67,40 @@ function getApiErrorMessage(err: unknown, fallback: string): string {
   );
 }
 
+function resolveLoginRole(result: any): string | null {
+  const candidates = [
+    result?.role,
+    result?.data?.role,
+    result?.user?.role,
+    result?.user?.roles?.[0]?.name,
+    result?.user?.roles?.[0],
+    result?.data?.user?.role,
+    result?.data?.user?.roles?.[0]?.name,
+    result?.data?.user?.roles?.[0],
+    result?.roles?.[0]?.name,
+    result?.roles?.[0],
+  ];
+
+  for (const candidate of candidates) {
+    if (candidate == null || candidate === "") continue;
+    if (typeof candidate === "string" || typeof candidate === "number") {
+      const value = String(candidate).trim();
+      if (value) return value;
+      continue;
+    }
+    if (typeof candidate === "object") {
+      const record = candidate as { name?: unknown; role?: unknown; slug?: unknown };
+      const nested = record.name ?? record.role ?? record.slug;
+      if (typeof nested === "string" || typeof nested === "number") {
+        const value = String(nested).trim();
+        if (value) return value;
+      }
+    }
+  }
+
+  return null;
+}
+
 const STEP_LABELS: Record<ForgotPasswordStep, string> = {
   email: "Email",
   otp: "Verify & sign in",
@@ -85,6 +119,7 @@ export default function ForgotPasswordModal({
   const [otp, setOtp] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -92,6 +127,7 @@ export default function ForgotPasswordModal({
     setEmail(initialEmail.trim());
     setOtp("");
     setSubmitting(false);
+    submittingRef.current = false;
     setResendCooldown(0);
   }, [isOpen, initialEmail]);
 
@@ -166,78 +202,89 @@ export default function ForgotPasswordModal({
     }
   };
 
-  const handleVerifyOtpAndLogin = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    const trimmed = email.trim();
-    if (otp.length !== OTP_LENGTH) {
-      toastMessages.generic.error(
-        "Incomplete code",
-        `Enter the full ${OTP_LENGTH}-digit verification code.`
-      );
-      return;
-    }
+  const handleVerifyOtpAndLogin = useCallback(
+    async (code?: string, e?: React.FormEvent) => {
+      e?.preventDefault();
+      if (submittingRef.current) return;
 
-    setSubmitting(true);
-    try {
-      const result = await loginWithPasswordResetOtp(trimmed, otp);
-
-      if (result?.error) {
+      const trimmed = email.trim();
+      const otpValue = (code ?? otp).trim();
+      if (otpValue.length !== OTP_LENGTH) {
         toastMessages.generic.error(
-          "Verification failed",
-          result.error
+          "Incomplete code",
+          `Enter the full ${OTP_LENGTH}-digit verification code.`
         );
         return;
       }
 
-      Object.keys(sessionStorage).forEach((key) => {
-        if (key.startsWith("welcomeModal_")) {
-          sessionStorage.removeItem(key);
+      submittingRef.current = true;
+      setSubmitting(true);
+      try {
+        const result = await loginWithPasswordResetOtp(trimmed, otpValue);
+
+        if (result?.error) {
+          toastMessages.generic.error("Verification failed", result.error);
+          return;
         }
-      });
 
-      const role =
-        result?.role ||
-        result?.data?.role ||
-        result?.user?.role ||
-        null;
-      const dashboardPath = getDashboardPath(role);
+        Object.keys(sessionStorage).forEach((key) => {
+          if (key.startsWith("welcomeModal_")) {
+            sessionStorage.removeItem(key);
+          }
+        });
 
-      toastMessages.login.success(trimmed);
-      handleClose();
+        const role = resolveLoginRole(result);
+        const dashboardPath = getDashboardPath(role);
 
-      if (dashboardPath) {
-        router.push(dashboardPath);
-      } else {
-        toastMessages.generic.info(
-          "Signed in",
-          "Your account was verified. Redirecting to your dashboard."
+        toastMessages.login.success(trimmed);
+        onCloseAction();
+
+        if (dashboardPath) {
+          router.push(dashboardPath);
+        } else {
+          toastMessages.generic.info(
+            "Signed in",
+            "Your account was verified. Redirecting to your dashboard."
+          );
+          router.push("/");
+        }
+      } catch (err: unknown) {
+        toastMessages.generic.error(
+          "Verification failed",
+          getApiErrorMessage(
+            err,
+            "The code is invalid or has expired. Please try again."
+          )
         );
-        router.push("/");
+      } finally {
+        submittingRef.current = false;
+        setSubmitting(false);
       }
-    } catch (err: unknown) {
-      toastMessages.generic.error(
-        "Verification failed",
-        getApiErrorMessage(
-          err,
-          "The code is invalid or has expired. Please try again."
-        )
-      );
-    } finally {
-      setSubmitting(false);
+    },
+    [email, otp, loginWithPasswordResetOtp, onCloseAction, router]
+  );
+
+  const handleOtpChange = (value: string) => {
+    setOtp(value);
+    if (value.length === OTP_LENGTH && !submittingRef.current) {
+      void handleVerifyOtpAndLogin(value);
     }
   };
+
+  const isVerifyingOtp = step === "otp" && submitting;
 
   const headerTitle =
     step === "otp" ? "Verify your email" : "Reset your password";
 
   const headerDescription =
     step === "otp"
-      ? `Enter the ${OTP_LENGTH}-digit code. After verification, you will be signed in automatically.`
+      ? `Enter the ${OTP_LENGTH}-digit code. Once it is correct, you will be signed in automatically.`
       : "Enter the email linked to your account. We will send a verification code first.";
 
   const progressSteps: ForgotPasswordStep[] = ["email", "otp"];
 
   return (
+    <>
     <Dialog
       open={isOpen}
       onOpenChangeAction={(open) => {
@@ -374,7 +421,7 @@ export default function ForgotPasswordModal({
           ) : (
             <form
               id="forgot-password-otp-form"
-              onSubmit={handleVerifyOtpAndLogin}
+              onSubmit={(e) => handleVerifyOtpAndLogin(undefined, e)}
               className="space-y-5"
             >
               <div className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-sm ring-1 ring-slate-950/[0.03] sm:p-5">
@@ -384,13 +431,18 @@ export default function ForgotPasswordModal({
                 <p className="mt-1 text-xs leading-relaxed text-slate-500">
                   Code sent to{" "}
                   <span className="font-medium text-slate-700">{email.trim()}</span>
+                  . Signing in starts automatically when the code is complete.
                 </p>
                 <div className="mt-4 flex justify-center">
                   <InputOTP
                     maxLength={OTP_LENGTH}
                     value={otp}
-                    onChange={setOtp}
+                    onChange={handleOtpChange}
+                    onComplete={(value) => {
+                      void handleVerifyOtpAndLogin(value);
+                    }}
                     disabled={submitting}
+                    autoFocus
                   >
                     <InputOTPGroup>
                       {Array.from({ length: OTP_LENGTH }).map((_, index) => (
@@ -436,46 +488,99 @@ export default function ForgotPasswordModal({
 
         <DialogFooter className="shrink-0 flex-col-reverse gap-2 border-t border-slate-200/90 bg-slate-50/95 px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
           {step === "email" ? (
-            <>
-              
-              <Button
-                type="submit"
-                form="forgot-password-email-form"
-                disabled={submitting || !email.trim()}
-                className="h-10 w-full cursor-pointer bg-blue-600 text-white shadow-sm hover:bg-blue-700 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 sm:w-auto sm:min-w-[150px]"
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
-                    Sending…
-                  </>
-                ) : (
-                  "Send verification code"
-                )}
-              </Button>
-            </>
+            <Button
+              type="submit"
+              form="forgot-password-email-form"
+              disabled={submitting || !email.trim()}
+              className="h-10 w-full cursor-pointer bg-blue-600 text-white shadow-sm hover:bg-blue-700 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 sm:w-auto sm:min-w-[150px]"
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
+                  Sending…
+                </>
+              ) : (
+                "Send verification code"
+              )}
+            </Button>
           ) : (
-            <>
-              
-              <Button
-                type="submit"
-                form="forgot-password-otp-form"
-                disabled={submitting || otp.length !== OTP_LENGTH}
-                className="h-10 w-full cursor-pointer bg-blue-600 text-white shadow-sm hover:bg-blue-700 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 sm:w-auto sm:min-w-[170px]"
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
-                    Signing in…
-                  </>
-                ) : (
-                  "Verify & sign in"
-                )}
-              </Button>
-            </>
+            <Button
+              type="submit"
+              form="forgot-password-otp-form"
+              disabled={submitting || otp.length !== OTP_LENGTH}
+              className="h-10 w-full cursor-pointer bg-blue-600 text-white shadow-sm hover:bg-blue-700 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 sm:w-auto sm:min-w-[170px]"
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
+                  Signing in…
+                </>
+              ) : (
+                "Verify & sign in"
+              )}
+            </Button>
           )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+      <Dialog open={isVerifyingOtp} onOpenChangeAction={() => {}}>
+        <DialogContent
+          portalClassName="z-[100]"
+          className="max-w-[min(100%,20rem)] overflow-hidden border-indigo-200/70 p-0 shadow-2xl shadow-indigo-950/20 sm:max-w-sm"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="relative overflow-hidden bg-gradient-to-b from-slate-50 to-white px-6 py-8 sm:px-8 sm:py-10">
+            <div
+              className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-indigo-200/40 blur-2xl"
+              aria-hidden
+            />
+            <div
+              className="pointer-events-none absolute -bottom-10 -left-6 h-24 w-24 rounded-full bg-blue-200/40 blur-2xl"
+              aria-hidden
+            />
+            <div
+              className="relative flex flex-col items-center justify-center space-y-4 text-center"
+              role="status"
+              aria-live="polite"
+              aria-busy="true"
+            >
+              <div className="relative">
+                <div className="h-16 w-16 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <img
+                    src="/smct.png"
+                    alt=""
+                    className="h-8 w-8 object-contain"
+                    width={32}
+                    height={32}
+                    decoding="async"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <p className="text-base font-semibold text-slate-800 sm:text-lg">
+                  Confirming OTP…
+                </p>
+                <p className="text-sm leading-relaxed text-slate-500">
+                  Please wait while we verify your code and sign you in.
+                </p>
+              </div>
+              <div className="flex items-center gap-1.5 pt-1">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500" />
+                <span
+                  className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500"
+                  style={{ animationDelay: "150ms" }}
+                />
+                <span
+                  className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500"
+                  style={{ animationDelay: "300ms" }}
+                />
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
