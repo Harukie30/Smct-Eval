@@ -38,6 +38,15 @@ interface ForgotPasswordModalProps {
   onCloseAction: () => void;
   /** Pre-fill from the login field when available. */
   initialEmail?: string;
+  /**
+   * Called after OTP verify + session login succeed.
+   * Parent (login page) should redirect to the role dashboard.
+   */
+  onSuccessAction?: (payload: {
+    email: string;
+    role: string | null;
+    result: unknown;
+  }) => void | Promise<void>;
 }
 
 type ForgotPasswordStep = "email" | "otp";
@@ -110,6 +119,7 @@ export default function ForgotPasswordModal({
   isOpen,
   onCloseAction,
   initialEmail = "",
+  onSuccessAction,
 }: ForgotPasswordModalProps) {
   const router = useRouter();
   const { loginWithPasswordResetOtp } = useAuth();
@@ -239,6 +249,12 @@ export default function ForgotPasswordModal({
         toastMessages.login.success(trimmed);
         onCloseAction();
 
+        if (onSuccessAction) {
+          await onSuccessAction({ email: trimmed, role, result });
+          return;
+        }
+
+        // Fallback when used without a parent success handler.
         if (dashboardPath) {
           router.push(dashboardPath);
         } else {
@@ -261,7 +277,7 @@ export default function ForgotPasswordModal({
         setSubmitting(false);
       }
     },
-    [email, otp, loginWithPasswordResetOtp, onCloseAction, router]
+    [email, otp, loginWithPasswordResetOtp, onCloseAction, onSuccessAction, router]
   );
 
   const handleOtpChange = (value: string) => {

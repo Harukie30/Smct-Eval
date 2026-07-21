@@ -28,6 +28,7 @@ import ForgotPasswordModal from "@/components/ForgotPasswordModal";
 import { useUser } from "@/contexts/UserContext";
 import { useRouter } from "next/navigation";
 import { toastMessages } from "@/lib/toastMessages";
+import { getDashboardPath } from "@/lib/dashboardUtils";
 // Removed clientDataService import - forceRefreshAccounts is no longer needed with pure API approach
 import ContactDevsModal from "@/components/ContactDevsModal";
 import { HowItWorksModal } from "@/components/HowItWorksModal";
@@ -141,17 +142,18 @@ function LandingLoginPage() {
         await new Promise((resolve) => setTimeout(resolve, 1000));
         toastMessages.login.success(username);
 
-        const roleDashboards: Record<string, string> = {
-          admin: "/admin",
-          hr: "/hr-dashboard",
-          evaluator: "/evaluator",
-          employee: "/employee-dashboard",
-        };
-
-        const dashboardPath = roleDashboards[result?.role] || "";
+        const dashboardPath = getDashboardPath(result?.role) || "";
         console.log("🚀 Redirecting to:", dashboardPath);
         await new Promise((resolve) => setTimeout(resolve, 300));
-        router.push(dashboardPath);
+        if (dashboardPath) {
+          router.push(dashboardPath);
+        } else {
+          setShowLoadingScreen(false);
+          toastMessages.generic.info(
+            "Signed in",
+            "We couldn't determine your dashboard. Please try again or contact support."
+          );
+        }
       } else {
         // fallback
         setLoginError("Invalid Credentials");
@@ -1186,6 +1188,31 @@ function LandingLoginPage() {
         isOpen={showForgotPasswordModal}
         onCloseAction={() => setShowForgotPasswordModal(false)}
         initialEmail={username}
+        onSuccessAction={async ({ role }) => {
+          setShowForgotPasswordModal(false);
+          setShowLoadingScreen(true);
+          try {
+            await new Promise((resolve) => setTimeout(resolve, 800));
+            const dashboardPath = getDashboardPath(role) || "";
+            console.log("🚀 OTP login redirecting to:", dashboardPath);
+            await new Promise((resolve) => setTimeout(resolve, 300));
+            if (dashboardPath) {
+              router.push(dashboardPath);
+            } else {
+              setShowLoadingScreen(false);
+              toastMessages.generic.info(
+                "Signed in",
+                "We couldn't determine your dashboard. Please try again or contact support."
+              );
+            }
+          } catch (error: any) {
+            setShowLoadingScreen(false);
+            toastMessages.generic.error(
+              "Redirect failed",
+              error?.message || "Signed in, but we couldn't open your dashboard."
+            );
+          }
+        }}
       />
 
       {/* Contact Developers Modal */}
