@@ -55,6 +55,7 @@ import {
 } from "@/lib/evaluationStatus";
 import { getCachedYears } from "@/lib/referenceDataCache";
 import { cn } from "@/lib/utils";
+import { getMyEvalAsEvaluatorCount } from "@/lib/evaluatorEvalListResponse";
 import { useBranchesForEvaluation } from "@/hooks/useBranchesForEvaluation";
 import { getEmployeeBranchCodeDisplay } from "@/components/evaluation/employeeBranchLabel";
 import { isSubmissionResubmitAllowed } from "@/lib/evaluationSubmissionRecord";
@@ -199,41 +200,53 @@ async function sumTotalsByStatuses(
 }
 
 /**
- * Pending Approval badge: only pending_approval_1/2 + rejected.
- * Avoid empty-status pending-approval API totals — backends may wrongly include `pending`.
+ * Tab badge counts from GET `/getPendingApprovalEvaluations`.
+ * Uses `pending_approvals.total` + `myEval_as_Evaluator_count` when the backend provides them.
+ */
+async function fetchTabCountsFromPendingApprovalApi(
+  searchValue: string,
+  quarter: string,
+  yearNum: number
+): Promise<{ approvals: number; all: number | null } | null> {
+  try {
+    const response = await apiService.getPendingApprovalEvaluations(
+      searchValue,
+      1,
+      1,
+      "",
+      quarter,
+      yearNum
+    );
+
+    return {
+      approvals: getEvaluatorRecordsTotal(response),
+      all: getMyEvalAsEvaluatorCount(response),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Pending Approval badge fallback when the dedicated endpoint is unavailable.
  */
 async function fetchPendingApprovalTabTotal(
   searchValue: string,
   quarter: string,
   yearNum: number
 ): Promise<number> {
-  try {
-    return await sumTotalsByStatuses(
-      (status) =>
-        apiService.getPendingApprovalEvaluations(
-          searchValue,
-          1,
-          1,
-          status,
-          quarter,
-          yearNum
-        ),
-      PENDING_APPROVAL_COUNT_STATUSES
-    );
-  } catch {
-    return sumTotalsByStatuses(
-      (status) =>
-        apiService.getEvalAuthEvaluator(
-          searchValue,
-          1,
-          1,
-          status,
-          quarter,
-          yearNum
-        ),
-      PENDING_APPROVAL_COUNT_STATUSES
-    );
-  }
+  return sumTotalsByStatuses(
+    (status) =>
+      apiService.getEvalAuthEvaluator(
+        searchValue,
+        1,
+        1,
+        status,
+        quarter,
+        yearNum
+      ),
+    PENDING_APPROVAL_COUNT_STATUSES
+  );
 }
 
 /**
@@ -606,24 +619,42 @@ export default function OverviewTab() {
             options?.grandTotal ??
             grandTotalCacheRef.current.get(grandTotalKey);
 
-          const [approvalsCount, allRecords] = await Promise.all([
-            fetchPendingApprovalTabTotal(searchValue, quarter, yearNum),
-            fetchAllRecordsTabTotal(
+          const pendingApiCounts = await fetchTabCountsFromPendingApprovalApi(
+            searchValue,
+            quarter,
+            yearNum
+          );
+
+          let approvalsCount = pendingApiCounts?.approvals;
+          let allCount = pendingApiCounts?.all ?? null;
+
+          if (approvalsCount === undefined) {
+            approvalsCount = await fetchPendingApprovalTabTotal(
+              searchValue,
+              quarter,
+              yearNum
+            );
+          }
+
+          if (allCount === null) {
+            const allRecords = await fetchAllRecordsTabTotal(
               searchValue,
               quarter,
               yearNum,
               knownGrandTotal
-            ),
-          ]);
-
-          grandTotalCacheRef.current.set(
-            grandTotalKey,
-            allRecords.grandTotal
-          );
+            );
+            allCount = allRecords.all;
+            grandTotalCacheRef.current.set(
+              grandTotalKey,
+              allRecords.grandTotal
+            );
+          } else if (knownGrandTotal !== undefined) {
+            grandTotalCacheRef.current.set(grandTotalKey, knownGrandTotal);
+          }
 
           const nextCounts = {
             approvals: approvalsCount,
-            all: allRecords.all,
+            all: allCount,
           };
 
           tabCountsCacheRef.current.set(cacheKey, nextCounts);

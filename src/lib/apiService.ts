@@ -11,6 +11,7 @@ import type { EvaluationResubmitType } from "@/lib/evaluationEditTypes";
 import type { EvaluationSubmissionRecord } from "@/lib/evaluationSubmissionRecord";
 import { asEvaluationSubmissionRecord } from "@/lib/evaluationSubmissionRecord";
 import { normalizeMyEvalAsEmployeeResponse } from "@/lib/employeeEvalListResponse";
+import { normalizePendingApprovalEvaluationsResponse } from "@/lib/evaluatorEvalListResponse";
 
 export type ResubmitEvaluationType = EvaluationResubmitType;
 
@@ -971,10 +972,11 @@ export const apiService = {
    * - search, page, per_page, quarter, year
    * - status: "" | pending_approval_1 | pending_approval_2 | rejected
    *
-   * Expected response (either key is accepted by the UI):
+   * Expected response:
    * {
    *   pending_approvals: { data, total, last_page, per_page }
-   *   // or myEval_as_Evaluator: { data, total, last_page, per_page }
+   *   myEval_as_Evaluator_count: number  // All Records tab badge
+   *   // legacy: myEval_as_Evaluator: { data, total, last_page, per_page }
    * }
    *
    * Backend should return only rows relevant to the current user as approver
@@ -1000,7 +1002,7 @@ export const apiService = {
         year: year || "",
       },
     });
-    return response.data;
+    return normalizePendingApprovalEvaluationsResponse(response.data);
   },
 
   // Get evaluations by authenticated employee
