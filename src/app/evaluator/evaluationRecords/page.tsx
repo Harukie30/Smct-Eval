@@ -201,7 +201,8 @@ async function sumTotalsByStatuses(
 
 /**
  * Tab badge counts from GET `/getPendingApprovalEvaluations`.
- * Uses `pending_approvals.total` + `myEval_as_Evaluator_count` when the backend provides them.
+ * Pending Approval badge → `pending_approvals.total`
+ * All Records badge → `myEval_as_Evaluator_count` (all-records-only; never approval-tab rows)
  */
 async function fetchTabCountsFromPendingApprovalApi(
   searchValue: string,
@@ -218,10 +219,15 @@ async function fetchTabCountsFromPendingApprovalApi(
       yearNum
     );
 
-    return {
-      approvals: getEvaluatorRecordsTotal(response),
-      all: getMyEvalAsEvaluatorCount(response),
-    };
+    const approvals = getEvaluatorRecordsTotal(response);
+    const apiAllCount = getMyEvalAsEvaluatorCount(response);
+
+    // If backend still mirrors the pending total into myEval_as_Evaluator_count,
+    // treat it as missing so we can derive All Records from getEvalAuthEvaluator.
+    const all =
+      apiAllCount !== null && apiAllCount !== approvals ? apiAllCount : null;
+
+    return { approvals, all };
   } catch {
     return null;
   }
@@ -527,16 +533,18 @@ export default function OverviewTab() {
           ? paginator.data.filter((review) =>
               isStatusOnPendingApprovalTab(review.status)
             )
-          : paginator.data;
-        // Empty-status pending-approval APIs may include plain `pending` in `total`.
-        // Prefer the filtered page size adjustment only as a floor; tab badges use
-        // status-specific counts from loadTabRecordCounts.
-        const removedNonApprovalRows = isApprovalsTab
-          ? Math.max(0, paginator.data.length - nextEvaluations.length)
-          : 0;
+          : paginator.data.filter((review) =>
+              isStatusOnAllRecordsTab(review.status)
+            );
+        // Keep page totals aligned with the tab: drop cross-tab statuses the API
+        // may still include (e.g. plain `pending` on approvals, or approval rows on all).
+        const removedCrossTabRows = Math.max(
+          0,
+          paginator.data.length - nextEvaluations.length
+        );
         const nextOverviewTotal = Math.max(
           0,
-          paginator.total - removedNonApprovalRows
+          paginator.total - removedCrossTabRows
         );
         const nextTotalPages = paginator.lastPage;
         const nextPerPage = paginator.perPage || itemsPerPage;
@@ -554,10 +562,40 @@ export default function OverviewTab() {
         });
 
         if (!isApprovalsTab && isAllStatusFilter(status)) {
+          const countKey = JSON.stringify({
+            searchValue,
+            quarter,
+            year: yearNum,
+          });
           grandTotalCacheRef.current.set(
             getGrandTotalCacheKey(searchValue, quarter, year),
             nextOverviewTotal
           );
+          // Keep All Records badge aligned with the filtered All Records list total.
+          setTabRecordCounts((prev) => {
+            const next = { ...prev, all: nextOverviewTotal };
+            tabCountsCacheRef.current.set(countKey, {
+              approvals: prev.approvals,
+              all: nextOverviewTotal,
+            });
+            return next;
+          });
+        }
+
+        if (isApprovalsTab && isAllStatusFilter(status)) {
+          const countKey = JSON.stringify({
+            searchValue,
+            quarter,
+            year: yearNum,
+          });
+          setTabRecordCounts((prev) => {
+            const next = { ...prev, approvals: nextOverviewTotal };
+            tabCountsCacheRef.current.set(countKey, {
+              approvals: nextOverviewTotal,
+              all: prev.all,
+            });
+            return next;
+          });
         }
 
         return nextOverviewTotal;
@@ -587,7 +625,7 @@ export default function OverviewTab() {
       searchValue: string,
       quarter: string,
       year: string,
-      options?: { force?: boolean; grandTotal?: number }
+      options?: { force?: boolean; allRecordsTotal?: number }
     ) => {
       const yearNum = Number(year) || 0;
       const cacheKey = JSON.stringify({
@@ -595,7 +633,6 @@ export default function OverviewTab() {
         quarter,
         year: yearNum,
       });
-      const grandTotalKey = getGrandTotalCacheKey(searchValue, quarter, year);
 
       if (!options?.force) {
         const cached = tabCountsCacheRef.current.get(cacheKey);
@@ -615,10 +652,6 @@ export default function OverviewTab() {
 
       const requestPromise = (async () => {
         try {
-          const knownGrandTotal =
-            options?.grandTotal ??
-            grandTotalCacheRef.current.get(grandTotalKey);
-
           const pendingApiCounts = await fetchTabCountsFromPendingApprovalApi(
             searchValue,
             quarter,
@@ -626,8 +659,6 @@ export default function OverviewTab() {
           );
 
           let approvalsCount = pendingApiCounts?.approvals;
-          let allCount = pendingApiCounts?.all ?? null;
-
           if (approvalsCount === undefined) {
             approvalsCount = await fetchPendingApprovalTabTotal(
               searchValue,
@@ -636,25 +667,29 @@ export default function OverviewTab() {
             );
           }
 
+          // All Records badge priority:
+          // 1) filtered All Records list total (matches the table)
+          // 2) myEval_as_Evaluator_count when it is not just a copy of pending total
+          // 3) derive from getEvalAuthEvaluator minus approval statuses
+          let allCount =
+            options?.allRecordsTotal ?? pendingApiCounts?.all ?? null;
+
           if (allCount === null) {
             const allRecords = await fetchAllRecordsTabTotal(
               searchValue,
               quarter,
-              yearNum,
-              knownGrandTotal
+              yearNum
             );
             allCount = allRecords.all;
             grandTotalCacheRef.current.set(
-              grandTotalKey,
+              getGrandTotalCacheKey(searchValue, quarter, year),
               allRecords.grandTotal
             );
-          } else if (knownGrandTotal !== undefined) {
-            grandTotalCacheRef.current.set(grandTotalKey, knownGrandTotal);
           }
 
           const nextCounts = {
-            approvals: approvalsCount,
-            all: allCount,
+            approvals: approvalsCount ?? 0,
+            all: allCount ?? 0,
           };
 
           tabCountsCacheRef.current.set(cacheKey, nextCounts);
@@ -755,24 +790,18 @@ export default function OverviewTab() {
         if (shouldRefreshTabCounts) {
           prevTabCountFilterKeyRef.current = tabCountFilterKey;
 
-          const grandTotal =
+          const allRecordsTotal =
             activeRecordsTab === "all" &&
             isAllStatusFilter(debouncedStatusFilter)
               ? loadedTotal
-              : grandTotalCacheRef.current.get(
-                  getGrandTotalCacheKey(
-                    debouncedSearchTerm,
-                    debouncedQuarterFilter,
-                    debouncedYearFilter
-                  )
-                );
+              : undefined;
 
           const scheduleTabCounts = () => {
             void loadTabRecordCounts(
               debouncedSearchTerm,
               debouncedQuarterFilter,
               debouncedYearFilter,
-              { grandTotal }
+              { allRecordsTotal }
             );
           };
 
@@ -835,7 +864,7 @@ export default function OverviewTab() {
         debouncedYearFilter,
       });
 
-      const grandTotal =
+      const allRecordsTotal =
         activeRecordsTab === "all" &&
         isAllStatusFilter(debouncedStatusFilter)
           ? loadedTotal
@@ -845,7 +874,7 @@ export default function OverviewTab() {
         debouncedSearchTerm,
         debouncedQuarterFilter,
         debouncedYearFilter,
-        { force: true, grandTotal }
+        { force: true, allRecordsTotal }
       );
     } catch (error) {
       console.error("Error refreshing data:", error);
