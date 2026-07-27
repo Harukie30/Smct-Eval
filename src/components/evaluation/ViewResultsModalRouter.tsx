@@ -15,6 +15,7 @@ import ViewResultsModalAreaManager from "./ViewResultsModalAreaManager";
 import ViewResultsModalDefault from "./ViewResultsModalDefault";
 import ViewResultsModalBasic from "./ViewResultsModalBasic";
 import ViewEvaluationMobileWarningModal from "./ViewEvaluationMobileWarningModal";
+import ViewResultsModalLoadingShell from "./ViewResultsModalLoadingShell";
 import { useMobileViewport } from "@/hooks/useMobileViewport";
 
 export type Submission = {
@@ -63,6 +64,9 @@ export interface ViewResultsModalProps {
   isOpen: boolean;
   onCloseAction: () => void;
   submission: Submission | null;
+  /** When set, router fetches submission and shows loading overlay until ready. */
+  submissionId?: number | string | null;
+  onLoadErrorAction?: (message: string) => void;
   onApprove?: (submissionId: number) => void;
   isApproved?: boolean;
   approvalData?: ApprovalData | null;
@@ -204,6 +208,8 @@ export default function ViewResultsModalRouter({
   isOpen,
   onCloseAction,
   submission,
+  submissionId = null,
+  onLoadErrorAction,
   onApprove,
   isApproved = false,
   approvalData = null,
@@ -214,45 +220,114 @@ export default function ViewResultsModalRouter({
   const isMobileViewport = useMobileViewport();
   const [bypassMobileWarning, setBypassMobileWarning] = useState(false);
   const [supervisorName, setSupervisorName] = useState("");
+  const [isSupervisorLoading, setIsSupervisorLoading] = useState(false);
+  const [loadedSubmission, setLoadedSubmission] = useState<Submission | null>(
+    null
+  );
+  const [isLoadingSubmission, setIsLoadingSubmission] = useState(false);
+
+  const activeSubmission = submission ?? loadedSubmission;
 
   useEffect(() => {
     if (!isOpen) {
       setBypassMobileWarning(false);
+      setLoadedSubmission(null);
+      setIsLoadingSubmission(false);
+      setIsSupervisorLoading(false);
+      setSupervisorName("");
     }
   }, [isOpen]);
 
   useEffect(() => {
-    if (!submission) {
-      setSupervisorName("");
+    if (!isOpen) return;
+
+    if (submission) {
+      setLoadedSubmission(null);
+      setIsLoadingSubmission(false);
       return;
     }
 
-    const fallback = getEvaluatorDisplayName(submission.evaluator);
-    const fromSubmission = pickSupervisorFromSubmission(submission);
+    if (submissionId == null || submissionId === "") {
+      setIsLoadingSubmission(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsLoadingSubmission(true);
+    setLoadedSubmission(null);
+
+    const loadSubmission = async () => {
+      try {
+        const result = await apiService.getSubmissionById(submissionId);
+        if (cancelled) return;
+
+        if (result) {
+          setLoadedSubmission(result as Submission);
+        } else {
+          onLoadErrorAction?.(
+            "Evaluation record was not found. Please refresh to view the latest updates."
+          );
+          onCloseAction();
+        }
+      } catch (error) {
+        if (cancelled) return;
+        console.error("Failed to load evaluation submission:", error);
+        onLoadErrorAction?.(
+          "Unable to load evaluation details. Please try again."
+        );
+        onCloseAction();
+      } finally {
+        if (!cancelled) {
+          setIsLoadingSubmission(false);
+        }
+      }
+    };
+
+    void loadSubmission();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, submission, submissionId, onCloseAction, onLoadErrorAction]);
+
+  useEffect(() => {
+    if (!activeSubmission) {
+      setSupervisorName("");
+      setIsSupervisorLoading(false);
+      return;
+    }
+
+    const fallback = getEvaluatorDisplayName(activeSubmission.evaluator);
+    const fromSubmission = pickSupervisorFromSubmission(activeSubmission);
     const syncName =
       fromSubmission?.name ??
-      (submission.employee
-        ? pickSupervisorFromEmployee(submission.employee)?.name
+      (activeSubmission.employee
+        ? pickSupervisorFromEmployee(activeSubmission.employee)?.name
         : null) ??
       fallback;
     setSupervisorName(syncName);
 
-    if (submissionHasStoredApprovers(submission) || fromSubmission) {
+    if (submissionHasStoredApprovers(activeSubmission) || fromSubmission) {
+      setIsSupervisorLoading(false);
       return;
     }
 
-    const employeeId = submission.employee?.id;
-    if (!employeeId) return;
+    const employeeId = activeSubmission.employee?.id;
+    if (!employeeId) {
+      setIsSupervisorLoading(false);
+      return;
+    }
 
     let cancelled = false;
+    setIsSupervisorLoading(true);
+
     const loadSupervisor = async () => {
       try {
         const dashboard = await apiService.employeeDashboard2(Number(employeeId));
         if (cancelled) return;
         const prioritized =
           pickSupervisorWithApproverPriority(dashboard)?.name ??
-          (submission.employee
-            ? pickSupervisorFromEmployee(submission.employee)?.name
+          (activeSubmission.employee
+            ? pickSupervisorFromEmployee(activeSubmission.employee)?.name
             : null) ??
           fallback;
         setSupervisorName(prioritized);
@@ -260,21 +335,45 @@ export default function ViewResultsModalRouter({
         if (cancelled) return;
         console.error("Failed to load prioritized supervisor:", error);
         setSupervisorName(syncName);
+      } finally {
+        if (!cancelled) {
+          setIsSupervisorLoading(false);
+        }
       }
     };
 
-    loadSupervisor();
+    void loadSupervisor();
     return () => {
       cancelled = true;
     };
-  }, [submission]);
+  }, [activeSubmission]);
 
-  if (!submission) return null;
+  const isPreparingModal =
+    isOpen &&
+    (isLoadingSubmission || !activeSubmission || isSupervisorLoading);
+
+  if (!isOpen) return null;
+
+  if (isPreparingModal) {
+    return (
+      <ViewResultsModalLoadingShell
+        isOpen={isOpen}
+        onCloseAction={onCloseAction}
+        label={
+          isLoadingSubmission || !activeSubmission
+            ? "Loading evaluation results..."
+            : "Preparing evaluation view..."
+        }
+      />
+    );
+  }
+
+  if (!activeSubmission) return null;
 
   const modalProps = {
     isOpen,
     onCloseAction,
-    submission,
+    submission: activeSubmission,
     onApprove,
     isApproved,
     approvalData,
@@ -284,7 +383,7 @@ export default function ViewResultsModalRouter({
     supervisorName,
   };
 
-  if (isOpen && isMobileViewport && !bypassMobileWarning) {
+  if (isMobileViewport && !bypassMobileWarning) {
     return (
       <ViewEvaluationMobileWarningModal
         isOpen={isOpen}
@@ -296,31 +395,31 @@ export default function ViewResultsModalRouter({
 
   // Get evaluationType from API response (primary routing method)
   // Check multiple possible field names
-  const apiEvaluationType = getEvaluationType(submission);
+  const apiEvaluationType = getEvaluationType(activeSubmission);
 
   // Check employee's branch and position (not evaluator)
-  const isHOEmp = isEmployeeHO(submission);
-  const isBranchEmp = isEmployeeBranch(submission);
-  const isEmployeeAreaMgr = isEmployeeAreaManager(submission);
-  const isEmployeeBranchMgrOrSup = isEmployeeBranchManagerOrSupervisor(submission);
+  const isHOEmp = isEmployeeHO(activeSubmission);
+  const isBranchEmp = isEmployeeBranch(activeSubmission);
+  const isEmployeeAreaMgr = isEmployeeAreaManager(activeSubmission);
+  const isEmployeeBranchMgrOrSup = isEmployeeBranchManagerOrSupervisor(activeSubmission);
 
   // Fallback: Determine evaluation type based on submission data (if evaluationType not available)
-  const hasCustomerService = submission.customer_services && 
-    Array.isArray(submission.customer_services) && 
-    submission.customer_services.length > 0;
-  const hasManagerialSkills = submission.managerial_skills && 
-    Array.isArray(submission.managerial_skills) && 
-    submission.managerial_skills.length > 0;
+  const hasCustomerService = activeSubmission.customer_services && 
+    Array.isArray(activeSubmission.customer_services) && 
+    activeSubmission.customer_services.length > 0;
+  const hasManagerialSkills = activeSubmission.managerial_skills && 
+    Array.isArray(activeSubmission.managerial_skills) && 
+    activeSubmission.managerial_skills.length > 0;
 
   // Debug logging - helpful for troubleshooting routing issues
   // This will show in development mode (and can be enabled in production if needed)
   const debugInfo = {
-    id: submission.id,
+    id: activeSubmission.id,
     evaluationType: apiEvaluationType,
     hasCustomerService,
     hasManagerialSkills,
-    employeeBranch: submission.employee?.branches?.[0]?.branch_name || submission.employee?.branches?.branch_name,
-    employeePosition: submission.employee?.positions?.label || submission.employee?.positions?.name || submission.employee?.position,
+    employeeBranch: activeSubmission.employee?.branches?.[0]?.branch_name || activeSubmission.employee?.branches?.branch_name,
+    employeePosition: activeSubmission.employee?.positions?.label || activeSubmission.employee?.positions?.name || activeSubmission.employee?.position,
     isHOEmp,
     isBranchEmp,
   };

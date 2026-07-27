@@ -342,7 +342,9 @@ export default function OverviewTab() {
   const [debouncedYearFilter, setDebouncedYearFilter] = useState(yearFilter);
 
   const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
-  const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
+  const [viewSubmissionId, setViewSubmissionId] = useState<
+    number | string | null
+  >(null);
   const [isEditEvaluationModalOpen, setIsEditEvaluationModalOpen] =
     useState(false);
   const [selectedSubmissionForEdit, setSelectedSubmissionForEdit] =
@@ -883,26 +885,9 @@ export default function OverviewTab() {
     }
   };
 
-  const handleViewEvaluation = async (review: Review) => {
-    try {
-      const submission = await clientDataService.getSubmissionById(review.id);
-
-      if (submission) {
-        setSelectedSubmission(submission);
-        setIsViewResultsModalOpen(true);
-      } else {
-        setEvaluationActionError({
-          title: "Unable to Open Evaluation",
-          message:
-            "Evaluation record was not found. Please refresh to view the latest updates.",
-        });
-      }
-    } catch (error) {
-      setEvaluationActionError({
-        title: "Unable to Open Evaluation",
-        message: getViewEvaluationErrorMessage(error),
-      });
-    }
+  const handleViewEvaluation = (review: Review) => {
+    setViewSubmissionId(review.id);
+    setIsViewResultsModalOpen(true);
   };
 
   const closeEditEvaluationModal = async () => {
@@ -1843,11 +1828,18 @@ export default function OverviewTab() {
         {/* View Results Modal */}
         <ViewResultsModal
           isOpen={isViewResultsModalOpen}
+          submissionId={viewSubmissionId}
+          submission={null}
+          onLoadErrorAction={(message) => {
+            setEvaluationActionError({
+              title: "Unable to Open Evaluation",
+              message,
+            });
+          }}
           onCloseAction={() => {
             setIsViewResultsModalOpen(false);
-            setSelectedSubmission(null);
+            setViewSubmissionId(null);
           }}
-          submission={selectedSubmission}
           showApprovalButton={false}
         />
 

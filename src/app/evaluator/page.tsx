@@ -36,7 +36,6 @@ import {
   EvalRecordStatusBadge,
   getReviewQuarterDisplay,
   getReviewRowClassName,
-  getViewEvaluationErrorMessage,
 } from "@/components/evaluation/evaluationRecordsShared";
 import {
   EVALUATION_STATUS_FILTER_OPTIONS,
@@ -186,7 +185,9 @@ export default function OverviewTab() {
   const [perPage, setPerPage] = useState(0);
 
   //view data
-  const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
+  const [viewSubmissionId, setViewSubmissionId] = useState<
+    number | string | null
+  >(null);
 
   //modal
   const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
@@ -266,37 +267,20 @@ export default function OverviewTab() {
     return () => clearTimeout(debounceTimeout);
   }, [searchTerm]);
 
-  const handleViewEvaluation = async (review: Review) => {
-    try {
-      const submission = await apiService.getSubmissionById(review.id);
-
-      if (submission) {
-        setSelectedSubmission(submission);
-        setIsViewResultsModalOpen(true);
-      } else {
-        setEvaluationActionError({
-          title: "Unable to Open Evaluation",
-          message:
-            "Evaluation record was not found. Please refresh to view the latest updates.",
-        });
-      }
-    } catch (error) {
-      setEvaluationActionError({
-        title: "Unable to Open Evaluation",
-        message: getViewEvaluationErrorMessage(error),
-      });
-    }
+  const handleViewEvaluation = (review: Review) => {
+    setViewSubmissionId(review.id);
+    setIsViewResultsModalOpen(true);
   };
 
   const handleClose = async () => {
     try {
       setIsRefreshing(true);
       setIsViewResultsModalOpen(false);
-      setSelectedSubmission(null);
+      setViewSubmissionId(null);
     } catch (error) {
       console.log(error);
       setIsViewResultsModalOpen(false);
-      setSelectedSubmission(null);
+      setViewSubmissionId(null);
     }
   };
 
@@ -866,10 +850,17 @@ export default function OverviewTab() {
               {/* View Results Modal */}
               <ViewResultsModal
                 isOpen={isViewResultsModalOpen}
+                submissionId={viewSubmissionId}
+                submission={null}
+                onLoadErrorAction={(message) => {
+                  setEvaluationActionError({
+                    title: "Unable to Open Evaluation",
+                    message,
+                  });
+                }}
                 onCloseAction={() => {
                   handleClose();
                 }}
-                submission={selectedSubmission}
                 showApprovalButton={false}
               />
             </>

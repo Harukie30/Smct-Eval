@@ -87,7 +87,9 @@ export default function OverviewTab() {
   const [overviewTotal, setOverviewTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [perPage, setPerPage] = useState(0);
-  const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
+  const [viewSubmissionId, setViewSubmissionId] = useState<
+    number | string | null
+  >(null);
   const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
   const [evaluationActionError, setEvaluationActionError] = useState<{
     title: string;
@@ -309,26 +311,9 @@ export default function OverviewTab() {
     }
   };
 
-  const handleViewEvaluation = async (review: Review) => {
-    try {
-      const submission = await apiService.getSubmissionById(review.id);
-
-      if (submission) {
-        setSelectedSubmission(submission);
-        setIsViewResultsModalOpen(true);
-      } else {
-        setEvaluationActionError({
-          title: "Unable to Open Evaluation",
-          message:
-            "Evaluation record was not found. Please refresh to view the latest updates.",
-        });
-      }
-    } catch (error) {
-      setEvaluationActionError({
-        title: "Unable to Open Evaluation",
-        message: getViewEvaluationErrorMessage(error),
-      });
-    }
+  const handleViewEvaluation = (review: Review) => {
+    setViewSubmissionId(review.id);
+    setIsViewResultsModalOpen(true);
   };
 
   const closeEditEvaluationModal = async () => {
@@ -461,18 +446,8 @@ export default function OverviewTab() {
   const handleApprove = async (id: number) => {
     try {
       await apiService.approvedByEmployee(id);
-      const submission = await apiService.getSubmissionById(id);
-
-      if (submission) {
-        setSelectedSubmission(submission);
-        setIsViewResultsModalOpen(true);
-      } else {
-        setEvaluationActionError({
-          title: "Unable to Open Evaluation",
-          message:
-            "Evaluation record was not found. Please refresh to view the latest updates.",
-        });
-      }
+      setViewSubmissionId(id);
+      setIsViewResultsModalOpen(true);
     } catch (error) {
       setEvaluationActionError({
         title: "Unable to Approve Evaluation",
@@ -490,11 +465,11 @@ export default function OverviewTab() {
         debouncedSearchTerm !== "" ? debouncedSearchTerm : searchTerm;
       await loadApprovedEvaluations(search);
       setIsViewResultsModalOpen(false);
-      setSelectedSubmission(null);
+      setViewSubmissionId(null);
     } catch (error) {
       console.error(error);
       setIsViewResultsModalOpen(false);
-      setSelectedSubmission(null);
+      setViewSubmissionId(null);
     }
   };
 
@@ -1154,10 +1129,17 @@ export default function OverviewTab() {
               {/* View Results Modal */}
               <ViewResultsModal
                 isOpen={isViewResultsModalOpen}
+                submissionId={viewSubmissionId}
+                submission={null}
+                onLoadErrorAction={(message) => {
+                  setEvaluationActionError({
+                    title: "Unable to Open Evaluation",
+                    message,
+                  });
+                }}
                 onCloseAction={() => {
                   handleClose();
                 }}
-                submission={selectedSubmission}
                 showApprovalButton={true}
                 onApprove={(id) => handleApprove(id)}
               />
