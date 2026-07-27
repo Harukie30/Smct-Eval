@@ -26,6 +26,12 @@ import {
   getQuarterlyReviewStatus,
   getCurrentYear,
 } from "@/lib/quarterlyReviewUtils";
+import {
+  getPriorityAreaFieldErrors,
+  hasAnyPriorityAreaError,
+  PRIORITY_AREA_INPUT_PLACEHOLDER,
+  PRIORITY_AREAS_VALIDATION_MESSAGE,
+} from "@/lib/priorityAreasValidation";
 import { useAuth, User as UserType } from "@/contexts/UserContext";
 import { usePrioritizedSupervisorName } from "@/hooks/usePrioritizedSupervisorName";
 import { CONFIG } from "../../../config/config";
@@ -91,7 +97,9 @@ export default function OverallAssessmentAreaManager({
   // Submission state management
   const [submissionError, setSubmissionError] = useState("");
   const [validationErrors, setValidationErrors] = useState({
-    priorityAreas: false,
+    priorityArea1: false,
+    priorityArea2: false,
+    priorityArea3: false,
     remarks: false,
   });
   const { user } = useAuth();
@@ -150,18 +158,18 @@ export default function OverallAssessmentAreaManager({
 
     // Clear any previous errors
     setSubmissionError("");
-    setValidationErrors({ priorityAreas: false, remarks: false });
+    setValidationErrors({
+      priorityArea1: false,
+      priorityArea2: false,
+      priorityArea3: false,
+      remarks: false,
+    });
 
     // Validate Priority Areas for Improvement: each field needs minimum characters
-    const PRIORITY_AREA_MIN_CHARS = 20;
-    const p1 = (data.priorityArea1 || "").trim().length;
-    const p2 = (data.priorityArea2 || "").trim().length;
-    const p3 = (data.priorityArea3 || "").trim().length;
-    if (p1 < PRIORITY_AREA_MIN_CHARS && p2 < PRIORITY_AREA_MIN_CHARS && p3 < PRIORITY_AREA_MIN_CHARS) {
-      setValidationErrors((prev) => ({ ...prev, priorityAreas: true }));
-      error(
-        `Please enter at least one of the 3 Priority Areas for Improvement.`
-      );
+    const priorityAreaErrors = getPriorityAreaFieldErrors(data);
+    if (hasAnyPriorityAreaError(priorityAreaErrors)) {
+      setValidationErrors((prev) => ({ ...prev, ...priorityAreaErrors }));
+      error(PRIORITY_AREAS_VALIDATION_MESSAGE);
       setShowLoadingDialog(false);
       setIsSubmittingEvaluation(false);
       return;
@@ -3199,9 +3207,11 @@ export default function OverallAssessmentAreaManager({
             performance and align with branch or company goals. Keep the
             feedback clear, helpful, and easy to act on.
           </p>
-          {validationErrors.priorityAreas && (
+          {(validationErrors.priorityArea1 ||
+            validationErrors.priorityArea2 ||
+            validationErrors.priorityArea3) && (
             <p className="text-sm text-red-600 mb-3">
-              Please enter at least 20 characters in at least one of the 3 priority areas.
+              {PRIORITY_AREAS_VALIDATION_MESSAGE}
             </p>
           )}
           <div className="space-y-3">
@@ -3213,12 +3223,20 @@ export default function OverallAssessmentAreaManager({
                 id="priority1"
                 value={data.priorityArea1 || ""}
                 onChange={(e) => {
-                  setValidationErrors((prev) => ({ ...prev, priorityAreas: false }));
+                  setValidationErrors((prev) => ({
+                    ...prev,
+                    priorityArea1: false,
+                  }));
                   updateDataAction({ priorityArea1: e.target.value });
                 }}
-                className={`mt-1 bg-yellow-50 ${validationErrors.priorityAreas ? "border-red-500" : "border-gray-300"}`}
-                placeholder="Enter priority area (at least one with min. 20 characters)"
+                className={`mt-1 bg-yellow-50 ${validationErrors.priorityArea1 ? "border-red-500" : "border-gray-300"}`}
+                placeholder={PRIORITY_AREA_INPUT_PLACEHOLDER}
               />
+              {validationErrors.priorityArea1 && (
+                <p className="mt-1 text-xs text-red-600">
+                  Enter at least 20 characters.
+                </p>
+              )}
             </div>
             <div>
               <Label htmlFor="priority2" className="text-sm font-medium">
@@ -3228,12 +3246,20 @@ export default function OverallAssessmentAreaManager({
                 id="priority2"
                 value={data.priorityArea2 || ""}
                 onChange={(e) => {
-                  setValidationErrors((prev) => ({ ...prev, priorityAreas: false }));
+                  setValidationErrors((prev) => ({
+                    ...prev,
+                    priorityArea2: false,
+                  }));
                   updateDataAction({ priorityArea2: e.target.value });
                 }}
-                className={`mt-1 bg-yellow-50 ${validationErrors.priorityAreas ? "border-red-500" : "border-gray-300"}`}
-                placeholder="Enter priority area (at least one with min. 20 characters)"
+                className={`mt-1 bg-yellow-50 ${validationErrors.priorityArea2 ? "border-red-500" : "border-gray-300"}`}
+                placeholder={PRIORITY_AREA_INPUT_PLACEHOLDER}
               />
+              {validationErrors.priorityArea2 && (
+                <p className="mt-1 text-xs text-red-600">
+                  Enter at least 20 characters.
+                </p>
+              )}
             </div>
             <div>
               <Label htmlFor="priority3" className="text-sm font-medium">
@@ -3243,12 +3269,20 @@ export default function OverallAssessmentAreaManager({
                 id="priority3"
                 value={data.priorityArea3 || ""}
                 onChange={(e) => {
-                  setValidationErrors((prev) => ({ ...prev, priorityAreas: false }));
+                  setValidationErrors((prev) => ({
+                    ...prev,
+                    priorityArea3: false,
+                  }));
                   updateDataAction({ priorityArea3: e.target.value });
                 }}
-                className={`mt-1 bg-yellow-50 ${validationErrors.priorityAreas ? "border-red-500" : "border-gray-300"}`}
-                placeholder="Enter priority area (at least one with min. 20 characters)"
+                className={`mt-1 bg-yellow-50 ${validationErrors.priorityArea3 ? "border-red-500" : "border-gray-300"}`}
+                placeholder={PRIORITY_AREA_INPUT_PLACEHOLDER}
               />
+              {validationErrors.priorityArea3 && (
+                <p className="mt-1 text-xs text-red-600">
+                  Enter at least 20 characters.
+                </p>
+              )}
             </div>
           </div>
         </CardContent>
