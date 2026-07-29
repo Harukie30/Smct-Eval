@@ -3335,15 +3335,13 @@ export default function ViewResultsModal({
                                   </div>
                                 </td>
                                 <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
-                                  {Math.round(
-                                    calculateScore(
-                                      (submission.job_knowledge || []).map(
-                                        (item: any) => {
-                                          return String(item.score || 0);
-                                        }
-                                      )
-                                    ) * 10
-                                  ) / 10}
+                                  {calculateScore(
+                                    (submission.job_knowledge || []).map(
+                                      (item: any) => {
+                                        return String(item.score || 0);
+                                      }
+                                    )
+                                  ).toFixed(2)}
                                 </td>
                                 <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
                                   {evaluationType === 'rankNfile' || evaluationType === 'basic' ? '25%' : '20%'}
