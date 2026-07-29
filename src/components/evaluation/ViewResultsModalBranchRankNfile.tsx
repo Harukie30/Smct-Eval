@@ -2119,14 +2119,21 @@ export default function ViewResultsModal({
                             >
                               Others:
                             </label>
-                            <input
-                              type="text"
-                              value={submission.reviewTypeOthersCustom || ""}
-                              className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded bg-gray-50"
-                              placeholder="Enter custom review type"
-                              disabled
-                              readOnly
-                            />
+                            {submission.reviewTypeOthersCustom !== "" &&
+                              submission.reviewTypeOthersCustom !== null &&
+                              submission.reviewTypeOthersCustom.trim() !==
+                                "" && (
+                                <input
+                                  type="text"
+                                  value={
+                                    submission.reviewTypeOthersCustom || ""
+                                  }
+                                  className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded bg-gray-50"
+                                  placeholder="Enter custom review type"
+                                  disabled
+                                  readOnly
+                                />
+                              )}
                           </div>
                         </div>
                       </div>

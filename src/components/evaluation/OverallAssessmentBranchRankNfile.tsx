@@ -839,14 +839,18 @@ export default function OverallAssessmentBranchRankNfile({
                   >
                     Others:
                   </label>
-                  <input
-                    type="text"
-                    value={data.reviewTypeOthersCustom || ""}
-                    className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded bg-gray-50"
-                    placeholder="Enter custom review type"
-                    disabled
-                    readOnly
-                  />
+                  {data.reviewTypeOthersCustom !== "" &&
+                    data.reviewTypeOthersCustom !== null &&
+                    data.reviewTypeOthersCustom.trim() !== "" && (
+                      <input
+                        type="text"
+                        value={data.reviewTypeOthersCustom || ""}
+                        className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded bg-gray-50"
+                        placeholder="Enter custom review type"
+                        disabled
+                        readOnly
+                      />
+                    )}
                 </div>
               </div>
             </div>

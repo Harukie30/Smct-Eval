@@ -790,42 +790,39 @@ export default function Step1({
                   >
                     Others:
                   </label>
-                  <input
-                    type="text"
-                    value={data.reviewTypeOthersCustom || ""}
-                    disabled={
-                      data.reviewTypeProbationary !== "" ||
-                      data.reviewTypeRegular !== "" ||
-                      data.reviewTypeOthersImprovement === true ||
-                      !isOthersCustomEnabled
-                    }
-                    onChange={(e) => {
-                      // Always update the value when user types
-                      updateDataAction({
-                        reviewTypeOthersCustom: e.target.value,
-                        reviewTypeOthersImprovement: false,
-                        reviewTypeProbationary: "",
-                        reviewTypeRegular: "",
-                      });
-                    }}
-                    className={`flex-1 px-2 py-1 text-sm border border-gray-300 rounded ${
-                      data.reviewTypeProbationary !== "" ||
-                      data.reviewTypeRegular !== "" ||
-                      data.reviewTypeOthersImprovement === true ||
-                      !isOthersCustomEnabled
-                        ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                        : "bg-white"
-                    }`}
-                    placeholder={
-                      data.reviewTypeProbationary !== "" ||
-                      data.reviewTypeRegular !== "" ||
-                      data.reviewTypeOthersImprovement === true
-                        ? "Disabled - other review type selected"
-                        : !isOthersCustomEnabled
-                        ? "Check the box above to enable"
-                        : "Enter custom review type"
-                    }
-                  />
+                  {(isOthersCustomEnabled ||
+                    (data.reviewTypeOthersCustom !== "" &&
+                      data.reviewTypeOthersCustom !== null &&
+                      data.reviewTypeOthersCustom.trim() !== "")) && (
+                    <input
+                      type="text"
+                      value={data.reviewTypeOthersCustom || ""}
+                      disabled={
+                        data.reviewTypeProbationary !== "" ||
+                        data.reviewTypeRegular !== "" ||
+                        data.reviewTypeOthersImprovement === true ||
+                        !isOthersCustomEnabled
+                      }
+                      onChange={(e) => {
+                        // Always update the value when user types
+                        updateDataAction({
+                          reviewTypeOthersCustom: e.target.value,
+                          reviewTypeOthersImprovement: false,
+                          reviewTypeProbationary: "",
+                          reviewTypeRegular: "",
+                        });
+                      }}
+                      className={`flex-1 px-2 py-1 text-sm border border-gray-300 rounded ${
+                        data.reviewTypeProbationary !== "" ||
+                        data.reviewTypeRegular !== "" ||
+                        data.reviewTypeOthersImprovement === true ||
+                        !isOthersCustomEnabled
+                          ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                          : "bg-white"
+                      }`}
+                      placeholder="Enter custom review type"
+                    />
+                  )}
                 </div>
               </div>
             </div>
