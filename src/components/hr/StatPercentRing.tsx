@@ -61,8 +61,8 @@ export function StatPercentRing({
           </span>
         </div>
       </div>
-      <p className="text-xs font-semibold text-gray-800">{label}</p>
-      <p className="max-w-[7.5rem] text-[0.65rem] leading-snug text-gray-500">
+      <p className="text-xs font-semibold leading-tight text-gray-800">{label}</p>
+      <p className="max-w-[8rem] text-[0.65rem] leading-snug text-gray-500">
         {detail}
       </p>
     </div>
