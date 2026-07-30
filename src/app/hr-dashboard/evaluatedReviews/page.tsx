@@ -54,6 +54,8 @@ import { useAuth } from "@/contexts/UserContext";
 import { useMobileViewport } from "@/hooks/useMobileViewport";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 import { cn } from "@/lib/utils";
+import { toastMessages } from "@/lib/toastMessages";
+import { getEmployeeBranchCodeDisplay } from "@/components/evaluation/employeeBranchLabel";
 import {
   EvalRecordSignBadge,
   hasEmployeeSigned,
@@ -70,6 +72,7 @@ import {
   type EvaluationRecordReview,
   getReviewRowClassName,
   getViewEvaluationErrorMessage,
+  getDeleteEvaluationErrorMessage,
   isReviewPendingEditableByEvaluator,
   QUARTER_LATE_LEGEND_LABEL,
 } from "@/components/evaluation/evaluationRecordsShared";
@@ -265,6 +268,9 @@ export default function OverviewTab() {
     title: string;
     message: string;
   } | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [reviewToDelete, setReviewToDelete] = useState<Review | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
   const [years, setYears] = useState<any[]>([]);
   const [branchesData, setBranchesData] = useState<any[]>([]);
@@ -690,6 +696,35 @@ export default function OverviewTab() {
   const handleViewEvaluation = (review: Review) => {
     setViewSubmissionId(review.id);
     setIsViewResultsModalOpen(true);
+  };
+
+  const openDeleteModal = (review: Review) => {
+    setReviewToDelete(review);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleDeleteClick = async (submission: Review | null) => {
+    if (!submission) return;
+    setIsDeleting(true);
+    try {
+      await clientDataService.deleteSubmission(submission.id);
+      await handleRefresh();
+      toastMessages.evaluation.deleted(
+        `${submission.employee?.fname ?? ""} ${submission.employee?.lname ?? ""}`.trim() ||
+          "employee"
+      );
+      setReviewToDelete(null);
+      setIsDeleteModalOpen(false);
+    } catch (error) {
+      setEvaluationActionError({
+        title: "Unable to Delete Evaluation",
+        message: getDeleteEvaluationErrorMessage(error),
+      });
+      setReviewToDelete(null);
+      setIsDeleteModalOpen(false);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const closeEditEvaluationModal = async () => {
@@ -1424,6 +1459,10 @@ export default function OverviewTab() {
                               review={review as EvaluationRecordReview}
                               onViewAction={() => handleViewEvaluation(review)}
                               onEditAction={() => handleEditEvaluation(review)}
+                              onDeleteAction={() => openDeleteModal(review)}
+                              deleting={
+                                isDeleting && reviewToDelete?.id === review.id
+                              }
                               allowPendingEditByCurrentUser={isReviewPendingEditableByEvaluator(
                                 review as EvaluationRecordReview,
                                 user?.id
@@ -1465,6 +1504,120 @@ export default function OverviewTab() {
             void handleRefresh();
           }}
         />
+
+        {/* Delete Confirmation Modal */}
+        <Dialog
+          open={isDeleteModalOpen}
+          onOpenChangeAction={(open) => {
+            setIsDeleteModalOpen(open);
+            if (!open) {
+              setReviewToDelete(null);
+            }
+          }}
+        >
+          <DialogContent className={`max-w-md p-6 ${dialogAnimationClass}`}>
+            <DialogHeader className="pb-4 bg-red-50 rounded-lg ">
+              <DialogTitle className="text-red-800 flex items-center gap-2">
+                <span className="text-xl">⚠️</span>
+                Delete Evaluation of{" "}
+                {reviewToDelete?.employee?.fname +
+                  " " +
+                  reviewToDelete?.employee?.lname}
+              </DialogTitle>
+              <DialogDescription className="text-red-700">
+                This action cannot be undone. Are you sure you want to
+                permanently delete this evaluation?
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 px-2 mt-8">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0">
+                    <svg
+                      className="h-5 w-5 text-red-400"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
+                  <div className="text-sm text-red-700">
+                    <p className="font-medium">
+                      Warning: This will permanently delete:
+                    </p>
+                    <ul className="mt-2 list-disc list-inside space-y-1">
+                      <li>This evaluation record</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                <div className="text-sm text-gray-700">
+                  <p className="font-medium">Evaluation Details:</p>
+                  <div className="mt-2 space-y-1">
+                    <p>
+                      <span className="font-medium">Employee Name:</span>{" "}
+                      {reviewToDelete?.employee?.fname +
+                        " " +
+                        reviewToDelete?.employee?.lname}
+                    </p>
+                    <p>
+                      <span className="font-medium">Evaluator Name:</span>{" "}
+                      {reviewToDelete?.evaluator?.fname +
+                        " " +
+                        reviewToDelete?.evaluator?.lname}
+                    </p>
+                    <p>
+                      <span className="font-medium">Branch:</span>{" "}
+                      {reviewToDelete?.employee
+                        ? getEmployeeBranchCodeDisplay(
+                            reviewToDelete.employee,
+                            branchesData,
+                            refreshing
+                          )
+                        : "N/A"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="pt-6 px-2">
+              <div className="flex justify-end space-x-4 w-full">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsDeleteModalOpen(false);
+                    setReviewToDelete(null);
+                  }}
+                  className="text-white bg-red-600 hover:text-white hover:bg-red-500 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="bg-blue-600 hover:bg-red-700 text-white cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                  onClick={() => handleDeleteClick(reviewToDelete)}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                      Deleting...
+                    </>
+                  ) : (
+                    "❌ Delete Permanently"
+                  )}
+                </Button>
+              </div>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* View Results Modal */}
         <ViewResultsModal

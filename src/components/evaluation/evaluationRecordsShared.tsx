@@ -249,8 +249,9 @@ export function isReviewPendingEditableByEvaluator(
   );
 }
 
-export function isReviewDeletable(review: EvaluationRecordReview): boolean {
-  return isEvaluationStatusPending(review.status);
+/** Whether a delete action may be offered; availability is gated by wiring `onDeleteAction`. */
+export function isReviewDeletable(_review: EvaluationRecordReview): boolean {
+  return true;
 }
 
 function isPresentId(value: unknown): boolean {
