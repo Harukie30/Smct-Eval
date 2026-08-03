@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/tooltip";
 import { HiringRateTooltipContent } from "@/components/hr/HiringRateTooltipContent";
 import { ApprovalStatusTooltipContent } from "@/components/hr/ApprovalStatusTooltipContent";
+import { LateSubmissionTooltipContent } from "@/components/hr/LateSubmissionTooltipContent";
 import {
   resolveHiringRateStats,
   type HiringRateStats,
@@ -44,6 +45,10 @@ import {
   resolveApprovalStatusStats,
   type ApprovalStatusStats,
 } from "@/lib/evaluationApprovalStats";
+import {
+  resolveLateSubmissionStats,
+  type LateSubmissionStats,
+} from "@/lib/lateSubmissionStats";
 
 const HR_OVERVIEW_TABLE_CLASS =
   "min-w-[34rem] sm:min-w-[42rem] md:min-w-[52rem] lg:min-w-0 lg:w-full [&_th]:h-auto [&_th]:min-h-8 [&_th]:whitespace-nowrap [&_th]:px-2 [&_th]:py-2 [&_th]:align-middle [&_th]:text-[0.6rem] [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600 sm:[&_th]:px-2.5 sm:[&_th]:py-2.5 sm:[&_th]:text-[0.65rem] lg:[&_th]:px-3 lg:[&_th]:text-xs [&_td]:min-w-0 [&_td]:px-2 [&_td]:py-2 [&_td]:align-top [&_td]:text-[0.7rem] [&_td]:leading-snug sm:[&_td]:px-2.5 sm:[&_td]:py-2.5 sm:[&_td]:text-xs lg:[&_td]:px-3 lg:[&_td]:text-sm";
@@ -219,6 +224,8 @@ export default function OverviewTab() {
   );
   const [approvalStatusStats, setApprovalStatusStats] =
     useState<ApprovalStatusStats | null>(null);
+  const [lateSubmissionStats, setLateSubmissionStats] =
+    useState<LateSubmissionStats | null>(null);
   //filters
   const [overviewSearchTerm, setOverviewSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] =
@@ -286,6 +293,10 @@ export default function OverviewTab() {
           );
           setHiringRateStats(hiringStats);
           setApprovalStatusStats(resolveApprovalStatusStats(dashboard));
+          const lateStats = await resolveLateSubmissionStats(dashboard, () =>
+            apiService.getSubmissions("", 1, 5000)
+          );
+          setLateSubmissionStats(lateStats);
         } catch (error) {
           console.log(error);
         } finally {
@@ -350,6 +361,11 @@ export default function OverviewTab() {
     [approvalStatusStats]
   );
 
+  const newSubmissionsTooltip = useMemo(
+    () => <LateSubmissionTooltipContent stats={lateSubmissionStats} />,
+    [lateSubmissionStats]
+  );
+
   return (
     <>
       <div className="mb-4 grid grid-cols-2 gap-3 sm:mb-5 sm:gap-4 lg:grid-cols-4">
@@ -360,6 +376,7 @@ export default function OverviewTab() {
           subtitle="Last 24 hours"
           valueClassName="text-yellow-600"
           cardClassName="border-yellow-200/90 bg-yellow-50/90"
+          tooltip={newSubmissionsTooltip}
         />
         <DashboardStatCard
           emoji="⏳"
