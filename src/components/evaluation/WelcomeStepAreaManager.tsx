@@ -269,17 +269,12 @@ export default function WelcomeStepAreaManager({
                 Important Information
               </h4>
               <ul className="text-sm text-yellow-700 space-y-1">
-                <li>
-                  • This evaluation will take approximately 20–30 minutes to
-                  complete
-                </li>
+                
                 <li>• All ratings are on a scale of 1–5 (Poor to Excellent)</li>
                 <li>
                   • You can navigate back to previous steps to make changes
                 </li>
-                <li>
-                  • Your responses will be saved automatically as you progress
-                </li>
+               
                 <li>
                   • This evaluation will be used for performance management and
                   development planning
