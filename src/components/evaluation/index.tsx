@@ -33,6 +33,8 @@ import {
 } from "./evaluationFormEdit";
 import { submitEvaluationForm } from "@/lib/evaluationEditSubmit";
 import { isEditSession } from "@/lib/evaluationEditTypes";
+import { toastMessages } from "@/lib/toastMessages";
+import { getEvaluationApiErrorMessage } from "@/components/evaluation/evaluationRecordsShared";
 
 // Default steps use branch evaluation configuration
 const defaultSteps: EvaluationStepConfig[] = branchEvaluationSteps;
@@ -834,44 +836,40 @@ export default function EvaluationForm({
   const confirmSubmit = async () => {
     try {
       const empID = employee?.id;
-      if (empID) {
-        // Route by the *employee being evaluated* (HO vs branch), not the evaluator.
-        // RankNfileHo/BasicHo omit Customer Service and (for rank-and-file) Job Targets row 5;
-        // posting those payloads to branch endpoints caused backend validation errors
-        // (e.g. customerServiceExplanation1–5, qualityOfWorkComments5 required).
-
-        // Debug: Verify Shop Income (Q12) is being sent to backend
-        if (form.qualityOfWorkScore12 !== undefined && form.qualityOfWorkScore12 !== 0) {
-          console.log('✅ Frontend: qualityOfWorkScore12 is being sent to backend:', form.qualityOfWorkScore12);
-        } else {
-          console.warn('⚠️ Frontend: qualityOfWorkScore12 is missing or zero');
-        }
-
-        await submitEvaluationForm(editSession, form, async () => {
-          if (isHO) {
-            if (evaluationType === 'rankNfile') {
-              await apiService.postHoRankNFile(empID, form);
-            } else if (evaluationType === 'basic') {
-              await apiService.postHoBasic(empID, form);
-            } else {
-              await apiService.createSubmission(empID, form);
-            }
-          } else {
-            if (evaluationType === 'rankNfile') {
-              await apiService.postBranchRankNFile(empID, form);
-            } else if (evaluationType === 'basic') {
-              await apiService.postBranchBasic(empID, form);
-            } else {
-              await apiService.postBranchBasic(empID, form);
-            }
-          }
-        });
+      if (!empID) {
+        throw new Error("Missing employee ID. Please reopen the evaluation and try again.");
       }
+
+      // Route by the *employee being evaluated* (HO vs branch), not the evaluator.
+      // RankNfileHo/BasicHo omit Customer Service and (for rank-and-file) Job Targets row 5;
+      // posting those payloads to branch endpoints caused backend validation errors
+      // (e.g. customerServiceExplanation1–5, qualityOfWorkComments5 required).
+
+      await submitEvaluationForm(editSession, form, async () => {
+        if (isHO) {
+          if (evaluationType === "rankNfile") {
+            await apiService.postHoRankNFile(empID, form);
+          } else if (evaluationType === "basic") {
+            await apiService.postHoBasic(empID, form);
+          } else {
+            await apiService.createSubmission(empID, form);
+          }
+        } else if (evaluationType === "rankNfile") {
+          await apiService.postBranchRankNFile(empID, form);
+        } else {
+          await apiService.postBranchBasic(empID, form);
+        }
+      });
+
       setShowSuccessDialog(true);
     } catch (clientError) {
-      console.log(
-        "Client data service storage failed, but localStorage storage succeeded:",
-        clientError
+      console.error("Evaluation submit failed:", clientError);
+      toastMessages.generic.error(
+        "Evaluation Error",
+        getEvaluationApiErrorMessage(
+          clientError,
+          "Failed to save evaluation. Please try again."
+        )
       );
     }
   };
