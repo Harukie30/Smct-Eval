@@ -874,7 +874,15 @@ export const apiService = {
     const response = await api.post(`/HoBasic/${employeeId}`, submission);
     return response.data;
   },
-  // Get head office rank and file employees
+
+  // Head office rank and file employees
+  postHoRankNFile: async (
+    employeeId: number | string,
+    submission: EvaluationPayload
+  ): Promise<any> => {
+    const response = await api.post(`/HoRankNFile/${employeeId}`, submission);
+    return response.data;
+  },
 
   /**
    * Unified resubmit API for all evaluation forms.
