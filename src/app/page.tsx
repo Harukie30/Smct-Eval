@@ -151,7 +151,7 @@ function LandingLoginPage() {
           }
         }
 
-        console.log("🚀 Redirecting to:", dashboardPath, { role: result?.role, result });
+        console.log(" Redirecting to:", dashboardPath, { role: result?.role, result });
         toastMessages.login.success(username);
         await new Promise((resolve) => setTimeout(resolve, 300));
 

@@ -21,7 +21,13 @@ import { AlertTriangle } from "lucide-react";
 import WelcomeStep from "./WelcomeStep";
 import { EvaluationPayload, EvaluationStepConfig } from "./types";
 import { storeEvaluationResult } from "@/lib/evaluationStorage";
-import { apiService } from "@/lib/apiService";
+import {
+  createSubmission,
+  postBranchBasic,
+  postBranchRankNFile,
+  postHoBasic,
+  postHoRankNFile,
+} from "@/lib/evaluationCreateApi";
 import { createEvaluationNotification } from "@/lib/notificationUtils";
 import { User, useAuth } from "../../contexts/UserContext";
 import { branchEvaluationSteps, branchRankNfileSteps } from "./configs";
@@ -848,16 +854,16 @@ export default function EvaluationForm({
       await submitEvaluationForm(editSession, form, async () => {
         if (isHO) {
           if (evaluationType === "rankNfile") {
-            await apiService.postHoRankNFile(empID, form);
+            await postHoRankNFile(empID, form);
           } else if (evaluationType === "basic") {
-            await apiService.postHoBasic(empID, form);
+            await postHoBasic(empID, form);
           } else {
-            await apiService.createSubmission(empID, form);
+            await createSubmission(empID, form);
           }
         } else if (evaluationType === "rankNfile") {
-          await apiService.postBranchRankNFile(empID, form);
+          await postBranchRankNFile(empID, form);
         } else {
-          await apiService.postBranchBasic(empID, form);
+          await postBranchBasic(empID, form);
         }
       });
 

@@ -1,4 +1,12 @@
 import { api, sanctum } from "./api";
+import {
+  createSubmission as createSubmissionRequest,
+  postBranchBasic as postBranchBasicRequest,
+  postBranchBasicAreaManager as postBranchBasicAreaManagerRequest,
+  postBranchRankNFile as postBranchRankNFileRequest,
+  postHoBasic as postHoBasicRequest,
+  postHoRankNFile as postHoRankNFileRequest,
+} from "./evaluationCreateApi";
 import { pickApiTimestamp } from "@/lib/parseApiTimestamp";
 
 /** Ask API for stable name order so OFFSET pagination does not overlap pages (backend may ignore). */
@@ -338,8 +346,7 @@ export const apiService = {
     employeeId: number | string,
     submission: EvaluationPayload
   ): Promise<any> => {
-    const response = await api.post(`/submit/${employeeId}`, submission);
-    return response.data;
+    return createSubmissionRequest(employeeId, submission);
   },
 
   updateSubmission: async (id: number, updates: any): Promise<any> => {
@@ -871,8 +878,7 @@ export const apiService = {
     employeeId: number | string,
     submission: EvaluationPayload
   ): Promise<any> => {
-    const response = await api.post(`/HoBasic/${employeeId}`, submission);
-    return response.data;
+    return postHoBasicRequest(employeeId, submission);
   },
 
   // Head office rank and file employees
@@ -880,8 +886,7 @@ export const apiService = {
     employeeId: number | string,
     submission: EvaluationPayload
   ): Promise<any> => {
-    const response = await api.post(`/HoRankNFile/${employeeId}`, submission);
-    return response.data;
+    return postHoRankNFileRequest(employeeId, submission);
   },
 
   /**
@@ -921,8 +926,7 @@ export const apiService = {
     employeeId: number | string,
     submission: EvaluationPayload
   ): Promise<any> => {
-    const response = await api.post(`/BranchBasic/${employeeId}`, submission);
-    return response.data;
+    return postBranchBasicRequest(employeeId, submission);
   },
 
   // Area Manager evaluation (BranchBasicAreaManager)
@@ -930,8 +934,7 @@ export const apiService = {
     employeeId: number | string,
     submission: EvaluationPayload
   ): Promise<any> => {
-    const response = await api.post(`/BranchBasicAreaManager/${employeeId}`, submission);
-    return response.data;
+    return postBranchBasicAreaManagerRequest(employeeId, submission);
   },
 
   // Get branch rank and file employees
@@ -939,8 +942,7 @@ export const apiService = {
     employeeId: number | string,
     submission: EvaluationPayload
   ): Promise<any> => {
-    const response = await api.post(`/BranchRankNFile/${employeeId}`, submission);
-    return response.data;
+    return postBranchRankNFileRequest(employeeId, submission);
   },
 
   // Get evaluations by authenticated evaluator
@@ -1082,5 +1084,14 @@ export const apiService = {
     return response.data;
   },
 };
+
+Object.assign(apiService, {
+  createSubmission: createSubmissionRequest,
+  postHoBasic: postHoBasicRequest,
+  postHoRankNFile: postHoRankNFileRequest,
+  postBranchBasic: postBranchBasicRequest,
+  postBranchBasicAreaManager: postBranchBasicAreaManagerRequest,
+  postBranchRankNFile: postBranchRankNFileRequest,
+});
 
 export default apiService;
