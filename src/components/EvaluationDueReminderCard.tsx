@@ -27,11 +27,12 @@ export default function EvaluationDueReminderCard() {
   return (
     <Card
       className={cn(
-        "mb-6 border shadow-md backdrop-blur-md sm:mb-8",
+        "mb-6 animate-fade-in-up border w-1/2 shadow-md backdrop-blur-md sm:mb-8",
         reminder.isDueToday || urgent
           ? "border-amber-200/90 bg-amber-50/90"
           : "border-white/40 bg-white/85"
       )}
+      style={{ animationDelay: "0.05s" }}
     >
       <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
         <div className="flex min-w-0 items-start gap-3">
