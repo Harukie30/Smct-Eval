@@ -36,6 +36,7 @@ import { LoginRegistrationGuideModal } from "@/components/LoginRegistrationGuide
 import { api } from "@/lib/api";
 import { withPublicPage } from "@/hoc";
 import { CONFIG } from "../../config/config";
+import EvaluationDueReminderCard from "@/components/EvaluationDueReminderCard";
 
 function LandingLoginPage() {
   const [username, setUsername] = useState("");
@@ -366,6 +367,7 @@ function LandingLoginPage() {
 
       {/* Main Content */}
       <main className="relative z-10 mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:py-10">
+        <EvaluationDueReminderCard />
         <div className="grid grid-cols-1 items-center gap-8 lg:grid-cols-2 lg:gap-10 xl:gap-12">
           {/* Left Column - Landing Content */}
           <div className="group relative flex flex-col justify-center space-y-6 lg:space-y-8">
