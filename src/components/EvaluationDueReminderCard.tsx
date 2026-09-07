@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { CalendarClock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { getUpcomingEvaluationDueReminder } from "@/lib/quarterUtils";
+import { getUpcomingEvaluationDueReminder } from "@/lib/evaluationDueReminder";
 
 function formatDueDate(date: Date): string {
   return date.toLocaleDateString(undefined, {
@@ -27,7 +27,7 @@ export default function EvaluationDueReminderCard() {
   return (
     <Card
       className={cn(
-        "mb-6 animate-fade-in-up border w-1/2 shadow-md backdrop-blur-md sm:mb-8",
+        "mb-6 animate-fade-in-up border shadow-md backdrop-blur-md sm:mb-8",
         reminder.isDueToday || urgent
           ? "border-amber-200/90 bg-amber-50/90"
           : "border-white/40 bg-white/85"
