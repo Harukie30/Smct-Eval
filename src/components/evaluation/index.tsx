@@ -20,15 +20,7 @@ import {
 import { AlertTriangle } from "lucide-react";
 import WelcomeStep from "./WelcomeStep";
 import { EvaluationPayload, EvaluationStepConfig } from "./types";
-import { storeEvaluationResult } from "@/lib/evaluationStorage";
-import {
-  createSubmission,
-  postBranchBasic,
-  postBranchRankNFile,
-  postHoBasic,
-  postHoRankNFile,
-} from "@/lib/evaluationCreateApi";
-import { createEvaluationNotification } from "@/lib/notificationUtils";
+import { apiService } from "@/lib/apiService";
 import { User, useAuth } from "../../contexts/UserContext";
 import { branchEvaluationSteps, branchRankNfileSteps } from "./configs";
 import { isEmployeeHeadOffice } from "./employeeBranchLabel";
@@ -854,16 +846,16 @@ export default function EvaluationForm({
       await submitEvaluationForm(editSession, form, async () => {
         if (isHO) {
           if (evaluationType === "rankNfile") {
-            await postHoRankNFile(empID, form);
+            await apiService.postHoRankNFile(empID, form);
           } else if (evaluationType === "basic") {
-            await postHoBasic(empID, form);
+            await apiService.postHoBasic(empID, form);
           } else {
-            await createSubmission(empID, form);
+            await apiService.createSubmission(empID, form);
           }
         } else if (evaluationType === "rankNfile") {
-          await postBranchRankNFile(empID, form);
+          await apiService.postBranchRankNFile(empID, form);
         } else {
-          await postBranchBasic(empID, form);
+          await apiService.postBranchBasic(empID, form);
         }
       });
 
@@ -919,7 +911,7 @@ export default function EvaluationForm({
         @keyframes successBounce {
           0% {
             transform: scale(0.9);
-            opacity: 0;
+            opacity: 0; 
           }
           50% {
             transform: scale(1.05);
@@ -1002,7 +994,7 @@ export default function EvaluationForm({
                             {index === filteredSteps.length - 1 ? "End" : step.id}
                           </div>
 
-                          {/* Connecting Line */}
+                          {/* Connecting Line */} 
                           {index < filteredSteps.length - 1 && (
                             <div className="w-16 h-1 mx-2 relative">
                               <div className="absolute inset-0 bg-gray-200 rounded-full"></div>
@@ -1139,7 +1131,7 @@ export default function EvaluationForm({
                     {currentStep >= 1 &&
                     !isOverallAssessmentStep &&
                     !isCurrentStepComplete() ? (
-                      <Tooltip>
+                      <Tooltip>ccccccc
                         <TooltipTrigger asChild>
                           <Button
                             onClick={(e) => {
