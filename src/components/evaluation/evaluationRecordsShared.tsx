@@ -403,12 +403,6 @@ export function getEvaluationApiErrorMessage(
   if (error instanceof Error && error.message.trim() !== "") {
     const msg = error.message.trim();
     if (msg !== "Request failed with status code 404") {
-      if (
-        msg.includes("is not a function") ||
-        msg.includes("__TURBOPACK__")
-      ) {
-        return fallback;
-      }
       return msg;
     }
     return "Evaluation record was not found. Please refresh to view the latest updates.";
