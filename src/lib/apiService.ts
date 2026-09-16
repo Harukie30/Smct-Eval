@@ -943,16 +943,41 @@ export const apiService = {
     return response.data;
   },
 
+  /**
+   * Save an in-progress evaluation as draft.
+   * Backend: POST `/{HoRankNFile|HoBasic|BranchRankNFile|BranchBasic|BranchBasicAreaManager}/draft/{user}`
+   */
+  postEvaluationDraft: async (
+    evaluationType: ResubmitEvaluationType,
+    userId: number | string,
+    submission: EvaluationPayload | Record<string, unknown>
+  ): Promise<any> => {
+    const endpointByType: Record<ResubmitEvaluationType, string> = {
+      rankNfile: "HoRankNFile",
+      basic: "HoBasic",
+      branchRankNfile: "BranchRankNFile",
+      branchBasic: "BranchBasic",
+      branchBasicAreaManager: "BranchBasicAreaManager",
+    };
+
+    const endpoint = endpointByType[evaluationType];
+    const response = await api.post(
+      `/${endpoint}/draft/${userId}`,
+      submission
+    );
+    return response.data;
+  },
+
   /** Save a Branch Rank & File evaluation as draft. Backend: POST `/BranchRankNFile/draft/{user}` */
   postBranchRankNFileDraft: async (
     userId: number | string,
     submission: EvaluationPayload
   ): Promise<any> => {
-    const response = await api.post(
-      `/BranchRankNFile/draft/${userId}`,
+    return apiService.postEvaluationDraft(
+      "branchRankNfile",
+      userId,
       submission
     );
-    return response.data;
   },
 
   // Get evaluations by authenticated evaluator

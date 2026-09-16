@@ -32,11 +32,53 @@ import {
 } from "./evaluationFormEdit";
 import { submitEvaluationForm } from "@/lib/evaluationEditSubmit";
 import { isEditSession } from "@/lib/evaluationEditTypes";
+import EvaluationStepNavigation from "./EvaluationStepNavigation";
+import { useEvaluationDraftOnNext } from "@/hooks/useEvaluationDraftOnNext";
+import { buildEvaluationSavePayload } from "@/lib/evaluationDraftSave";
 
 interface AreaManagerEvaluationFormProps extends EvaluationFormSessionProps {
   employee?: User | null;
   onCloseAction?: () => void;
   onCancelAction?: () => void;
+}
+
+function buildAreaManagerSavePayload(form: EvaluationPayload): EvaluationPayload {
+  const managerial_skills = (
+    [
+      {
+        question_number: 1 as const,
+        score: Number(form.managerialSkillsScore1 || 0),
+        explanation: form.managerialSkillsExplanation1 || "",
+      },
+      {
+        question_number: 2 as const,
+        score: Number(form.managerialSkillsScore2 || 0),
+        explanation: form.managerialSkillsExplanation2 || "",
+      },
+      {
+        question_number: 3 as const,
+        score: Number(form.managerialSkillsScore3 || 0),
+        explanation: form.managerialSkillsExplanation3 || "",
+      },
+      {
+        question_number: 4 as const,
+        score: Number(form.managerialSkillsScore4 || 0),
+        explanation: form.managerialSkillsExplanation4 || "",
+      },
+      {
+        question_number: 5 as const,
+        score: Number(form.managerialSkillsScore5 || 0),
+        explanation: form.managerialSkillsExplanation5 || "",
+      },
+      {
+        question_number: 6 as const,
+        score: Number(form.managerialSkillsScore6 || 0),
+        explanation: form.managerialSkillsExplanation6 || "",
+      },
+    ] as NonNullable<EvaluationPayload["managerial_skills"]>
+  ).filter((item) => item.score > 0);
+
+  return buildEvaluationSavePayload(form, { managerial_skills });
 }
 
 export default function AreaManagerEvaluationForm({
@@ -440,10 +482,19 @@ export default function AreaManagerEvaluationForm({
   };
 
   const nextStep = () => {
-    if (currentStep < filteredSteps.length) {
-      setCurrentStep(currentStep + 1);
-    }
+    setCurrentStep((step) =>
+      step < filteredSteps.length ? step + 1 : step
+    );
   };
+
+  const { saveAndNext, isSavingDraft } = useEvaluationDraftOnNext({
+    employeeId: employee?.id,
+    form,
+    draftType: "branchBasicAreaManager",
+    editSession,
+    buildPayload: buildAreaManagerSavePayload,
+    onAdvance: nextStep,
+  });
 
   const prevStep = () => {
     if (currentStep > 1) {
@@ -477,45 +528,8 @@ export default function AreaManagerEvaluationForm({
         
         const employeeId = typeof empID === 'string' ? parseInt(empID, 10) : empID;
         const evaluatorId = typeof user?.id === 'string' ? parseInt(user.id, 10) : (user?.id || 0);
-        
-        // Use BranchBasicAreaManager endpoint for Area Manager evaluations
-        const managerial_skills = ([
-          {
-            question_number: 1 as const,
-            score: Number(form.managerialSkillsScore1 || 0),
-            explanation: form.managerialSkillsExplanation1 || "",
-          },
-          {
-            question_number: 2 as const,
-            score: Number(form.managerialSkillsScore2 || 0),
-            explanation: form.managerialSkillsExplanation2 || "",
-          },
-          {
-            question_number: 3 as const,
-            score: Number(form.managerialSkillsScore3 || 0),
-            explanation: form.managerialSkillsExplanation3 || "",
-          },
-          {
-            question_number: 4 as const,
-            score: Number(form.managerialSkillsScore4 || 0),
-            explanation: form.managerialSkillsExplanation4 || "",
-          },
-          {
-            question_number: 5 as const,
-            score: Number(form.managerialSkillsScore5 || 0),
-            explanation: form.managerialSkillsExplanation5 || "",
-          },
-          {
-            question_number: 6 as const,
-            score: Number(form.managerialSkillsScore6 || 0),
-            explanation: form.managerialSkillsExplanation6 || "",
-          },
-        ].filter((x) => x.score > 0) as EvaluationPayload["managerial_skills"]);
 
-        const submissionPayload: EvaluationPayload = {
-          ...form,
-          managerial_skills,
-        };
+        const submissionPayload = buildAreaManagerSavePayload(form);
 
         await submitEvaluationForm(editSession, submissionPayload, async () => {
             await apiService.postBranchBasicAreaManager(
@@ -686,70 +700,16 @@ export default function AreaManagerEvaluationForm({
               </CardContent>
             </Card>
 
-            {/* Navigation Buttons */}
             {currentStep > 0 && !isOverallAssessmentStep && (
-              <div className="flex justify-between mt-6">
-                <div className="flex gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={prevStep}
-                    disabled={currentStep === 1}
-                    className="px-6 cursor-pointer bg-blue-600 text-white hover:bg-blue-700 hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
-                  >
-                    Previous
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setShowCancelDialog(true);
-                    }}
-                    className="px-6 bg-red-600 text-white border-red-300 hover:bg-red-700 hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
-                  >
-                    Cancel Evaluation
-                  </Button>
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <TooltipProvider>
-                    {currentStep >= 1 &&
-                    !isOverallAssessmentStep &&
-                    !isCurrentStepComplete() ? (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            onClick={(e) => {
-                              e.preventDefault();
-                            }}
-                            className="px-6 opacity-50 cursor-not-allowed"
-                          >
-                            Next
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{getValidationMessage()}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    ) : (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            onClick={nextStep}
-                            className="px-6 bg-blue-600 text-white hover:bg-blue-700 hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
-                          >
-                            Next
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Proceed to the next step</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    )}
-                  </TooltipProvider>
-                </div>
-              </div>
+              <EvaluationStepNavigation
+                currentStep={currentStep}
+                canProceed={Boolean(isCurrentStepComplete())}
+                validationMessage={getValidationMessage()}
+                isSaving={isSavingDraft}
+                onPrevious={prevStep}
+                onCancel={() => setShowCancelDialog(true)}
+                onNext={saveAndNext}
+              />
             )}
           </div>
         </div>

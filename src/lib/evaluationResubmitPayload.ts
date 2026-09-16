@@ -168,6 +168,7 @@ function buildBasicInfoForResubmit(
     form.reviewTypeOthersImprovement
   );
   setIfPresent(basic, "review_type_others_custom", form.reviewTypeOthersCustom);
+  setIfPresent(basic, "quarter", form.quarter);
   setIfPresent(basic, "priority_area_1", form.priorityArea1);
   setIfPresent(basic, "priority_area_2", form.priorityArea2);
   setIfPresent(basic, "priority_area_3", form.priorityArea3);

@@ -32,6 +32,9 @@ import {
 } from "./evaluationFormEdit";
 import { submitEvaluationForm } from "@/lib/evaluationEditSubmit";
 import { isEditSession } from "@/lib/evaluationEditTypes";
+import EvaluationStepNavigation from "./EvaluationStepNavigation";
+import { useEvaluationDraftOnNext } from "@/hooks/useEvaluationDraftOnNext";
+import { buildEvaluationSavePayload } from "@/lib/evaluationDraftSave";
 
 interface BranchManagerEvaluationFormProps extends EvaluationFormSessionProps {
   employee?: User | null;
@@ -469,10 +472,19 @@ export default function BranchManagerEvaluationForm({
   };
 
   const nextStep = () => {
-    if (currentStep < filteredSteps.length) {
-      setCurrentStep(currentStep + 1);
-    }
+    setCurrentStep((step) =>
+      step < filteredSteps.length ? step + 1 : step
+    );
   };
+
+  const { saveAndNext, isSavingDraft } = useEvaluationDraftOnNext({
+    employeeId: employee?.id,
+    form,
+    draftType:
+      evaluationType === "rankNfile" ? "branchRankNfile" : "branchBasic",
+    editSession,
+    onAdvance: nextStep,
+  });
 
   const prevStep = () => {
     if (currentStep > 1) {
@@ -509,14 +521,14 @@ export default function BranchManagerEvaluationForm({
         const evaluatorId = typeof user?.id === 'string' ? parseInt(user.id, 10) : (user?.id || 0);
         
         // Branch Manager/Supervisor uses appropriate endpoint based on evaluationType
-        await submitEvaluationForm(editSession, form, async () => {
+        const payload = buildEvaluationSavePayload(form);
+        await submitEvaluationForm(editSession, payload, async () => {
           if (evaluationType === 'rankNfile') {
-            await apiService.postBranchRankNFile(employeeId, form);
+            await apiService.postBranchRankNFile(employeeId, payload);
           } else if (evaluationType === 'basic') {
-            await apiService.postBranchBasic(employeeId, form);
+            await apiService.postBranchBasic(employeeId, payload);
           } else {
-            // Default evaluation for branch - use BranchBasic endpoint
-            await apiService.postBranchBasic(employeeId, form);
+            await apiService.postBranchBasic(employeeId, payload);
           }
         });
         
@@ -687,71 +699,16 @@ export default function BranchManagerEvaluationForm({
               </CardContent>
             </Card>
 
-            {/* Navigation Buttons - Only show for steps before Overall Assessment */}
             {currentStep > 0 && !isOverallAssessmentStep && (
-              <div className="flex justify-between mt-6">
-                <div className="flex gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={prevStep}
-                    disabled={currentStep === 1}
-                    className="px-6 cursor-pointer bg-blue-600 text-white hover:bg-blue-700 hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
-                  >
-                    Previous
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setShowCancelDialog(true);
-                    }}
-                    className="px-6 bg-red-600 text-white border-red-300 hover:bg-red-700 hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
-                  >
-                    Cancel Evaluation
-                  </Button>
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <TooltipProvider>
-                    {currentStep >= 1 &&
-                    !isOverallAssessmentStep &&
-                    !isCurrentStepComplete() ? (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              // Button is disabled, do nothing
-                            }}
-                            className="px-6 opacity-50 cursor-not-allowed"
-                          >
-                            Next
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{getValidationMessage()}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    ) : (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            onClick={nextStep}
-                            className="px-6 bg-blue-600 text-white hover:bg-blue-700 hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
-                          >
-                            Next
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Proceed to the next step</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    )}
-                  </TooltipProvider>
-                </div>
-              </div>
+              <EvaluationStepNavigation
+                currentStep={currentStep}
+                canProceed={Boolean(isCurrentStepComplete())}
+                validationMessage={getValidationMessage()}
+                isSaving={isSavingDraft}
+                onPrevious={prevStep}
+                onCancel={() => setShowCancelDialog(true)}
+                onNext={saveAndNext}
+              />
             )}
           </div>
         </div>
