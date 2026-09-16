@@ -943,6 +943,18 @@ export const apiService = {
     return response.data;
   },
 
+  /** Save a Branch Rank & File evaluation as draft. Backend: POST `/BranchRankNFile/draft/{user}` */
+  postBranchRankNFileDraft: async (
+    userId: number | string,
+    submission: EvaluationPayload
+  ): Promise<any> => {
+    const response = await api.post(
+      `/BranchRankNFile/draft/${userId}`,
+      submission
+    );
+    return response.data;
+  },
+
   // Get evaluations by authenticated evaluator
   getEvalAuthEvaluator: async (
     search: string,

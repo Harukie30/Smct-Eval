@@ -94,12 +94,6 @@ function formatApprovalStatus(status: string): { short: string; full: string } {
 }
 
 function getSubmissionQuarterDisplay(submission: any): string {
-  const isOthersSelected =
-    (submission.reviewTypeOthersImprovement != null &&
-      submission.reviewTypeOthersImprovement !== 0) ||
-    (submission.reviewTypeOthersCustom &&
-      submission.reviewTypeOthersCustom.trim() !== "");
-
   const hasRegular =
     submission.reviewTypeRegular != null &&
     submission.reviewTypeRegular !== "" &&
@@ -115,15 +109,6 @@ function getSubmissionQuarterDisplay(submission: any): string {
 
   if (hasRegular) return String(submission.reviewTypeRegular).trim();
   if (hasProbationary) return "M" + String(submission.reviewTypeProbationary).trim();
-  if (isOthersSelected) {
-    if (
-      submission.reviewTypeOthersCustom &&
-      submission.reviewTypeOthersCustom.trim() !== ""
-    ) {
-      return submission.reviewTypeOthersCustom.trim();
-    }
-    return "Others";
-  }
   return "Others";
 }
 

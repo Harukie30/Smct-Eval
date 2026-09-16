@@ -1131,7 +1131,7 @@ export default function EvaluationForm({
                     {currentStep >= 1 &&
                     !isOverallAssessmentStep &&
                     !isCurrentStepComplete() ? (
-                      <Tooltip>ccccccc
+                      <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
                             onClick={(e) => {
