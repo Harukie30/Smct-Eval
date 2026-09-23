@@ -14,6 +14,7 @@ import {
 import { ChevronDownIcon } from "lucide-react";
 import { format } from "date-fns";
 import { EvaluationPayload } from "./types";
+import { ReviewTypeOthersCustomInput } from "./ReviewTypeOthersCustomInput";
 import {
   getQuarterlyReviewStatus,
   getCurrentYear,
@@ -794,8 +795,7 @@ export default function Step1({
                     (data.reviewTypeOthersCustom !== "" &&
                       data.reviewTypeOthersCustom !== null &&
                       data.reviewTypeOthersCustom.trim() !== "")) && (
-                    <input
-                      type="text"
+                    <ReviewTypeOthersCustomInput
                       value={data.reviewTypeOthersCustom || ""}
                       disabled={
                         data.reviewTypeProbationary !== "" ||
@@ -803,24 +803,14 @@ export default function Step1({
                         data.reviewTypeOthersImprovement === true ||
                         !isOthersCustomEnabled
                       }
-                      onChange={(e) => {
-                        // Always update the value when user types
+                      onChange={(value) => {
                         updateDataAction({
-                          reviewTypeOthersCustom: e.target.value,
+                          reviewTypeOthersCustom: value,
                           reviewTypeOthersImprovement: false,
                           reviewTypeProbationary: "",
                           reviewTypeRegular: "",
                         });
                       }}
-                      className={`flex-1 px-2 py-1 text-sm border border-gray-300 rounded ${
-                        data.reviewTypeProbationary !== "" ||
-                        data.reviewTypeRegular !== "" ||
-                        data.reviewTypeOthersImprovement === true ||
-                        !isOthersCustomEnabled
-                          ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                          : "bg-white"
-                      }`}
-                      placeholder="Enter custom review type"
                     />
                   )}
                 </div>
