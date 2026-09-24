@@ -55,7 +55,7 @@ export default function EvaluationStepNavigation({
           disabled={isSaving}
           className={`${navButtonClass} border-red-300 bg-red-600 text-white hover:bg-red-700 hover:text-white`}
         >
-          Cancel Evaluation
+          Save Draft
         </Button>
       </div>
 

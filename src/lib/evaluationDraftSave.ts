@@ -1,5 +1,6 @@
 import { apiService } from "@/lib/apiService";
 import { getEvaluationQuarterLabel } from "@/lib/evaluationQuarterLabel";
+import { toDateInputValue } from "@/lib/dateInputValue";
 import {
   type EvaluationEditSession,
   type EvaluationResubmitType,
@@ -11,11 +12,28 @@ export function buildEvaluationSavePayload(
   form: EvaluationPayload,
   extras?: Partial<EvaluationPayload>
 ): EvaluationPayload {
-  return {
+  const merged = {
     ...form,
     ...extras,
-    quarter: getEvaluationQuarterLabel(form),
   };
+
+  const hireDate = toDateInputValue(merged.hireDate) || merged.hireDate;
+  const coverageFrom =
+    toDateInputValue(merged.coverageFrom) || merged.coverageFrom;
+  const coverageTo = toDateInputValue(merged.coverageTo) || merged.coverageTo;
+
+  // Send both camelCase and snake_case so draft endpoints that only read
+  // coverage_from / hire_date keep the exact day (not month start).
+  return {
+    ...merged,
+    hireDate,
+    coverageFrom,
+    coverageTo,
+    hire_date: hireDate,
+    coverage_from: coverageFrom,
+    coverage_to: coverageTo,
+    quarter: getEvaluationQuarterLabel(merged),
+  } as EvaluationPayload;
 }
 
 /** Create/new flows and draft edits save on Next. Pending resubmits skip draft POST. */

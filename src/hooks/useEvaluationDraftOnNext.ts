@@ -32,35 +32,44 @@ export function useEvaluationDraftOnNext(options: {
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const savingRef = useRef(false);
 
-  const saveAndNext = useCallback(async () => {
-    if (savingRef.current) return;
+  const buildPayloadForSave = useCallback(() => {
+    return buildPayload
+      ? buildPayload(form)
+      : buildEvaluationSavePayload(form);
+  }, [buildPayload, form]);
+
+  const saveDraft = useCallback(async (): Promise<boolean> => {
+    if (savingRef.current) return false;
     savingRef.current = true;
     setIsSavingDraft(true);
     try {
-      const payload = buildPayload
-        ? buildPayload(form)
-        : buildEvaluationSavePayload(form);
       await saveEvaluationStepDraft({
         employeeId,
         draftType,
-        payload,
+        payload: buildPayloadForSave(),
         editSession,
       });
-      onAdvance();
+      return true;
     } catch (error) {
-      console.error("Evaluation step draft save failed:", error);
+      console.error("Evaluation draft save failed:", error);
       toastMessages.generic.error(
         "Could not save progress",
         getEvaluationApiErrorMessage(
           error,
-          "Failed to save this step as a draft. Please try again."
+          "Failed to save this evaluation as a draft. Please try again."
         )
       );
+      return false;
     } finally {
       savingRef.current = false;
       setIsSavingDraft(false);
     }
-  }, [buildPayload, draftType, editSession, employeeId, form, onAdvance]);
+  }, [buildPayloadForSave, draftType, editSession, employeeId]);
 
-  return { saveAndNext, isSavingDraft };
+  const saveAndNext = useCallback(async () => {
+    const saved = await saveDraft();
+    if (saved) onAdvance();
+  }, [onAdvance, saveDraft]);
+
+  return { saveAndNext, saveDraft, isSavingDraft };
 }

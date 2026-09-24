@@ -1,4 +1,5 @@
 import { EvaluationPayload } from "@/components/evaluation/types";
+import { toDateInputValue } from "@/lib/dateInputValue";
 import {
   type EvaluationScoreItem,
   type EvaluationSubmissionRecord,
@@ -94,13 +95,8 @@ const JOB_TARGET_BY_QUESTION: Record<
 };
 
 function serializeDateValue(value: unknown): string | undefined {
-  if (value instanceof Date) {
-    return value.toISOString().slice(0, 10);
-  }
-  if (value === undefined || value === null || value === "") {
-    return undefined;
-  }
-  return String(value);
+  const normalized = toDateInputValue(value);
+  return normalized || undefined;
 }
 
 function setIfPresent(
