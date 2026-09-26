@@ -22,18 +22,13 @@ export function buildEvaluationSavePayload(
     toDateInputValue(merged.coverageFrom) || merged.coverageFrom;
   const coverageTo = toDateInputValue(merged.coverageTo) || merged.coverageTo;
 
-  // Send both camelCase and snake_case so draft endpoints that only read
-  // coverage_from / hire_date keep the exact day (not month start).
   return {
-    ...merged,
-    hireDate,
-    coverageFrom,
-    coverageTo,
-    hire_date: hireDate,
-    coverage_from: coverageFrom,
-    coverage_to: coverageTo,
-    quarter: getEvaluationQuarterLabel(merged),
-  } as EvaluationPayload;
+    ...source,
+    quarter: getEvaluationQuarterLabel(source),
+    ...(hireDate ? { hire_date: hireDate } : {}),
+    ...(coverageFrom ? { coverage_from: coverageFrom } : {}),
+    ...(coverageTo ? { coverage_to: coverageTo } : {}),
+  };
 }
 
 /** Create/new flows and draft edits save on Next. Pending resubmits skip draft POST. */
@@ -63,7 +58,7 @@ export async function saveEvaluationStepDraft(options: {
   await apiService.postEvaluationDraft(
     options.draftType,
     options.employeeId,
-    options.payload
+    withDraftDateAliases(options.payload)
   );
   return "saved";
 }

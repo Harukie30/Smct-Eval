@@ -73,7 +73,6 @@ import {
   getReviewRowClassName,
   getViewEvaluationErrorMessage,
   getDeleteEvaluationErrorMessage,
-  isReviewPendingEditableByEvaluator,
   isReviewDraft,
   QUARTER_LATE_LEGEND_LABEL,
 } from "@/components/evaluation/evaluationRecordsShared";
@@ -737,12 +736,7 @@ export default function OverviewTab() {
 
   const handleEditEvaluation = async (review: Review) => {
     const asReview = review as EvaluationRecordReview;
-    const canEditDraft = isReviewDraft(asReview);
-    const canEditPending = isReviewPendingEditableByEvaluator(
-      asReview,
-      user?.id
-    );
-    if (!canEditDraft && !canEditPending) {
+    if (!isReviewDraft(asReview)) {
       return;
     }
 
@@ -1467,10 +1461,6 @@ export default function OverviewTab() {
                               }
                               allowDraftEdit={isReviewDraft(
                                 review as EvaluationRecordReview
-                              )}
-                              allowPendingEditByCurrentUser={isReviewPendingEditableByEvaluator(
-                                review as EvaluationRecordReview,
-                                user?.id
                               )}
                             />
                           </TableCell>

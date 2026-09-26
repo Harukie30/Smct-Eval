@@ -30,6 +30,7 @@ import EvaluationStepNavigation from "./EvaluationStepNavigation";
 import EvaluationCancelDraftDialog from "./EvaluationCancelDraftDialog";
 import { useEvaluationDraftOnNext } from "@/hooks/useEvaluationDraftOnNext";
 import { buildEvaluationSavePayload } from "@/lib/evaluationDraftSave";
+import { toDateInputValue } from "@/lib/dateInputValue";
 
 // Default steps use branch evaluation configuration
 const defaultSteps: EvaluationStepConfig[] = branchEvaluationSteps;
@@ -852,7 +853,16 @@ export default function EvaluationForm({
       // posting those payloads to branch endpoints caused backend validation errors
       // (e.g. customerServiceExplanation1–5, qualityOfWorkComments5 required).
 
-      const payload = buildEvaluationSavePayload(form);
+      const employeeHireDate = toDateInputValue(
+        (employee as { date_hired?: unknown } | null | undefined)?.date_hired ??
+          (employee as { dateHired?: unknown } | null | undefined)?.dateHired ??
+          (employee as { hireDate?: unknown } | null | undefined)?.hireDate
+      );
+      const payload = buildEvaluationSavePayload(form, {
+        ...(employeeHireDate && !toDateInputValue(form.hireDate)
+          ? { hireDate: employeeHireDate }
+          : {}),
+      });
 
       await submitEvaluationForm(editSession, payload, async () => {
         if (isHO) {
