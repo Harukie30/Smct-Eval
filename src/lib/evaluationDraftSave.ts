@@ -17,10 +17,37 @@ export function buildEvaluationSavePayload(
     ...extras,
   };
 
-  const hireDate = toDateInputValue(merged.hireDate) || merged.hireDate;
-  const coverageFrom =
-    toDateInputValue(merged.coverageFrom) || merged.coverageFrom;
-  const coverageTo = toDateInputValue(merged.coverageTo) || merged.coverageTo;
+  const hireDate = toDateInputValue(merged.hireDate);
+  const coverageFrom = toDateInputValue(merged.coverageFrom);
+  const coverageTo = toDateInputValue(merged.coverageTo);
+
+  // Match the original submit body: camelCase only. `quarter` and snake_case
+  // date aliases are added only on the draft POST below.
+  const payload: Record<string, unknown> = { ...merged };
+  delete payload.hire_date;
+  delete payload.coverage_from;
+  delete payload.coverage_to;
+  delete payload.quarter;
+
+  if (hireDate) payload.hireDate = hireDate;
+  else delete payload.hireDate;
+  if (coverageFrom) payload.coverageFrom = coverageFrom;
+  else delete payload.coverageFrom;
+  if (coverageTo) payload.coverageTo = coverageTo;
+  else delete payload.coverageTo;
+  if (payload.created_at === "") delete payload.created_at;
+
+  return payload as unknown as EvaluationPayload;
+}
+
+/** Draft endpoints also read snake_case date columns. Omit blanks so MySQL date columns don't 500. */
+function withDraftDateAliases(
+  payload: EvaluationPayload | Record<string, unknown>
+): Record<string, unknown> {
+  const source = payload as Record<string, unknown>;
+  const hireDate = toDateInputValue(source.hireDate);
+  const coverageFrom = toDateInputValue(source.coverageFrom);
+  const coverageTo = toDateInputValue(source.coverageTo);
 
   return {
     ...source,
