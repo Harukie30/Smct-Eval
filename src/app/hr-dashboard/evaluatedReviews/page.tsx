@@ -1619,6 +1619,7 @@ export default function OverviewTab() {
           isOpen={isViewResultsModalOpen}
           submissionId={viewSubmissionId}
           submission={null}
+          loadTimeoutMs={4500}
           onLoadErrorAction={(message) => {
             setEvaluationActionError({
               title: "Unable to Open Evaluation",
