@@ -55,6 +55,7 @@ import EditUserModal from "@/components/EditUserModal";
 import AddEmployeeModal from "@/components/AddEmployeeModal";
 import { toastMessages } from "@/lib/toastMessages";
 import apiService from "@/lib/apiService";
+import { AlertDialog } from "@/components/ui/alert-dialog";
 import {
   getCachedPositions,
   getCachedBranches,
@@ -397,6 +398,12 @@ export default function UserManagementTab() {
   const [userToEdit, setUserToEdit] = useState<any>(null);
   const [employeeToDelete, setEmployeeToDelete] = useState<User | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
+  const [isEvaluationDeleteAlertOpen, setIsEvaluationDeleteAlertOpen] =
+    useState(false);
+  const [evaluationDeleteAlertMessage, setEvaluationDeleteAlertMessage] =
+    useState("");
+  const [evaluationDeleteEmployeeName, setEvaluationDeleteEmployeeName] =
+    useState("");
   const [recentlyUpdatedIds, setRecentlyUpdatedIds] = useState<Set<number>>(new Set());
 
   //filters for active users
@@ -1338,13 +1345,41 @@ export default function UserManagementTab() {
       setDeletingUserId(null);
 
       toastMessages.user.deleted(employee.fname);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error deleting user:", error);
       setDeletingUserId(null);
-      toastMessages.generic.error(
-        "Error",
-        "Failed to delete user. Please try again."
-      );
+
+      const backendMessage = String(
+        error?.response?.data?.message ??
+          error?.response?.data?.error ??
+          error?.message ??
+          ""
+      ).trim();
+
+      const isBlockedByEvaluations =
+        /cannot delete user due to user has\/have evaluation/i.test(
+          backendMessage
+        ) ||
+        /has\/have evaluation/i.test(backendMessage) ||
+        /evaluation\/s/i.test(backendMessage);
+
+      if (isBlockedByEvaluations) {
+        const fullName = [employee?.fname, employee?.lname]
+          .filter(Boolean)
+          .join(" ")
+          .trim();
+        setEvaluationDeleteEmployeeName(fullName || "this employee");
+        setEvaluationDeleteAlertMessage(
+          backendMessage ||
+            "Cannot delete user due to user has/have evaluation/s"
+        );
+        setIsEvaluationDeleteAlertOpen(true);
+      } else {
+        toastMessages.generic.error(
+          "Error",
+          backendMessage || "Failed to delete user. Please try again."
+        );
+      }
     } finally {
       setEmployeeToDelete(null);
     }
@@ -2102,6 +2137,39 @@ export default function UserManagementTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog
+        open={isEvaluationDeleteAlertOpen}
+        onOpenChangeAction={(open) => {
+          setIsEvaluationDeleteAlertOpen(open);
+          if (!open) {
+            setEvaluationDeleteAlertMessage("");
+            setEvaluationDeleteEmployeeName("");
+          }
+        }}
+        title="Cannot Delete Employee"
+        description={
+          evaluationDeleteAlertMessage
+            ? `${evaluationDeleteAlertMessage}${
+                evaluationDeleteEmployeeName
+                  ? ` (${evaluationDeleteEmployeeName})`
+                  : ""
+              }`
+            : "Cannot delete user due to user has/have evaluation/s"
+        }
+        type="warning"
+        confirmText="OK"
+        showCancel={false}
+        backgroundImage="/smct.png"
+        size="lg"
+        logoSize="cover"
+        logoOpacity={10}
+        onConfirm={() => {
+          setIsEvaluationDeleteAlertOpen(false);
+          setEvaluationDeleteAlertMessage("");
+          setEvaluationDeleteEmployeeName("");
+        }}
+      />
 
       <MemorandumViolationModal
         open={isMemorandumViolationModalOpen}
