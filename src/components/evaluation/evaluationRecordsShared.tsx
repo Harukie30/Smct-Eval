@@ -1037,7 +1037,7 @@ export function EvalRecordRowActions({
   allowPendingEditByCurrentUser?: boolean;
   /** When true on a draft row, show Edit (e.g. HR may edit any draft). */
   allowDraftEdit?: boolean;
-  /** When true, show Delete on every row but enable it only for draft status. */
+  /** When true, show Delete only on draft rows. */
   restrictDeleteToDraft?: boolean;
   deleting?: boolean;
   accepting?: boolean;
@@ -1057,14 +1057,11 @@ export function EvalRecordRowActions({
   const deleteAllowed = restrictDeleteToDraft
     ? isDraft
     : isReviewDeletable(review);
-  const showDelete =
-    onDeleteAction != null && (restrictDeleteToDraft || deleteAllowed);
-  const deleteDisabled = deleting || !deleteAllowed;
-  const deleteTitle = !deleteAllowed
-    ? "Delete is only available while this evaluation is a draft"
-    : isDraft
-      ? "Delete this draft evaluation"
-      : "Delete this evaluation record";
+  const showDelete = onDeleteAction != null && deleteAllowed;
+  const deleteDisabled = deleting;
+  const deleteTitle = isDraft
+    ? "Delete this draft evaluation"
+    : "Delete this evaluation record";
   const deleteButton = showDelete ? (
     <Button
       type="button"
