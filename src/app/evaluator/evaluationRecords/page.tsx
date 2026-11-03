@@ -1749,7 +1749,11 @@ export default function OverviewTab() {
                                   restrictDeleteToDraft
                                   onViewAction={() => handleViewEvaluation(review)}
                                   onEditAction={() => handleEditEvaluation(review)}
-                                  onDeleteAction={() => openDeleteModal(review)}
+                                  onDeleteAction={
+                                    isReviewDraft(review)
+                                      ? () => openDeleteModal(review)
+                                      : undefined
+                                  }
                                   onAcceptAction={
                                     showApproverActions
                                       ? () => void handleAcceptApproval(review)

@@ -1054,8 +1054,14 @@ export function EvalRecordRowActions({
     isDraft &&
     !showDraftEdit &&
     (onAcceptAction != null || onRejectAction != null);
+  // Evaluator: hide (never disable) Delete for draft-only mode and any pending.
+  const hideDeleteForPending =
+    isEvaluationStatusAnyPending(review.status) ||
+    shouldShowEmployeeSignPending(review) ||
+    shouldShowEvaluatorSignPending(review) ||
+    shouldShowHrSignPending(review);
   const deleteAllowed = restrictDeleteToDraft
-    ? isDraft
+    ? isDraft && !hideDeleteForPending
     : isReviewDeletable(review);
   const showDelete = onDeleteAction != null && deleteAllowed;
   const deleteDisabled = deleting;
