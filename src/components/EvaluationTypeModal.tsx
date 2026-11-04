@@ -182,7 +182,7 @@ export default function EvaluationTypeModal({
                       Basic Evaluation
                     </h3>
                     <p className="text-sm text-gray-600 mb-4 leading-relaxed">
-                      Comprehensive evaluation for managers. Assesses leadership,
+                      Comprehensive evaluation for supervisors and managers. Assesses leadership,
                       decision-making, and managerial performance.
                     </p>
                     <div className="flex flex-wrap gap-2 justify-center mb-4">
