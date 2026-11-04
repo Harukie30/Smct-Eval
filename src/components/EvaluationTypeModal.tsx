@@ -187,7 +187,7 @@ export default function EvaluationTypeModal({
                     </p>
                     <div className="flex flex-wrap gap-2 justify-center mb-4">
                       <span className="px-2 py-1 bg-green-50 text-green-700 text-xs rounded-full font-medium">
-                        Managers Only
+                        Supervisors and Managers
                       </span>
                       <span className="px-2 py-1 bg-green-50 text-green-700 text-xs rounded-full font-medium">
                         8 Steps
