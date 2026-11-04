@@ -52,6 +52,12 @@ interface AddEmployeeModalProps {
   onBulkUploadSuccess?: () => void;
   onBulkUploadError?: () => void;
 }
+const toLocalDateString = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
 
 const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
   isOpen,
@@ -223,15 +229,16 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
             normalizedRow[normalizeKey(k)] = row[k];
           });
 
-          const dateHiredItem = new Date(
-            getValue(normalizedRow, [
-              "date_hired",
-              "datehired",
-              "hired_date",
-            ]),
-          );
+          const dateHiredRaw = getValue(normalizedRow, [
+            "date_hired",
+            "datehired",
+            "hired_date",
+          ]);
 
-          const dateHired = String(dateHiredItem) !== "Invalid Date" ? dateHiredItem : "";
+          const dateHiredItem = dateHiredRaw ? new Date(dateHiredRaw) : null;
+          const isValidDate = dateHiredItem instanceof Date && !isNaN(dateHiredItem.getTime());
+
+          const dateHired = isValidDate ? toLocalDateString(dateHiredItem as Date): "";
 
           return {
             employee_id: getValue(normalizedRow, ["employee_id", "employeeid", "id"]),
