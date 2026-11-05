@@ -496,7 +496,7 @@ export default function DashboardShell(props: DashboardShellProps) {
   // Auto-open collapsible groups when their items are active
   useEffect(() => {
     // For admin dashboard, management group includes subordinates, departments, branches,
-    // positions, branch-heads, area-managers, and violation-summary (single collapsible).
+    // positions, branch-heads, area-managers, violation-summary, and activity-logs.
     if (isAdminDashboard) {
       if (
         [
@@ -507,6 +507,7 @@ export default function DashboardShell(props: DashboardShellProps) {
           "branch-heads",
           "area-managers",
           "violation-summary",
+          "activity-logs",
         ].includes(activeItemId) &&
         !isManagementOpen
       ) {
@@ -1160,7 +1161,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                   // For HR dashboard: overview, evaluation-records, employees (management items go in collapsible group)
                   // For admin dashboard: all items except management group (subordinates,
                   // departments, branches, positions, branch-heads, area-managers,
-                  // violation-summary)
+                  // violation-summary, activity-logs)
                   const visibleItems = isAdminDashboard
                     ? sidebarItems
                         .map((item) => item.id)
@@ -1174,6 +1175,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                               "branch-heads",
                               "area-managers",
                               "violation-summary",
+                              "activity-logs",
                             ].includes(id)
                         )
                     : isHRDashboard
@@ -1208,7 +1210,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                   // For HR dashboard, management includes departments, branches, positions,
                   // branch-heads, area-managers, subordinates, violation-summary.
                   // For admin dashboard, management includes subordinates, org structure,
-                  // and violation summary (no separate Leadership section).
+                  // violation summary, and activity logs (no separate Leadership section).
                   const managementItems = isHRDashboard
                     ? [
                         "subordinates",
@@ -1227,6 +1229,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                         "branch-heads",
                         "area-managers",
                         "violation-summary",
+                        "activity-logs",
                       ];
                   // Analytics items vary by dashboard type - exclude items that are already visible
                   const analyticsItems = isEmployeeDashboard
