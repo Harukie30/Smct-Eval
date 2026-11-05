@@ -64,6 +64,36 @@ function formatLogDate(raw: string | null | undefined): string {
   });
 }
 
+/** Hours since the deletion was logged (`created_at`). */
+function hoursSinceDeleted(raw: string | null | undefined): number | null {
+  if (!raw) return null;
+  const t = new Date(raw).getTime();
+  if (Number.isNaN(t)) return null;
+  return (Date.now() - t) / (1000 * 60 * 60);
+}
+
+/** New = within 24h; Recent = 24h–7 days. */
+function getDeletionRecency(
+  raw: string | null | undefined
+): "new" | "recent" | null {
+  const hours = hoursSinceDeleted(raw);
+  if (hours == null || hours < 0) return null;
+  if (hours <= 24) return "new";
+  if (hours <= 168) return "recent";
+  return null;
+}
+
+function getActivityLogRowClassName(log: ActivityLogRow): string {
+  const recency = getDeletionRecency(log.created_at);
+  if (recency === "new") {
+    return "bg-yellow-50 hover:bg-yellow-100 border-l-4 border-l-yellow-500 transition-colors";
+  }
+  if (recency === "recent") {
+    return "bg-blue-50 hover:bg-blue-100 border-l-4 border-l-blue-500 transition-colors";
+  }
+  return "border-slate-100 transition-colors hover:bg-blue-50/40";
+}
+
 function isUserDeleted(log: ActivityLogRow): boolean {
   return (
     log.action === "user_deleted" ||
@@ -179,10 +209,6 @@ export default function AdminActivityLogsPage() {
       : rows.length > 0
         ? (serverLastPage - 1) * TABLE_PAGE_SIZE + rows.length
         : 0;
-  const showPagination =
-    !loading &&
-    rows.length > 0 &&
-    (totalPages > 1 || page > 1 || totalRows > TABLE_PAGE_SIZE);
 
   useEffect(() => {
     setPage((p) => (p > totalPages ? totalPages : p < 1 ? 1 : p));
@@ -254,6 +280,18 @@ export default function AdminActivityLogsPage() {
     return "Deleted users and evaluations will appear here after they are removed.";
   }, [debouncedSearch, fetchError, typeFilter]);
 
+  const newCountOnPage = useMemo(
+    () =>
+      rows.filter((log) => getDeletionRecency(log.created_at) === "new").length,
+    [rows]
+  );
+  const recentCountOnPage = useMemo(
+    () =>
+      rows.filter((log) => getDeletionRecency(log.created_at) === "recent")
+        .length,
+    [rows]
+  );
+
   return (
     <div className="relative space-y-2 pb-4 sm:space-y-3 sm:pb-5">
       <Card className="overflow-hidden border-slate-200/90 shadow-sm">
@@ -312,6 +350,53 @@ export default function AdminActivityLogsPage() {
               listBusy && "pointer-events-none opacity-40"
             )}
           >
+            <div className="flex flex-wrap items-center gap-2">
+              {newCountOnPage > 0 ? (
+                <Badge className="animate-pulse bg-yellow-500 text-white hover:bg-yellow-500">
+                  {newCountOnPage} NEW
+                </Badge>
+              ) : null}
+              {recentCountOnPage > 0 ? (
+                <Badge className="bg-blue-500 text-white hover:bg-blue-500">
+                  {recentCountOnPage} RECENT
+                </Badge>
+              ) : null}
+            </div>
+
+            <div className="rounded-lg border border-slate-200/80 bg-slate-50/90 p-2.5 sm:p-3">
+              <div className="flex flex-wrap items-center gap-2 text-[0.65rem] sm:gap-3 sm:text-xs">
+                <span className="mr-1 w-full text-xs font-medium text-slate-700 sm:mr-2 sm:w-auto sm:text-sm">
+                  Indicators:
+                </span>
+                <div className="flex items-center gap-1">
+                  <div className="h-2 w-2 rounded border-l-2 border-l-yellow-500 bg-yellow-100" />
+                  <Badge className="bg-yellow-200 text-xs text-yellow-800 hover:bg-yellow-200">
+                    New
+                  </Badge>
+                  <span className="text-slate-500">≤ 24h</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="h-2 w-2 rounded border-l-2 border-l-blue-500 bg-blue-50" />
+                  <Badge className="bg-blue-300 text-xs text-blue-800 hover:bg-blue-300">
+                    Recent
+                  </Badge>
+                  <span className="text-slate-500">≤ 7 days</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="h-2 w-2 rounded border-l-2 border-l-rose-500 bg-rose-50" />
+                  <Badge className="bg-rose-100 text-xs text-rose-800 hover:bg-rose-100">
+                    Deleted User
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="h-2 w-2 rounded border-l-2 border-l-amber-500 bg-amber-50" />
+                  <Badge className="bg-amber-100 text-xs text-amber-900 hover:bg-amber-100">
+                    Deleted Evaluation
+                  </Badge>
+                </div>
+              </div>
+            </div>
+
             <div className="rounded-lg border border-slate-200/80 bg-white/90 p-2.5 shadow-sm backdrop-blur-sm sm:rounded-xl sm:p-3">
               <div className="flex flex-col gap-2.5 lg:flex-row lg:items-end lg:justify-between lg:gap-3">
                 <div className="grid w-full min-w-0 flex-1 gap-2.5 sm:grid-cols-2 sm:gap-3 lg:grid-cols-12 lg:items-end">
@@ -427,12 +512,12 @@ export default function AdminActivityLogsPage() {
                     <TableHead className="min-w-[8rem] font-semibold text-slate-600 sm:min-w-[10rem]">
                       Deleted By
                     </TableHead>
-                    <TableHead className="min-w-[8rem] font-semibold text-slate-600 sm:min-w-[10rem]">
+                    <TableHead className="min-w-[9rem] font-semibold text-slate-600 sm:min-w-[11rem]">
                       Deleted At
                     </TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody className="[&_tr:nth-child(even)]:bg-slate-50/40">
+                <TableBody>
                   {loading ? (
                     Array.from({ length: 8 }).map((_, idx) => (
                       <TableRow
@@ -485,37 +570,54 @@ export default function AdminActivityLogsPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    rows.map((log) => (
-                      <TableRow
-                        key={log.id}
-                        className="border-slate-100 transition-colors hover:bg-blue-50/40"
-                      >
-                        <TableCell className="align-top">
-                          {typeBadge(log)}
-                        </TableCell>
-                        <TableCell className="max-w-[16rem] align-top text-xs font-medium text-slate-900 sm:text-sm">
-                          {log.subject_label || "—"}
-                        </TableCell>
-                        <TableCell className="max-w-[22rem] break-words align-top text-xs text-slate-700 sm:text-sm">
-                          {detailSummary(log)}
-                        </TableCell>
-                        <TableCell className="max-w-[12rem] align-top text-xs text-slate-700 sm:text-sm">
-                          {log.deleted_by_name || "—"}
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap align-top text-xs text-slate-600 sm:text-sm">
-                          {formatLogDate(log.created_at)}
-                        </TableCell>
-                      </TableRow>
-                    ))
+                    rows.map((log) => {
+                      const recency = getDeletionRecency(log.created_at);
+                      return (
+                        <TableRow
+                          key={log.id}
+                          className={getActivityLogRowClassName(log)}
+                        >
+                          <TableCell className="align-top">
+                            {typeBadge(log)}
+                          </TableCell>
+                          <TableCell className="max-w-[16rem] align-top text-xs font-medium text-slate-900 sm:text-sm">
+                            {log.subject_label || "—"}
+                          </TableCell>
+                          <TableCell className="max-w-[22rem] break-words align-top text-xs text-slate-700 sm:text-sm">
+                            {detailSummary(log)}
+                          </TableCell>
+                          <TableCell className="max-w-[12rem] align-top text-xs text-slate-700 sm:text-sm">
+                            {log.deleted_by_name || "—"}
+                          </TableCell>
+                          <TableCell className="align-top">
+                            <div className="flex flex-col gap-1">
+                              <span className="whitespace-nowrap text-xs text-slate-600 sm:text-sm">
+                                {formatLogDate(log.created_at)}
+                              </span>
+                              {recency === "new" ? (
+                                <Badge className="w-fit bg-yellow-200 py-0 text-[0.6rem] text-yellow-800 hover:bg-yellow-200">
+                                  New
+                                </Badge>
+                              ) : null}
+                              {recency === "recent" ? (
+                                <Badge className="w-fit bg-blue-200 py-0 text-[0.6rem] text-blue-800 hover:bg-blue-200">
+                                  Recent
+                                </Badge>
+                              ) : null}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>
-              {showPagination ? (
-                <div className="border-t border-slate-100 bg-slate-50/50 px-1 py-1 sm:px-2">
+              {!loading && rows.length > 0 ? (
+                <div className="border-t border-slate-100 bg-slate-50/50 px-1 py-2 sm:px-2">
                   <EvaluationsPagination
                     currentPage={page}
-                    totalPages={totalPages}
-                    total={Math.max(totalRows, page * TABLE_PAGE_SIZE)}
+                    totalPages={Math.max(totalPages, 1)}
+                    total={Math.max(totalRows, rows.length)}
                     perPage={TABLE_PAGE_SIZE}
                     onPageChange={setPage}
                   />
@@ -530,16 +632,28 @@ export default function AdminActivityLogsPage() {
                     ? "No rows in this result set."
                     : totalPages > 1
                       ? `Page ${page} of ${totalPages} · ${totalRows} log${totalRows === 1 ? "" : "s"} (${TABLE_PAGE_SIZE}/page, server-loaded).`
-                      : `${totalRows} log${totalRows === 1 ? "" : "s"} (${TABLE_PAGE_SIZE}/page).`}
+                      : `${totalRows} log${totalRows === 1 ? "" : "s"} on this page (${TABLE_PAGE_SIZE}/page).`}
                 </p>
-                {totalRows > 0 ? (
-                  <Badge
-                    variant="outline"
-                    className="self-start border-slate-200 py-0 text-[0.65rem] sm:self-auto sm:text-xs"
-                  >
-                    {totalRows} total
-                  </Badge>
-                ) : null}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {newCountOnPage > 0 ? (
+                    <Badge className="border-yellow-200 bg-yellow-50 py-0 text-[0.65rem] text-yellow-800 hover:bg-yellow-50">
+                      {newCountOnPage} new
+                    </Badge>
+                  ) : null}
+                  {recentCountOnPage > 0 ? (
+                    <Badge className="border-blue-200 bg-blue-50 py-0 text-[0.65rem] text-blue-800 hover:bg-blue-50">
+                      {recentCountOnPage} recent
+                    </Badge>
+                  ) : null}
+                  {totalRows > 0 ? (
+                    <Badge
+                      variant="outline"
+                      className="self-start border-slate-200 py-0 text-[0.65rem] sm:self-auto sm:text-xs"
+                    >
+                      {totalRows} total
+                    </Badge>
+                  ) : null}
+                </div>
               </div>
             ) : null}
           </div>
