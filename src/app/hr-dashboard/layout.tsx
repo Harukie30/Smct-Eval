@@ -92,6 +92,12 @@ function HRLayout({ children }: { children: React.ReactNode }) {
         icon: "📋",
         path: "/hr-dashboard/violation-summary",
       },
+      {
+        id: "activity-logs",
+        label: "Activity Logs",
+        icon: "📜",
+        path: "/hr-dashboard/activityLogs",
+      },
     ];
   }, [user?.position_id]);
 

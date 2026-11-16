@@ -72,7 +72,12 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
         icon: "📋",
         path: "/admin/violation-summary",
       },
-      
+      {
+        id: "activity-logs",
+        label: "Activity Logs",
+        icon: "📜",
+        path: "/admin/activityLogs",
+      },
     ],
     []
   );

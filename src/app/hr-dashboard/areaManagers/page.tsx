@@ -1,13 +1,12 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Search, X, RefreshCw, Target } from "lucide-react";
+import ManagementPageShell, {
+  MANAGEMENT_TABLE_CLASS,
+  MANAGEMENT_TABLE_WRAP_CLASS,
+  MANAGEMENT_TABLE_HEADER_CLASS,
+} from "@/components/management/ManagementPageShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,7 +42,6 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import SmctLoadingOverlay from "@/components/SmctLoadingOverlay";
 
 interface Employee {
   id: number;
@@ -594,356 +592,297 @@ export default function AreaManagersTab() {
   }, [showEditSuccessDialog]);
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle>Area Managers</CardTitle>
-              <CardDescription>
-                List of all area managers in the organization
-              </CardDescription>
+    <>
+    <ManagementPageShell
+      title="Area managers"
+      description="List of all area managers in the organization."
+      icon={Target}
+      busy={areaManagersBusy}
+      busyLabel={areaManagersRefreshing && !loadingAreaManagers ? "Refreshing area managers…" : "Loading area managers…"}
+      toolbar={
+        <div className="flex flex-col gap-2.5 lg:flex-row lg:items-end lg:justify-between lg:gap-3">
+          <div className="w-full lg:max-w-sm">
+            <Label
+              htmlFor="area-managers-search"
+              className="mb-1 block cursor-pointer text-[0.7rem] font-medium text-slate-600 sm:text-xs"
+            >
+              Search
+            </Label>
+            <div className="relative">
+              <Search
+                className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400"
+                aria-hidden
+              />
+              <Input
+                id="area-managers-search"
+                placeholder="Search by name or branch..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="h-8 w-full pl-8 pr-8 text-xs sm:h-9 sm:text-sm"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-slate-600"
+                  title="Clear search"
+                  aria-label="Clear search"
+                  type="button"
+                >
+                  <X className="h-3.5 w-3.5" aria-hidden />
+                </button>
+              )}
             </div>
+          </div>
+          <div className="flex gap-2">
             <Button
               onClick={handleRefresh}
               disabled={areaManagersRefreshing || loadingAreaManagers}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-70 disabled:hover:translate-y-0"
+              className="h-8 cursor-pointer gap-1.5 bg-blue-600 px-3 text-xs text-white hover:bg-blue-700 disabled:opacity-70 sm:h-9 sm:text-sm"
               title="Refresh area managers data"
             >
-              {areaManagersRefreshing ? (
-                <div className="flex items-center space-x-2">
-                  <div className="relative h-8 w-8 shrink-0">
-                    <div className="absolute inset-0 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                    <span className="absolute inset-0 flex items-center justify-center">
-                      <img
-                        src="/smct.png"
-                        alt=""
-                        className="h-4 w-4 object-contain opacity-95"
-                        width={16}
-                        height={16}
-                        decoding="async"
-                      />
-                    </span>
-                  </div>
-                  <span>Refreshing...</span>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-2">
-                  <span aria-hidden>🔄</span>
-                  <span>Refresh</span>
-                </div>
-              )}
+              <RefreshCw
+                className={cn("h-3.5 w-3.5", areaManagersRefreshing && "animate-spin")}
+                aria-hidden
+              />
+              {areaManagersRefreshing ? "Refreshing..." : "Refresh"}
             </Button>
           </div>
-        </CardHeader>
-        <CardContent className="relative">
-          {areaManagersBusy ? (
-            <SmctLoadingOverlay
-              label={
-                areaManagersRefreshing && !loadingAreaManagers
-                  ? "Refreshing area managers…"
-                  : "Loading area managers…"
-              }
-            />
-          ) : null}
-          <div
-            className={cn(
-              areaManagersBusy && "pointer-events-none opacity-40"
-            )}
-          >
-          {/* Search Bar */}
-          <div className="mb-6">
-            <div className="relative w-full md:w-1/3">
-              <Label
-                htmlFor="area-managers-search"
-                className="text-sm font-medium mb-2 block cursor-pointer"
-              >
-                Search
-              </Label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                  <svg
-                    className="h-5 w-5 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle cx="11" cy="11" r="8"></circle>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                  </svg>
-                </span>
-                <Input
-                  id="area-managers-search"
-                  placeholder="Search by name or branch..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pr-10 pl-10"
-                />
-                {searchTerm && (
-                  <button
-                    onClick={() => setSearchTerm("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                    title="Clear search"
-                    aria-label="Clear search"
-                    type="button"
-                  >
-                    <svg
-                      className="h-5 w-5"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-          <div
-            className={cn(
-              "relative max-h-[600px] min-h-[280px] overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100",
-              areaManagersBusy && "border-blue-100 bg-gray-50/40"
-            )}
-          >
-            <Table>
-              <TableHeader className="sticky top-0 z-10 bg-white shadow-sm [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600">
-                <TableRow>
-                  <TableHead className="w-1/3">Name</TableHead>
-                  <TableHead className="w-1/3 text-center">Branches</TableHead>
-                  <TableHead className="w-1/3 text-right">Actions</TableHead>
+        </div>
+      }
+    >
+      <div className={MANAGEMENT_TABLE_WRAP_CLASS}>
+        <Table className={MANAGEMENT_TABLE_CLASS} wrapperClassName="max-h-[600px] min-h-[280px] overflow-auto">
+          <TableHeader className={MANAGEMENT_TABLE_HEADER_CLASS}>
+            <TableRow>
+              <TableHead className="w-1/3 font-semibold text-slate-600">Name</TableHead>
+              <TableHead className="w-1/3 text-center font-semibold text-slate-600">Branches</TableHead>
+              <TableHead className="w-1/3 text-right font-semibold text-slate-600">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loadingAreaManagers || areaManagersRefreshing ? (
+              Array.from({ length: 5 }).map((_, index) => (
+                <TableRow key={`skeleton-${index}`}>
+                  <TableCell className="py-4">
+                    <Skeleton className="h-4 w-32" />
+                  </TableCell>
+                  <TableCell className="py-4 text-center">
+                    <Skeleton className="h-4 w-24 mx-auto" />
+                  </TableCell>
+                  <TableCell className="py-4 text-right">
+                    <Skeleton className="h-8 w-16 ml-auto" />
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loadingAreaManagers || areaManagersRefreshing ? (
-                  Array.from({ length: 5 }).map((_, index) => (
-                    <TableRow key={`skeleton-${index}`}>
-                      <TableCell className="py-4">
-                        <Skeleton className="h-4 w-32" />
-                      </TableCell>
-                      <TableCell className="py-4 text-center">
-                        <Skeleton className="h-4 w-24 mx-auto" />
-                      </TableCell>
-                      <TableCell className="py-4 text-right">
-                        <Skeleton className="h-8 w-16 ml-auto" />
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : areaManagersPaginated.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={3} className="text-center py-12">
-                      <div className="flex flex-col items-center justify-center gap-4">
-                        <img
-                          src="/not-found.gif"
-                          alt="No data"
-                          className="w-25 h-25 object-contain"
-                          style={{
-                            imageRendering: "auto",
-                            willChange: "auto",
-                            transform: "translateZ(0)",
-                            backfaceVisibility: "hidden",
-                            WebkitBackfaceVisibility: "hidden",
-                          }}
-                        />
-                        <div className="text-gray-500">
-                          {searchTerm ? (
-                            <>
-                              <p className="text-base font-medium mb-1">
-                                No area managers found matching "{searchTerm}"
-                              </p>
-                              <p className="text-sm text-gray-400">
-                                Try adjusting your search term
-                              </p>
-                            </>
-                          ) : (
-                            <>
-                              <p className="text-base font-medium mb-1">
-                                No area managers found
-                              </p>
-                              <p className="text-sm text-gray-400">
-                                Area managers will appear here once added
-                              </p>
-                            </>
+              ))
+            ) : areaManagersPaginated.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={3} className="text-center py-12">
+                  <div className="flex flex-col items-center justify-center gap-4">
+                    <img
+                      src="/not-found.gif"
+                      alt="No data"
+                      className="w-25 h-25 object-contain"
+                      style={{
+                        imageRendering: "auto",
+                        willChange: "auto",
+                        transform: "translateZ(0)",
+                        backfaceVisibility: "hidden",
+                        WebkitBackfaceVisibility: "hidden",
+                      }}
+                    />
+                    <div className="text-gray-500">
+                      {searchTerm ? (
+                        <>
+                          <p className="text-base font-medium mb-1">
+                            No area managers found matching "{searchTerm}"
+                          </p>
+                          <p className="text-sm text-gray-400">
+                            Try adjusting your search term
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-base font-medium mb-1">
+                            No area managers found
+                          </p>
+                          <p className="text-sm text-gray-400">
+                            Area managers will appear here once added
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : (
+              areaManagersPaginated.map((manager: Employee) => {
+                // Parse branches - handle both comma-separated string and single branch
+                const branchList = manager.branch
+                  ? manager.branch
+                      .split(", ")
+                      .filter((b: string) => b.trim())
+                  : [];
+
+                return (
+                  <TableRow key={manager.id}>
+                    <TableCell className="py-4 font-medium">
+                      {manager.name}
+                    </TableCell>
+                    <TableCell className="py-4 text-center">
+                      {branchList.length > 0 ? (
+                        <div className="flex flex-wrap justify-center gap-2">
+                          {branchList.map(
+                            (branch: string, index: number) => {
+                              const branchCode = getBranchCode(branch);
+                              return (
+                                <Badge
+                                  key={index}
+                                  className="bg-blue-600 text-white"
+                                >
+                                  {branchCode}
+                                </Badge>
+                              );
+                            }
                           )}
                         </div>
+                      ) : (
+                        <span className="text-gray-400">N/A</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="py-4">
+                      <div className="flex justify-end space-x-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-white bg-blue-600 hover:text-white hover:bg-blue-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+                          onClick={async () => {
+                            setAreaManagerToEdit(manager);
+                            setIsEditModalOpen(true);
+                            // Load branches first and wait for them
+                            const loadedBranches = await loadBranches();
+                            // Then parse existing branches after branches are loaded
+                            if (manager.branch && loadedBranches) {
+                              const existingBranches = manager.branch
+                                .split(", ")
+                                .map((name: string) => {
+                                  // Try to find matching branch from loaded branches (match by name or code)
+                                  const branch = loadedBranches.find(
+                                    (b: { id: string; name: string; code: string }) =>
+                                      b.name === name.trim() || b.code === name.trim()
+                                  );
+                                  return (
+                                    branch || { id: "", name: name.trim(), code: name.trim() }
+                                  );
+                                })
+                                .filter(
+                                  (b: { id: string; name: string; code: string }) =>
+                                    b.id || b.name
+                                );
+                              setEditSelectedBranches(existingBranches);
+                            } else {
+                              setEditSelectedBranches([]);
+                            }
+                          }}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-white bg-red-600 hover:text-white hover:bg-red-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+                          onClick={() => {
+                            setAreaManagerToDelete(manager);
+                            setIsDeleteModalOpen(true);
+                          }}
+                        >
+                          Delete
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
-                ) : (
-                  areaManagersPaginated.map((manager: Employee) => {
-                    // Parse branches - handle both comma-separated string and single branch
-                    const branchList = manager.branch
-                      ? manager.branch
-                          .split(", ")
-                          .filter((b: string) => b.trim())
-                      : [];
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
-                    return (
-                      <TableRow key={manager.id}>
-                        <TableCell className="py-4 font-medium">
-                          {manager.name}
-                        </TableCell>
-                        <TableCell className="py-4 text-center">
-                          {branchList.length > 0 ? (
-                            <div className="flex flex-wrap justify-center gap-2">
-                              {branchList.map(
-                                (branch: string, index: number) => {
-                                  const branchCode = getBranchCode(branch);
-                                  return (
-                                    <Badge
-                                      key={index}
-                                      className="bg-blue-600 text-white"
-                                    >
-                                      {branchCode}
-                                    </Badge>
-                                  );
-                                }
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-gray-400">N/A</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="py-4">
-                          <div className="flex justify-end space-x-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-white bg-blue-600 hover:text-white hover:bg-blue-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
-                              onClick={async () => {
-                                setAreaManagerToEdit(manager);
-                                setIsEditModalOpen(true);
-                                // Load branches first and wait for them
-                                const loadedBranches = await loadBranches();
-                                // Then parse existing branches after branches are loaded
-                                if (manager.branch && loadedBranches) {
-                                  const existingBranches = manager.branch
-                                    .split(", ")
-                                    .map((name: string) => {
-                                      // Try to find matching branch from loaded branches (match by name or code)
-                                      const branch = loadedBranches.find(
-                                        (b: { id: string; name: string; code: string }) =>
-                                          b.name === name.trim() || b.code === name.trim()
-                                      );
-                                      return (
-                                        branch || { id: "", name: name.trim(), code: name.trim() }
-                                      );
-                                    })
-                                    .filter(
-                                      (b: { id: string; name: string; code: string }) =>
-                                        b.id || b.name
-                                    );
-                                  setEditSelectedBranches(existingBranches);
-                                } else {
-                                  setEditSelectedBranches([]);
-                                }
-                              }}
-                            >
-                              Edit
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-white bg-red-600 hover:text-white hover:bg-red-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
-                              onClick={() => {
-                                setAreaManagerToDelete(manager);
-                                setIsDeleteModalOpen(true);
-                              }}
-                            >
-                              Delete
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
+      {/* Pagination Controls */}
+      {!areaManagersBusy && areaManagersTotal > itemsPerPage && (
+        <div className="flex items-center justify-between mt-4 px-2">
+          <div className="text-sm text-gray-600">
+            Showing {areaManagersStartIndex + 1} to{" "}
+            {Math.min(areaManagersEndIndex, areaManagersTotal)} of{" "}
+            {areaManagersTotal} area managers
           </div>
-
-          {/* Pagination Controls */}
-          {!areaManagersBusy && areaManagersTotal > itemsPerPage && (
-            <div className="flex items-center justify-between mt-4 px-2">
-              <div className="text-sm text-gray-600">
-                Showing {areaManagersStartIndex + 1} to{" "}
-                {Math.min(areaManagersEndIndex, areaManagersTotal)} of{" "}
-                {areaManagersTotal} area managers
-              </div>
-              <Pagination>
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setAreaManagersPage((prev) => Math.max(1, prev - 1));
+                  }}
+                  className={
+                    areaManagersPage === 1
+                      ? "pointer-events-none opacity-50"
+                      : "cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                  }
+                />
+              </PaginationItem>
+              {generatePaginationPages(
+                areaManagersPage,
+                areaManagersTotalPages
+              ).map((page, index) => {
+                if (page === "ellipsis") {
+                  return (
+                    <PaginationItem key={`ellipsis-${index}`}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  );
+                }
+                return (
+                  <PaginationItem key={page}>
+                    <PaginationLink
                       href="#"
                       onClick={(e) => {
                         e.preventDefault();
-                        setAreaManagersPage((prev) => Math.max(1, prev - 1));
+                        setAreaManagersPage(page);
                       }}
+                      isActive={areaManagersPage === page}
                       className={
-                        areaManagersPage === 1
-                          ? "pointer-events-none opacity-50"
+                        areaManagersPage === page
+                          ? "cursor-pointer bg-blue-700 text-white hover:bg-blue-800 hover:text-white"
                           : "cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
                       }
-                    />
+                    >
+                      {page}
+                    </PaginationLink>
                   </PaginationItem>
-                  {generatePaginationPages(
-                    areaManagersPage,
-                    areaManagersTotalPages
-                  ).map((page, index) => {
-                    if (page === "ellipsis") {
-                      return (
-                        <PaginationItem key={`ellipsis-${index}`}>
-                          <PaginationEllipsis />
-                        </PaginationItem>
-                      );
-                    }
-                    return (
-                      <PaginationItem key={page}>
-                        <PaginationLink
-                          href="#"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            setAreaManagersPage(page);
-                          }}
-                          isActive={areaManagersPage === page}
-                          className={
-                            areaManagersPage === page
-                              ? "cursor-pointer bg-blue-700 text-white hover:bg-blue-800 hover:text-white"
-                              : "cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                          }
-                        >
-                          {page}
-                        </PaginationLink>
-                      </PaginationItem>
+                );
+              })}
+              <PaginationItem>
+                <PaginationNext
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setAreaManagersPage((prev) =>
+                      Math.min(areaManagersTotalPages, prev + 1)
                     );
-                  })}
-                  <PaginationItem>
-                    <PaginationNext
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setAreaManagersPage((prev) =>
-                          Math.min(areaManagersTotalPages, prev + 1)
-                        );
-                      }}
-                      className={
-                        areaManagersPage === areaManagersTotalPages
-                          ? "pointer-events-none opacity-50"
-                          : "cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                      }
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
-            </div>
-          )}
-          </div>
-        </CardContent>
-      </Card>
+                  }}
+                  className={
+                    areaManagersPage === areaManagersTotalPages
+                      ? "pointer-events-none opacity-50"
+                      : "cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                  }
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
+    </ManagementPageShell>
 
       {/* Area Managers List Modal */}
       <Dialog open={isListModalOpen} onOpenChangeAction={setIsListModalOpen}>
@@ -1823,6 +1762,6 @@ export default function AreaManagersTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

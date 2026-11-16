@@ -1,13 +1,12 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Search, X, RefreshCw, UserCog } from "lucide-react";
+import ManagementPageShell, {
+  MANAGEMENT_TABLE_CLASS,
+  MANAGEMENT_TABLE_WRAP_CLASS,
+  MANAGEMENT_TABLE_HEADER_CLASS,
+} from "@/components/management/ManagementPageShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +27,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import { apiService } from "@/lib/apiService";
 import { toastMessages } from "@/lib/toastMessages";
@@ -603,384 +603,332 @@ export default function BranchHeadsTab() {
   }, []);
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle>Branch Heads</CardTitle>
-              <CardDescription>
-                List of all branch heads in the organization
-              </CardDescription>
+    <>
+    <ManagementPageShell
+      title="Branch heads"
+      description="List of all branch heads in the organization."
+      icon={UserCog}
+      busy={loadingBranchHeads || branchHeadsRefreshing}
+      busyLabel={branchHeadsRefreshing && !loadingBranchHeads ? "Refreshing branch heads..." : "Loading branch heads..."}
+      toolbar={
+        <div className="flex flex-col gap-2.5 lg:flex-row lg:items-end lg:justify-between lg:gap-3">
+          <div className="w-full lg:max-w-sm">
+            <Label
+              htmlFor="branch-heads-search"
+              className="mb-1 block cursor-pointer text-[0.7rem] font-medium text-slate-600 sm:text-xs"
+            >
+              Search
+            </Label>
+            <div className="relative">
+              <Search
+                className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400"
+                aria-hidden
+              />
+              <Input
+                id="branch-heads-search"
+                placeholder="Search by name or branch..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="h-8 w-full pl-8 pr-8 text-xs sm:h-9 sm:text-sm"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-slate-600"
+                  title="Clear search"
+                  aria-label="Clear search"
+                  type="button"
+                >
+                  <X className="h-3.5 w-3.5" aria-hidden />
+                </button>
+              )}
             </div>
+          </div>
+          <div className="flex gap-2">
             <Button
               onClick={handleRefresh}
               disabled={branchHeadsRefreshing || loadingBranchHeads}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-70 disabled:hover:translate-y-0"
+              className="h-8 cursor-pointer gap-1.5 bg-blue-600 px-3 text-xs text-white hover:bg-blue-700 disabled:opacity-70 sm:h-9 sm:text-sm"
               title="Refresh branch heads data"
             >
-              {branchHeadsRefreshing ? (
-                <div className="flex items-center space-x-2">
-                  <div className="relative h-8 w-8 shrink-0">
-                    <div className="absolute inset-0 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                    <span className="absolute inset-0 flex items-center justify-center">
-                      <img
-                        src="/smct.png"
-                        alt=""
-                        className="h-4 w-4 object-contain opacity-95"
-                        width={16}
-                        height={16}
-                        decoding="async"
-                      />
-                    </span>
-                  </div>
-                  <span>Refreshing...</span>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-2">
-                  <span aria-hidden>🔄</span>
-                  <span>Refresh</span>
-                </div>
-              )}
+              <RefreshCw
+                className={cn("h-3.5 w-3.5", branchHeadsRefreshing && "animate-spin")}
+                aria-hidden
+              />
+              {branchHeadsRefreshing ? "Refreshing..." : "Refresh"}
             </Button>
           </div>
-        </CardHeader>
-        <CardContent className="relative">
-          {(loadingBranchHeads || branchHeadsRefreshing) && (
-            <SmctLoadingOverlay
-              label={
-                branchHeadsRefreshing && !loadingBranchHeads
-                  ? "Refreshing branch heads..."
-                  : "Loading branch heads..."
-              }
-            />
-          )}
-          {/* Search Bar */}
-          <div
-            className={`mb-6 ${loadingBranchHeads || branchHeadsRefreshing ? "pointer-events-none opacity-40" : ""}`}
-          >
-            <div className="relative w-full md:w-1/3">
-              <Label
-                htmlFor="branch-heads-search"
-                className="text-sm font-medium mb-2 block cursor-pointer"
-              >
-                Search
-              </Label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                  <svg
-                    className="h-5 w-5 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle cx="11" cy="11" r="8"></circle>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                  </svg>
-                </span>
-                <Input
-                  id="branch-heads-search"
-                  placeholder="Search by name or branch..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pr-10 pl-10"
-                />
-                {searchTerm && (
-                  <button
-                    onClick={() => setSearchTerm("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                    title="Clear search"
-                    aria-label="Clear search"
-                    type="button"
-                  >
-                    <svg
-                      className="h-5 w-5"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-          <div
-            className={`relative max-h-[600px] min-h-[280px] overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 ${loadingBranchHeads || branchHeadsRefreshing ? "border-blue-100 bg-gray-50/40" : ""}`}
-          >
-            <Table>
-              <TableHeader className="sticky top-0 z-10 bg-white shadow-sm [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600">
-                <TableRow>
-                  <TableHead className="w-1/3">Name</TableHead>
-                  <TableHead className="w-1/3 text-center">Branch</TableHead>
-                  <TableHead className="w-1/3 text-right">Actions</TableHead>
+        </div>
+      }
+    >
+      <div className={MANAGEMENT_TABLE_WRAP_CLASS}>
+        <Table className={MANAGEMENT_TABLE_CLASS} wrapperClassName="max-h-[600px] min-h-[280px] overflow-auto">
+          <TableHeader className={MANAGEMENT_TABLE_HEADER_CLASS}>
+            <TableRow>
+              <TableHead className="w-1/3 font-semibold text-slate-600">Name</TableHead>
+              <TableHead className="w-1/3 text-center font-semibold text-slate-600">Branch</TableHead>
+              <TableHead className="w-1/3 text-right font-semibold text-slate-600">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loadingBranchHeads || branchHeadsRefreshing ? (
+              Array.from({ length: 5 }).map((_, index) => (
+                <TableRow key={`skeleton-${index}`}>
+                  <TableCell className="py-4">
+                    <Skeleton className="h-5 w-40" />
+                  </TableCell>
+                  <TableCell className="py-4 text-center">
+                    <div className="flex flex-wrap justify-center gap-2">
+                      <Skeleton className="h-6 w-24" />
+                      <Skeleton className="h-6 w-24" />
+                    </div>
+                  </TableCell>
+                  <TableCell className="py-4">
+                    <div className="flex justify-end space-x-2">
+                      <Skeleton className="h-8 w-16" />
+                      <Skeleton className="h-8 w-16" />
+                    </div>
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loadingBranchHeads || branchHeadsRefreshing ? (
-                  Array.from({ length: 5 }).map((_, index) => (
-                    <TableRow key={`skeleton-${index}`}>
-                      <TableCell className="py-4">
-                        <Skeleton className="h-5 w-40" />
-                      </TableCell>
-                      <TableCell className="py-4 text-center">
+              ))
+            ) : branchHeadsPaginated.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={3} className="text-center py-12">
+                  <div className="flex flex-col items-center justify-center gap-4">
+                    <img
+                      src="/not-found.gif"
+                      alt="No data"
+                      className="w-25 h-25 object-contain"
+                      style={{
+                        imageRendering: "auto",
+                        willChange: "auto",
+                        transform: "translateZ(0)",
+                        backfaceVisibility: "hidden",
+                        WebkitBackfaceVisibility: "hidden",
+                      }}
+                    />
+                    <div className="text-gray-500">
+                      {searchTerm ? (
+                        <>
+                          <p className="text-base font-medium mb-1">
+                            No branch heads found matching "{searchTerm}"
+                          </p>
+                          <p className="text-sm text-gray-400">
+                            Try adjusting your search term
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-base font-medium mb-1">
+                            No branch heads found
+                          </p>
+                          <p className="text-sm text-gray-400">
+                            Branch heads will appear here once added
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : (
+              branchHeadsPaginated.map((head: Employee) => {
+                // Parse branches from comma-separated string
+                const branchList = head.branch
+                  ? head.branch.split(", ").filter((b: string) => b.trim())
+                  : [];
+
+                return (
+                  <TableRow key={head.id}>
+                    <TableCell className="font-medium py-4">
+                      {head.name}
+                    </TableCell>
+                    <TableCell className="py-4 text-center">
+                      {branchList.length > 0 ? (
                         <div className="flex flex-wrap justify-center gap-2">
-                          <Skeleton className="h-6 w-24" />
-                          <Skeleton className="h-6 w-24" />
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-4">
-                        <div className="flex justify-end space-x-2">
-                          <Skeleton className="h-8 w-16" />
-                          <Skeleton className="h-8 w-16" />
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : branchHeadsPaginated.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={3} className="text-center py-12">
-                      <div className="flex flex-col items-center justify-center gap-4">
-                        <img
-                          src="/not-found.gif"
-                          alt="No data"
-                          className="w-25 h-25 object-contain"
-                          style={{
-                            imageRendering: "auto",
-                            willChange: "auto",
-                            transform: "translateZ(0)",
-                            backfaceVisibility: "hidden",
-                            WebkitBackfaceVisibility: "hidden",
-                          }}
-                        />
-                        <div className="text-gray-500">
-                          {searchTerm ? (
-                            <>
-                              <p className="text-base font-medium mb-1">
-                                No branch heads found matching "{searchTerm}"
-                              </p>
-                              <p className="text-sm text-gray-400">
-                                Try adjusting your search term
-                              </p>
-                            </>
-                          ) : (
-                            <>
-                              <p className="text-base font-medium mb-1">
-                                No branch heads found
-                              </p>
-                              <p className="text-sm text-gray-400">
-                                Branch heads will appear here once added
-                              </p>
-                            </>
+                          {branchList.map(
+                            (branch: string, index: number) => {
+                              const branchCode = getBranchCode(branch);
+                              return (
+                                <Badge
+                                  key={index}
+                                  className="bg-blue-600 text-white"
+                                >
+                                  {branchCode}
+                                </Badge>
+                              );
+                            }
                           )}
                         </div>
+                      ) : (
+                        <span className="text-gray-400">N/A</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="py-4">
+                      <div className="flex justify-end space-x-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-white bg-blue-600 hover:text-white hover:bg-blue-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+                          onClick={async () => {
+                            setBranchHeadToEdit(head);
+                            setIsEditModalOpen(true);
+                            // Load branches first and wait for them
+                            const loadedBranches = await loadBranches();
+                            // Then parse existing branches after branches are loaded
+                            if (head.branch && loadedBranches) {
+                              const existingBranches = head.branch
+                                .split(", ")
+                                .map((name: string) => {
+                                  // Try to find matching branch from loaded branches (match by name or code)
+                                  const branch = loadedBranches.find(
+                                    (b: { id: string; name: string; code: string }) =>
+                                      b.name === name.trim() || b.code === name.trim()
+                                  );
+                                  return (
+                                    branch || { id: "", name: name.trim(), code: name.trim() }
+                                  );
+                                })
+                                .filter(
+                                  (b: { id: string; name: string; code: string }) =>
+                                    b.id || b.name
+                                );
+                              setEditSelectedBranches(existingBranches);
+                            } else {
+                              setEditSelectedBranches([]);
+                            }
+                          }}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-white bg-red-600 hover:text-white hover:bg-red-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+                          onClick={() => {
+                            setBranchHeadToDelete(head);
+                            setIsDeleteModalOpen(true);
+                          }}
+                        >
+                          Delete
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
-                ) : (
-                  branchHeadsPaginated.map((head: Employee) => {
-                    // Parse branches from comma-separated string
-                    const branchList = head.branch
-                      ? head.branch.split(", ").filter((b: string) => b.trim())
-                      : [];
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
-                    return (
-                      <TableRow key={head.id}>
-                        <TableCell className="font-medium py-4">
-                          {head.name}
-                        </TableCell>
-                        <TableCell className="py-4 text-center">
-                          {branchList.length > 0 ? (
-                            <div className="flex flex-wrap justify-center gap-2">
-                              {branchList.map(
-                                (branch: string, index: number) => {
-                                  const branchCode = getBranchCode(branch);
-                                  return (
-                                    <Badge
-                                      key={index}
-                                      className="bg-blue-600 text-white"
-                                    >
-                                      {branchCode}
-                                    </Badge>
-                                  );
-                                }
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-gray-400">N/A</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="py-4">
-                          <div className="flex justify-end space-x-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-white bg-blue-600 hover:text-white hover:bg-blue-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
-                              onClick={async () => {
-                                setBranchHeadToEdit(head);
-                                setIsEditModalOpen(true);
-                                // Load branches first and wait for them
-                                const loadedBranches = await loadBranches();
-                                // Then parse existing branches after branches are loaded
-                                if (head.branch && loadedBranches) {
-                                  const existingBranches = head.branch
-                                    .split(", ")
-                                    .map((name: string) => {
-                                      // Try to find matching branch from loaded branches (match by name or code)
-                                      const branch = loadedBranches.find(
-                                        (b: { id: string; name: string; code: string }) =>
-                                          b.name === name.trim() || b.code === name.trim()
-                                      );
-                                      return (
-                                        branch || { id: "", name: name.trim(), code: name.trim() }
-                                      );
-                                    })
-                                    .filter(
-                                      (b: { id: string; name: string; code: string }) =>
-                                        b.id || b.name
-                                    );
-                                  setEditSelectedBranches(existingBranches);
-                                } else {
-                                  setEditSelectedBranches([]);
-                                }
-                              }}
-                            >
-                              Edit
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-white bg-red-600 hover:text-white hover:bg-red-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
-                              onClick={() => {
-                                setBranchHeadToDelete(head);
-                                setIsDeleteModalOpen(true);
-                              }}
-                            >
-                              Delete
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
+      {/* Pagination Controls */}
+      {!branchHeadsRefreshing && branchHeadsTotal > itemsPerPage && (
+        <div className="flex items-center justify-between mt-4 px-2">
+          <div className="text-sm text-gray-600">
+            Showing {branchHeadsStartIndex + 1} to{" "}
+            {Math.min(branchHeadsEndIndex, branchHeadsTotal)} of{" "}
+            {branchHeadsTotal} branch heads
           </div>
-
-          {/* Pagination Controls */}
-          {!branchHeadsRefreshing && branchHeadsTotal > itemsPerPage && (
-            <div className="flex items-center justify-between mt-4 px-2">
-              <div className="text-sm text-gray-600">
-                Showing {branchHeadsStartIndex + 1} to{" "}
-                {Math.min(branchHeadsEndIndex, branchHeadsTotal)} of{" "}
-                {branchHeadsTotal} branch heads
-              </div>
-              <Pagination>
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setBranchHeadsPage((prev) => Math.max(1, prev - 1));
-                      }}
-                      className={
-                        branchHeadsPage === 1
-                          ? "pointer-events-none opacity-50"
-                          : "cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                      }
-                    />
-                  </PaginationItem>
-                  {(() => {
-                    const pages: (number | "ellipsis")[] = [];
-                    if (branchHeadsTotalPages <= 7) {
-                      for (let i = 1; i <= branchHeadsTotalPages; i++) {
-                        pages.push(i);
-                      }
-                    } else {
-                      if (branchHeadsPage <= 3) {
-                        for (let i = 1; i <= 5; i++) {
-                          pages.push(i);
-                        }
-                        pages.push("ellipsis");
-                        pages.push(branchHeadsTotalPages);
-                      } else if (branchHeadsPage >= branchHeadsTotalPages - 2) {
-                        pages.push(1);
-                        pages.push("ellipsis");
-                        for (
-                          let i = branchHeadsTotalPages - 4;
-                          i <= branchHeadsTotalPages;
-                          i++
-                        ) {
-                          pages.push(i);
-                        }
-                      } else {
-                        pages.push(1);
-                        pages.push("ellipsis");
-                        pages.push(branchHeadsPage - 1);
-                        pages.push(branchHeadsPage);
-                        pages.push(branchHeadsPage + 1);
-                        pages.push("ellipsis");
-                        pages.push(branchHeadsTotalPages);
-                      }
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setBranchHeadsPage((prev) => Math.max(1, prev - 1));
+                  }}
+                  className={
+                    branchHeadsPage === 1
+                      ? "pointer-events-none opacity-50"
+                      : "cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                  }
+                />
+              </PaginationItem>
+              {(() => {
+                const pages: (number | "ellipsis")[] = [];
+                if (branchHeadsTotalPages <= 7) {
+                  for (let i = 1; i <= branchHeadsTotalPages; i++) {
+                    pages.push(i);
+                  }
+                } else {
+                  if (branchHeadsPage <= 3) {
+                    for (let i = 1; i <= 5; i++) {
+                      pages.push(i);
                     }
-                    return pages.map((page, index) => {
-                      if (page === "ellipsis") {
-                        return (
-                          <PaginationItem key={`ellipsis-${index}`}>
-                            <PaginationEllipsis />
-                          </PaginationItem>
-                        );
-                      }
-                      return (
-                        <PaginationItem key={page}>
-                          <PaginationLink
-                            href="#"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setBranchHeadsPage(page);
-                            }}
-                            isActive={branchHeadsPage === page}
-                            className={
-                              branchHeadsPage === page
-                                ? "cursor-pointer bg-blue-700 text-white hover:bg-blue-800 hover:text-white"
-                                : "cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                            }
-                          >
-                            {page}
-                          </PaginationLink>
-                        </PaginationItem>
-                      );
-                    });
-                  })()}
-                  <PaginationItem>
-                    <PaginationNext
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setBranchHeadsPage((prev) =>
-                          Math.min(branchHeadsTotalPages, prev + 1)
-                        );
-                      }}
-                      className={
-                        branchHeadsPage === branchHeadsTotalPages
-                          ? "pointer-events-none opacity-50"
-                          : "cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                      }
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                    pages.push("ellipsis");
+                    pages.push(branchHeadsTotalPages);
+                  } else if (branchHeadsPage >= branchHeadsTotalPages - 2) {
+                    pages.push(1);
+                    pages.push("ellipsis");
+                    for (
+                      let i = branchHeadsTotalPages - 4;
+                      i <= branchHeadsTotalPages;
+                      i++
+                    ) {
+                      pages.push(i);
+                    }
+                  } else {
+                    pages.push(1);
+                    pages.push("ellipsis");
+                    pages.push(branchHeadsPage - 1);
+                    pages.push(branchHeadsPage);
+                    pages.push(branchHeadsPage + 1);
+                    pages.push("ellipsis");
+                    pages.push(branchHeadsTotalPages);
+                  }
+                }
+                return pages.map((page, index) => {
+                  if (page === "ellipsis") {
+                    return (
+                      <PaginationItem key={`ellipsis-${index}`}>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    );
+                  }
+                  return (
+                    <PaginationItem key={page}>
+                      <PaginationLink
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setBranchHeadsPage(page);
+                        }}
+                        isActive={branchHeadsPage === page}
+                        className={
+                          branchHeadsPage === page
+                            ? "cursor-pointer bg-blue-700 text-white hover:bg-blue-800 hover:text-white"
+                            : "cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                        }
+                      >
+                        {page}
+                      </PaginationLink>
+                    </PaginationItem>
+                  );
+                });
+              })()}
+              <PaginationItem>
+                <PaginationNext
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setBranchHeadsPage((prev) =>
+                      Math.min(branchHeadsTotalPages, prev + 1)
+                    );
+                  }}
+                  className={
+                    branchHeadsPage === branchHeadsTotalPages
+                      ? "pointer-events-none opacity-50"
+                      : "cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                  }
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
+    </ManagementPageShell>
 
       {/* Branch Heads List Modal */}
       <Dialog open={isListModalOpen} onOpenChangeAction={setIsListModalOpen}>
@@ -1906,6 +1854,6 @@ export default function BranchHeadsTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

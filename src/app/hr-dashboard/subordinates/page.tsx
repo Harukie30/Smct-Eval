@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -28,7 +28,13 @@ const getEvaluatorsDeduped = createInFlightDeduper(
     })
 );
 import { pickApiTimestamp } from "@/lib/parseApiTimestamp";
-import { Eye, Plus, RefreshCw, Users2, X } from "lucide-react";
+import { Eye, Plus, RefreshCw, Search, Users2, X } from "lucide-react";
+import ManagementPageShell, {
+  MANAGEMENT_TABLE_CLASS,
+  MANAGEMENT_TABLE_HEADER_CLASS,
+  MANAGEMENT_TABLE_WRAP_CLASS,
+} from "@/components/management/ManagementPageShell";
+import { cn } from "@/lib/utils";
 import EvaluationsPagination from "@/components/paginationComponent";
 import AddEmployeeToEvaluatorModal, {
   AssignEvaluatorTarget,
@@ -368,34 +374,6 @@ function extractAssignedEmployees(raw: unknown): unknown[] {
   return [];
 }
 
-/** Spinner + SMCT logo over card content while table loads or refreshes. */
-function SmctLoadingOverlay({ label }: { label?: string }) {
-  return (
-    <div
-      className="absolute inset-0 z-[70] flex items-center justify-center rounded-lg bg-white/55 backdrop-blur-[1px]"
-      aria-live="polite"
-      aria-busy="true"
-    >
-      <div className="pointer-events-none flex flex-col items-center gap-3 rounded-lg bg-white/90 px-8 py-6 shadow-lg ring-1 ring-gray-200/80">
-        <div className="relative">
-          <div className="h-16 w-16 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <img
-              src="/smct.png"
-              alt=""
-              className="h-10 w-10 object-contain"
-              width={40}
-              height={40}
-              decoding="async"
-            />
-          </div>
-        </div>
-        <p className="text-sm font-medium text-gray-600">{label ?? "Loading..."}</p>
-      </div>
-    </div>
-  );
-}
-
 export default function HRSubordinatesPage() {
   const [rows, setRows] = useState<EvaluatorRow[]>([]);
   const [evaluatorsTotal, setEvaluatorsTotal] = useState(0);
@@ -529,115 +507,88 @@ export default function HRSubordinatesPage() {
     setIsApprovalFlowModalOpen(true);
   }, []);
 
+  const listBusy = loading || refreshing;
+
   return (
-    <div className="space-y-4">
-      <Card className="overflow-hidden border-slate-200/90 shadow-md">
-        <div
-          className="relative overflow-hidden px-6 py-6 text-white"
-          style={{
-            backgroundImage: "url(/smct.png)",
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-          }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-600/95 via-blue-600/92 to-indigo-800/95" />
-          <div className="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex gap-4">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-white/15 shadow-inner ring-1 ring-white/30 backdrop-blur-sm">
-                <Users2 className="h-7 w-7 text-white" />
-              </div>
-              <div className="min-w-0 flex-1 space-y-2">
-                <CardTitle className="border-0 text-2xl font-semibold tracking-tight text-blue-50/95 shadow-none">
-                  Subordinates
-                </CardTitle>
-                <CardDescription className="max-w-2xl text-base leading-relaxed text-blue-50/90">
-                  Review evaluator accounts and open each staff list to manage the
-                  employees assigned under them.
-                </CardDescription>
+    <>
+      <ManagementPageShell
+        title="Subordinates"
+        description="Review evaluator accounts and open each staff list to manage the employees assigned under them."
+        icon={Users2}
+        busy={listBusy}
+        busyLabel={
+          refreshing && !loading
+            ? "Refreshing evaluators..."
+            : "Loading evaluators..."
+        }
+        toolbar={
+          <div className="flex flex-col gap-2.5 lg:flex-row lg:items-end lg:justify-between lg:gap-3">
+            <div className="w-full lg:max-w-md">
+              <Label
+                htmlFor="subordinates-search"
+                className="mb-1 block cursor-pointer text-[0.7rem] font-medium text-slate-600 sm:text-xs"
+              >
+                Search
+              </Label>
+              <div className="relative">
+                <Search
+                  className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400"
+                  aria-hidden
+                />
+                <Input
+                  id="subordinates-search"
+                  placeholder="Search evaluator by name, email, position, or role..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="h-8 w-full pl-8 pr-8 text-xs sm:h-9 sm:text-sm"
+                />
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-slate-600"
+                    title="Clear search"
+                    aria-label="Clear search"
+                  >
+                    <X className="h-3.5 w-3.5" aria-hidden />
+                  </button>
+                )}
               </div>
             </div>
-         
-          </div>
-        </div>
-        
-        <CardContent className="relative space-y-4 border-t border-slate-100 bg-gradient-to-b from-slate-50/50 to-white pt-6">
-          {(loading || refreshing) && (
-            <SmctLoadingOverlay
-              label={
-                refreshing && !loading
-                  ? "Refreshing evaluators..."
-                  : "Loading evaluators..."
-              }
-            />
-          )}
-          <div
-            className={`space-y-4 ${loading || refreshing ? "pointer-events-none opacity-40" : ""}`}
-          >
-            <div className="relative w-full sm:max-w-md">
-              <Input
-                placeholder="Search evaluator by name, email, position, or role..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className={search ? "w-full pr-10" : "w-full"}
-              />
-              {search && (
-                <button
-                  type="button"
-                  onClick={() => setSearch("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-red-400 transition-colors hover:text-red-600"
-                  aria-label="Clear search"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              )}
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                disabled={listBusy}
+                onClick={() => {
+                  void fetchEvaluatorsPage(evaluatorsTablePage, true);
+                }}
+                className="h-8 cursor-pointer gap-1.5 bg-blue-600 px-3 text-xs text-white hover:bg-blue-700 hover:text-white disabled:opacity-70 sm:h-9 sm:text-sm"
+              >
+                <RefreshCw
+                  className={cn("h-3.5 w-3.5", listBusy && "animate-spin")}
+                  aria-hidden
+                />
+                {refreshing ? "Refreshing..." : loading ? "Loading..." : "Refresh"}
+              </Button>
             </div>
-
-            <Button
-              type="button"
-              disabled={loading || refreshing}
-              onClick={() => {
-                void fetchEvaluatorsPage(evaluatorsTablePage, true);
-              }}
-              className="cursor-pointer bg-blue-600 text-white hover:bg-blue-700 hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-70 disabled:hover:translate-y-0"
-            >
-              {loading || refreshing ? (
-                <span className="flex items-center space-x-2">
-                  <span className="relative h-8 w-8 shrink-0">
-                    <span className="absolute inset-0 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                    <span className="absolute inset-0 flex items-center justify-center">
-                      <img
-                        src="/smct.png"
-                        alt=""
-                        className="h-4 w-4 object-contain opacity-95"
-                        width={16}
-                        height={16}
-                        decoding="async"
-                      />
-                    </span>
-                  </span>
-                  <span>{refreshing ? "Refreshing..." : "Loading..."}</span>
-                </span>
-              ) : (
-                <span className="flex items-center">
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Refresh
-                </span>
-              )}
-            </Button>
           </div>
-
+        }
+      >
           <div
-            className={`rounded-xl border border-slate-200/80 bg-white shadow-sm ${loading || refreshing ? "min-h-[280px] border-blue-100 bg-slate-50/40" : ""}`}
+            className={cn(
+              MANAGEMENT_TABLE_WRAP_CLASS,
+              listBusy && "min-h-[280px] border-blue-100 bg-slate-50/40"
+            )}
           >
-            <Table className="[&_th]:h-auto [&_th]:min-h-10 [&_th]:px-3 [&_th]:py-2.5 sm:[&_th]:px-4 [&_th]:align-middle [&_td]:px-3 [&_td]:py-2.5 sm:[&_td]:px-4 [&_td]:align-middle [&_td]:text-sm [&_td]:leading-snug">
-              <TableHeader>
-                <TableRow className="bg-slate-100/80">
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Position</TableHead>
-                  <TableHead>Branch</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
+            <Table className={MANAGEMENT_TABLE_CLASS}>
+              <TableHeader className={MANAGEMENT_TABLE_HEADER_CLASS}>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="font-semibold text-slate-600">Name</TableHead>
+                  <TableHead className="font-semibold text-slate-600">Email</TableHead>
+                  <TableHead className="font-semibold text-slate-600">Position</TableHead>
+                  <TableHead className="font-semibold text-slate-600">Branch</TableHead>
+                  <TableHead className="font-semibold text-slate-600">Role</TableHead>
+                  <TableHead className="text-right font-semibold text-slate-600">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -725,8 +676,7 @@ export default function HRSubordinatesPage() {
               onPageChange={setEvaluatorsTablePage}
             />
           )}
-        </CardContent>
-      </Card>
+      </ManagementPageShell>
 
       <CorrespondingStaffModal
         open={isStaffModalOpen}
@@ -785,6 +735,6 @@ export default function HRSubordinatesPage() {
           }
         }}
       />
-    </div>
+    </>
   );
 }

@@ -1,11 +1,21 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Clock, Lightbulb, Pencil, Plus, Trash2, X } from "lucide-react";
+import {
+  BriefcaseBusiness,
+  Clock,
+  Lightbulb,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Search,
+  Trash2,
+  X,
+} from "lucide-react";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -16,7 +26,7 @@ import DeletePositionModal, { Position } from "@/components/hr/DeletePositionMod
 import UpdatePositionModal from "@/components/hr/UpdatePositionModal";
 import EvaluationsPagination from "@/components/paginationComponent";
 import { cn } from "@/lib/utils";
-import SmctLoadingOverlay from "@/components/SmctLoadingOverlay";
+import ManagementPageShell from "@/components/management/ManagementPageShell";
 import { parseApiTimestampMs, pickApiTimestamp } from "@/lib/parseApiTimestamp";
 
 function isCreatedWithinLast24Hours(createdAt: string | null | undefined): boolean {
@@ -202,134 +212,141 @@ export default function PositionsTab() {
   const listBusy = loading || isRefreshing;
 
   return (
-    <div className="relative overflow-y-auto pr-2 min-h-[400px]">
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center gap-4">
-            <div className="w-1/2">
-              <div className="flex items-center gap-2">
-                <CardTitle>Positions</CardTitle>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-blue-300 bg-blue-100 text-blue-800 shadow-sm transition-colors hover:border-blue-400 hover:bg-blue-200 hover:text-blue-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-                      aria-label="Tips for using this list"
-                    >
-                      <Lightbulb className="h-5 w-5" strokeWidth={2.25} aria-hidden />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent
-                    side="bottom"
-                    align="start"
-                    sideOffset={6}
-                    className="max-w-sm px-3 py-2.5 text-sm leading-snug text-balance"
+    <>
+      <ManagementPageShell
+        title="Positions"
+        description={
+          <span className="inline-flex flex-wrap items-center gap-1.5">
+            Manage job positions.
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full border border-white/30 bg-white/15 text-white shadow-sm transition-colors hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                  aria-label="Tips for using this list"
+                >
+                  <Lightbulb className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent
+                side="bottom"
+                align="start"
+                sideOffset={6}
+                className="max-w-sm px-3 py-2.5 text-sm leading-snug text-balance"
+              >
+                <span className="font-semibold">Tip:</span> Use{" "}
+                <span className="font-medium">Last 24 hours</span> to show only
+                positions from the past day (newest first). Rows are tinted by age:
+                green (0–8h), blue (8–16h), orange (16–24h). In the full list, recent
+                rows use the same colors and a{" "}
+                <span className="font-medium">New</span> badge.
+              </TooltipContent>
+            </Tooltip>
+          </span>
+        }
+        icon={BriefcaseBusiness}
+        busy={listBusy}
+        busyLabel={
+          isRefreshing && !loading ? "Refreshing positions…" : "Loading positions…"
+        }
+        toolbar={
+          <div className="space-y-2.5">
+            <div className="flex flex-col gap-2.5 lg:flex-row lg:items-end lg:justify-between lg:gap-3">
+              <div className="flex w-full flex-col gap-2.5 sm:flex-row sm:items-end lg:max-w-xl">
+                <div className="w-full sm:max-w-sm">
+                  <Label
+                    htmlFor="positions-search"
+                    className="mb-1 block cursor-pointer text-[0.7rem] font-medium text-slate-600 sm:text-xs"
                   >
-                    <span className="font-semibold">Tip:</span> Use{" "}
-                    <span className="font-medium">Last 24 hours</span> to show only
-                    positions from the past day (newest first). Rows are tinted by age:
-                    green (0–8h), blue (8–16h), orange (16–24h). In the full list, recent
-                    rows use the same colors and a{" "}
-                    <span className="font-medium">New</span> badge.
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              <CardDescription>Manage job positions</CardDescription>
-              <div className="relative flex-1 mt-4">
-                <span className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-gray-400">🔎</span>
-                <Input
-                  placeholder="Search by position label"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className={`pl-10 ${searchTerm ? "pr-10" : "pr-4"}`}
-                />
-                {searchTerm && (
-                  <button
-                    type="button"
-                    onClick={() => setSearchTerm("")}
-                    aria-label="Clear search"
-                    className="absolute inset-y-0 right-2 flex items-center justify-center text-red-400 hover:text-red-600  transition-colors"
-                  >
-                    <X className="h-7 w-7" />
-                  </button>
-                )}
-              </div>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
+                    Search
+                  </Label>
+                  <div className="relative">
+                    <Search
+                      className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400"
+                      aria-hidden
+                    />
+                    <Input
+                      id="positions-search"
+                      placeholder="Search by position label"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="h-8 w-full pl-8 pr-8 text-xs sm:h-9 sm:text-sm"
+                    />
+                    {searchTerm && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchTerm("")}
+                        aria-label="Clear search"
+                        title="Clear search"
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-slate-600"
+                      >
+                        <X className="h-3.5 w-3.5" aria-hidden />
+                      </button>
+                    )}
+                  </div>
+                </div>
                 <Button
                   type="button"
                   variant={showRecent24h ? "default" : "outline"}
-                  size="sm"
                   onClick={() => setShowRecent24h((v) => !v)}
-                  className={
+                  className={cn(
+                    "h-8 shrink-0 cursor-pointer gap-1.5 px-3 text-xs sm:h-9 sm:text-sm",
                     showRecent24h
-                      ? "bg-amber-600 text-white hover:bg-amber-700 border-amber-600 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
-                      : "border-amber-200 text-amber-900 hover:bg-amber-50 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
-                  }
+                      ? "border-amber-600 bg-amber-600 text-white hover:bg-amber-700"
+                      : "border-amber-200 text-amber-900 hover:bg-amber-50"
+                  )}
                 >
-                  <Clock className="h-4 w-4" />
+                  <Clock className="h-3.5 w-3.5" aria-hidden />
                   Last 24 hours
                 </Button>
-                {showRecent24h && (
-                  <div className="flex flex-col gap-1.5 text-xs text-gray-600">
-                    <span>
-                      Showing positions created in the last 24 hours (newest first).
-                    </span>
-                    <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                      <span className="inline-flex items-center gap-1.5">
-                        <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-green-900" />
-                        0–8h
-                      </span>
-                      <span className="inline-flex items-center gap-1.5">
-                        <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-blue-600" />
-                        8–16h
-                      </span>
-                      <span className="inline-flex items-center gap-1.5">
-                        <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-orange-600" />
-                        16–24h
-                      </span>
-                    </span>
-                  </div>
-                )}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => setIsAddModalOpen(true)}
+                  className="h-8 cursor-pointer gap-1.5 bg-green-600 px-3 text-xs text-white hover:bg-green-700 sm:h-9 sm:text-sm"
+                >
+                  <Plus className="h-3.5 w-3.5" aria-hidden />
+                  Add Position
+                </Button>
+                <Button
+                  onClick={refreshPositions}
+                  disabled={isRefreshing}
+                  className="h-8 cursor-pointer gap-1.5 bg-blue-600 px-3 text-xs text-white hover:bg-blue-700 hover:text-white disabled:opacity-70 sm:h-9 sm:text-sm"
+                >
+                  <RefreshCw
+                    className={cn("h-3.5 w-3.5", isRefreshing && "animate-spin")}
+                    aria-hidden
+                  />
+                  {isRefreshing ? "Refreshing..." : "Refresh"}
+                </Button>
               </div>
             </div>
-
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={() => setIsAddModalOpen(true)}
-                className="flex items-center gap-2 bg-green-600 text-white hover:bg-green-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
-              >
-                <Plus className="h-5 w-5" />
-                Add Position
-              </Button>
-              <Button
-                variant="outline"
-                onClick={refreshPositions}
-                disabled={isRefreshing}
-                className="flex items-center gap-2 bg-blue-600 text-white hover:text-white hover:bg-blue-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
-              >
-                {isRefreshing ? "Refreshing..." : "Refresh"}
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-
-        <CardContent className="relative">
-          {listBusy ? (
-            <SmctLoadingOverlay
-              label={
-                isRefreshing && !loading
-                  ? "Refreshing positions…"
-                  : "Loading positions…"
-              }
-            />
-          ) : null}
-
-          <div
-            className={cn(
-              "space-y-3",
-              listBusy && "pointer-events-none opacity-40 min-h-[280px]"
+            {showRecent24h && (
+              <div className="flex flex-col gap-1.5 text-xs text-gray-600">
+                <span>
+                  Showing positions created in the last 24 hours (newest first).
+                </span>
+                <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-green-900" />
+                    0–8h
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-blue-600" />
+                    8–16h
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-orange-600" />
+                    16–24h
+                  </span>
+                </span>
+              </div>
             )}
-          >
+          </div>
+        }
+      >
+        <div className="rounded-lg border border-slate-200/80 bg-white p-2.5 shadow-sm sm:rounded-xl sm:p-3">
+          <div className={cn("space-y-2.5", listBusy && "min-h-[280px]")}>
             {loading ? (
               Array.from({ length: itemsPerPage }).map((_, i) => (
                 <div
@@ -413,18 +430,18 @@ export default function PositionsTab() {
               })
             )}
           </div>
+        </div>
 
-          {!listBusy && totalPages > 1 && (
-            <EvaluationsPagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              total={total}
-              perPage={itemsPerPage}
-              onPageChange={(page) => setCurrentPage(page)}
-            />
-          )}
-        </CardContent>
-      </Card>
+      {!listBusy && totalPages > 1 && (
+        <EvaluationsPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          total={total}
+          perPage={itemsPerPage}
+          onPageChange={(page) => setCurrentPage(page)}
+        />
+      )}
+      </ManagementPageShell>
 
       <AddPositionModal
         open={isAddModalOpen}
@@ -456,7 +473,7 @@ export default function PositionsTab() {
         onUpdated={refreshPositions}
         onUpdatingChange={setIsUpdating}
       />
-    </div>
+    </>
   );
 }
 

@@ -1187,6 +1187,24 @@ export const apiService = {
   // OTHER MISSING ENDPOINTS
   // ============================================
 
+  /** Admin activity logs for deleted users and deleted evaluations. */
+  getActivityLogs: async (params?: {
+    search?: string;
+    type?: "all" | "user" | "evaluation" | string;
+    page?: number;
+    per_page?: number;
+  }): Promise<any> => {
+    const response = await api.get("/activityLogs", {
+      params: {
+        search: params?.search ?? "",
+        type: params?.type ?? "all",
+        page: params?.page ?? 1,
+        per_page: params?.per_page ?? 10,
+      },
+    });
+    return response.data;
+  },
+
   // Get all roles
   getAllRoles: async (): Promise<any[]> => {
     const response = await api.get("/getAllRoles");

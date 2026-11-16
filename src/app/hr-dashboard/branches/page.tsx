@@ -1,7 +1,17 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Loader2, Pencil, Plus, Trash2, Users } from "lucide-react";
+import {
+  Loader2,
+  MapPin,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Search,
+  Trash2,
+  Users,
+  X,
+} from "lucide-react";
 import {
   Card,
   CardContent,
@@ -37,7 +47,7 @@ import { parseSubordinateEmployeesAndEvaluators } from "@/lib/subordinateLists";
 import EvaluationsPagination from "@/components/paginationComponent";
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
-import SmctLoadingOverlay from "@/components/SmctLoadingOverlay";
+import ManagementPageShell from "@/components/management/ManagementPageShell";
 import BranchEmployeesModal, {
   BranchEmployee,
 } from "@/components/hr/BranchEmployeesModal";
@@ -558,315 +568,258 @@ export default function DepartmentsTab() {
   const listBusy = loading || isRefreshing;
 
   return (
-    <div className="relative  overflow-y-auto">
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <div className="w-1/2">
-              <CardTitle>Branches</CardTitle>
-              <CardDescription>
-                View and manage branches information
-              </CardDescription>
-              <div className="relative flex-1 mt-5">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                  <svg
-                    className="h-5 w-5 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle cx="11" cy="11" r="8"></circle>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                  </svg>
-                </span>
+    <>
+      <ManagementPageShell
+        title="Branches"
+        description="View and manage branches information."
+        icon={MapPin}
+        busy={listBusy}
+        busyLabel={
+          isRefreshing && !loading ? "Refreshing branches…" : "Loading branches…"
+        }
+        toolbar={
+          <div className="flex flex-col gap-2.5 lg:flex-row lg:items-end lg:justify-between lg:gap-3">
+            <div className="w-full lg:max-w-md">
+              <Label
+                htmlFor="branches-search"
+                className="mb-1 block cursor-pointer text-[0.7rem] font-medium text-slate-600 sm:text-xs"
+              >
+                Search
+              </Label>
+              <div className="relative">
+                <Search
+                  className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400"
+                  aria-hidden
+                />
                 <Input
+                  id="branches-search"
                   placeholder="Search by branch, branch code, branch name, acronym"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pr-10 pl-10"
+                  className="h-8 w-full pl-8 pr-8 text-xs sm:h-9 sm:text-sm"
                 />
                 {searchTerm && (
                   <button
                     onClick={() => setSearchTerm("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-600 transition-colors"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-slate-600"
+                    title="Clear search"
                     aria-label="Clear search"
+                    type="button"
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-6 w-6"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
+                    <X className="h-3.5 w-3.5" aria-hidden />
                   </button>
                 )}
               </div>
             </div>
-            <div className="flex space-x-2">
+            <div className="flex gap-2">
               <Button
                 onClick={() => setIsAddModalOpen(true)}
-                className="flex items-center gap-2 bg-green-600 text-white hover:bg-green-700 hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+                className="h-8 cursor-pointer gap-1.5 bg-green-600 px-3 text-xs text-white hover:bg-green-700 hover:text-white sm:h-9 sm:text-sm"
               >
-                <Plus className="h-5 w-5" />
+                <Plus className="h-3.5 w-3.5" aria-hidden />
                 Add Branch
               </Button>
               <Button
-                variant="outline"
                 onClick={refreshData}
                 disabled={isRefreshing}
-                className="flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700 hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+                className="h-8 cursor-pointer gap-1.5 bg-blue-600 px-3 text-xs text-white hover:bg-blue-700 hover:text-white disabled:opacity-70 sm:h-9 sm:text-sm"
               >
-                {isRefreshing ? (
-                  <>
-                    <svg
-                      className="animate-spin h-5 w-5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      ></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
-                    </svg>
-                    Refreshing...
-                  </>
-                ) : (
-                  <>
-                    <svg
-                      className="h-5 w-5 font-bold"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                      />
-                    </svg>
-                    Refresh
-                  </>
-                )}
+                <RefreshCw
+                  className={cn("h-3.5 w-3.5", isRefreshing && "animate-spin")}
+                  aria-hidden
+                />
+                {isRefreshing ? "Refreshing..." : "Refresh"}
               </Button>
             </div>
           </div>
-        </CardHeader>
-        <CardContent className="relative">
-          {listBusy ? (
-            <SmctLoadingOverlay
-              label={
-                isRefreshing && !loading
-                  ? "Refreshing branches…"
-                  : "Loading branches…"
-              }
-            />
-          ) : null}
-
-          <div
-            className={cn(
-              listBusy && "pointer-events-none opacity-40",
-              listBusy && "min-h-[420px]"
-            )}
-          >
-            <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
-              {loading ? (
-                Array.from({ length: itemsPerPage }).map((_, index) => (
-                  <Card key={`skeleton-branch-${index}`} className="animate-pulse">
-                    <CardHeader>
-                      <div className="flex justify-between items-center">
-                        <Skeleton className="h-6 w-32" />
-                        <Skeleton className="h-5 w-20 rounded-full" />
-                      </div>
-                      <Skeleton className="h-4 w-40 mt-2" />
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="text-center p-3 bg-gray-100 rounded-lg">
-                          <Skeleton className="h-6 w-12 mx-auto mb-2" />
-                          <Skeleton className="h-3 w-16 mx-auto" />
+        }
+      >
+        <div className="rounded-lg border border-slate-200/80 bg-white p-2.5 shadow-sm sm:rounded-xl sm:p-3">
+            <div className={cn(listBusy && "min-h-[420px]")}>
+              <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
+                {loading ? (
+                  Array.from({ length: itemsPerPage }).map((_, index) => (
+                    <Card key={`skeleton-branch-${index}`} className="animate-pulse">
+                      <CardHeader>
+                        <div className="flex justify-between items-center">
+                          <Skeleton className="h-6 w-32" />
+                          <Skeleton className="h-5 w-20 rounded-full" />
                         </div>
-                        <div className="text-center p-3 bg-gray-100 rounded-lg">
-                          <Skeleton className="h-6 w-12 mx-auto mb-2" />
-                          <Skeleton className="h-3 w-16 mx-auto" />
+                        <Skeleton className="h-4 w-40 mt-2" />
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="text-center p-3 bg-gray-100 rounded-lg">
+                            <Skeleton className="h-6 w-12 mx-auto mb-2" />
+                            <Skeleton className="h-3 w-16 mx-auto" />
+                          </div>
+                          <div className="text-center p-3 bg-gray-100 rounded-lg">
+                            <Skeleton className="h-6 w-12 mx-auto mb-2" />
+                            <Skeleton className="h-3 w-16 mx-auto" />
+                          </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              ) : branches && Array.isArray(branches) && branches.length > 0 ? (
-                branches.map((branch) => {
-                    const headcounts = getBranchHeadcounts(branch);
-                    const isDeleting = deletingBranchId === branch.id;
-                    return (
-                      <Card
-                        key={branch.id}
-                        className={cn(
-                          "overflow-hidden transition-shadow duration-200 hover:shadow-md",
-                          isDeleting &&
-                            "animate-slide-out-right border-red-200 bg-red-50"
-                        )}
-                      >
-                        {isDeleting ? (
-                          <>
-                            <CardHeader>
-                              <div className="flex justify-between items-center">
-                                <Skeleton className="h-6 w-32" />
-                                <div className="flex items-center gap-2">
-                                  <Skeleton className="h-5 w-24 rounded-full" />
-                                  <Skeleton className="h-8 w-8 rounded" />
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : branches && Array.isArray(branches) && branches.length > 0 ? (
+                  branches.map((branch) => {
+                      const headcounts = getBranchHeadcounts(branch);
+                      const isDeleting = deletingBranchId === branch.id;
+                      return (
+                        <Card
+                          key={branch.id}
+                          className={cn(
+                            "overflow-hidden transition-shadow duration-200 hover:shadow-md",
+                            isDeleting &&
+                              "animate-slide-out-right border-red-200 bg-red-50"
+                          )}
+                        >
+                          {isDeleting ? (
+                            <>
+                              <CardHeader>
+                                <div className="flex justify-between items-center">
+                                  <Skeleton className="h-6 w-32" />
+                                  <div className="flex items-center gap-2">
+                                    <Skeleton className="h-5 w-24 rounded-full" />
+                                    <Skeleton className="h-8 w-8 rounded" />
+                                  </div>
                                 </div>
-                              </div>
-                              <Skeleton className="h-4 w-40 mt-2" />
-                              <Skeleton className="h-4 w-32 mt-2" />
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                              <div className="grid grid-cols-2 gap-4">
-                                <div className="text-center p-3 bg-gray-100 rounded-lg">
-                                  <Skeleton className="h-6 w-12 mx-auto mb-2" />
-                                  <Skeleton className="h-3 w-16 mx-auto" />
+                                <Skeleton className="h-4 w-40 mt-2" />
+                                <Skeleton className="h-4 w-32 mt-2" />
+                              </CardHeader>
+                              <CardContent className="space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="text-center p-3 bg-gray-100 rounded-lg">
+                                    <Skeleton className="h-6 w-12 mx-auto mb-2" />
+                                    <Skeleton className="h-3 w-16 mx-auto" />
+                                  </div>
+                                  <div className="text-center p-3 bg-gray-100 rounded-lg">
+                                    <Skeleton className="h-6 w-12 mx-auto mb-2" />
+                                    <Skeleton className="h-3 w-16 mx-auto" />
+                                  </div>
                                 </div>
-                                <div className="text-center p-3 bg-gray-100 rounded-lg">
-                                  <Skeleton className="h-6 w-12 mx-auto mb-2" />
-                                  <Skeleton className="h-3 w-16 mx-auto" />
-                                </div>
-                              </div>
-                            </CardContent>
-                          </>
-                        ) : (
-                          <>
-                            <CardHeader className="pb-3">
-                              <CardTitle className="flex items-start justify-between gap-2 text-base sm:text-lg">
-                                <span className="min-w-0 flex-1 truncate pr-1">
-                                  {branch.branch_name} / {branch.branch_code}
-                                </span>
-                                <div className="flex shrink-0 items-center gap-1">
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => openEditBranch(branch)}
-                                    disabled={
-                                      deletingBranchId !== null ||
-                                      isUpdatingBranch
-                                    }
-                                    aria-label={`Edit ${branch.branch_name}`}
-                                    className="h-9 w-9 touch-manipulation p-0 text-blue-600 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-                                  >
-                                    <Pencil className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => {
-                                      if (headcounts.total > 0) {
-                                        setBranchWithEmployees(branch);
-                                        setIsAlertDialogOpen(true);
-                                      } else {
-                                        setBranchesToDelete(branch);
-                                        setIsDeleteModalOpen(true);
+                              </CardContent>
+                            </>
+                          ) : (
+                            <>
+                              <CardHeader className="pb-3">
+                                <CardTitle className="flex items-start justify-between gap-2 text-base sm:text-lg">
+                                  <span className="min-w-0 flex-1 truncate pr-1">
+                                    {branch.branch_name} / {branch.branch_code}
+                                  </span>
+                                  <div className="flex shrink-0 items-center gap-1">
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => openEditBranch(branch)}
+                                      disabled={
+                                        deletingBranchId !== null ||
+                                        isUpdatingBranch
                                       }
-                                    }}
-                                    disabled={deletingBranchId !== null}
-                                    aria-label={`Delete ${branch.branch_name}`}
-                                    className="h-9 w-9 touch-manipulation p-0 text-red-600 hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </CardTitle>
-                              <CardDescription className="truncate text-xs sm:text-sm">
-                                {branch.branch} · {branch.acronym}
-                              </CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-3 pt-0 sm:space-y-4">
-                              <div className="grid grid-cols-1 gap-3 min-[400px]:grid-cols-2 sm:gap-4">
-                                <div
-                                  className={cn(
-                                    BRANCH_STAT_TILE_CLASS,
-                                    "border-blue-100/80 bg-blue-50 hover:border-blue-200 hover:shadow-sm"
-                                  )}
-                                >
-                                  <div>
-                                    <div className="text-2xl font-bold tabular-nums text-blue-600 sm:text-3xl">
-                                      {headcounts.employees}
-                                    </div>
-                                    <div className="mt-0.5 text-xs font-medium text-gray-600 sm:text-sm">
-                                      Employees
-                                    </div>
+                                      aria-label={`Edit ${branch.branch_name}`}
+                                      className="h-9 w-9 touch-manipulation p-0 text-blue-600 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => {
+                                        if (headcounts.total > 0) {
+                                          setBranchWithEmployees(branch);
+                                          setIsAlertDialogOpen(true);
+                                        } else {
+                                          setBranchesToDelete(branch);
+                                          setIsDeleteModalOpen(true);
+                                        }
+                                      }}
+                                      disabled={deletingBranchId !== null}
+                                      aria-label={`Delete ${branch.branch_name}`}
+                                      className="h-9 w-9 touch-manipulation p-0 text-red-600 hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
                                   </div>
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() =>
-                                      void openBranchEmployeesModal(branch)
-                                    }
+                                </CardTitle>
+                                <CardDescription className="truncate text-xs sm:text-sm">
+                                  {branch.branch} · {branch.acronym}
+                                </CardDescription>
+                              </CardHeader>
+                              <CardContent className="space-y-3 pt-0 sm:space-y-4">
+                                <div className="grid grid-cols-1 gap-3 min-[400px]:grid-cols-2 sm:gap-4">
+                                  <div
                                     className={cn(
-                                      BRANCH_STAT_ACTION_BTN_CLASS,
-                                      "border-blue-700 bg-blue-600 text-white hover:bg-blue-700 hover:text-white"
+                                      BRANCH_STAT_TILE_CLASS,
+                                      "border-blue-100/80 bg-blue-50 hover:border-blue-200 hover:shadow-sm"
                                     )}
                                   >
-                                    <Users className="h-4 w-4 shrink-0" />
-                                    View employees
-                                  </Button>
-                                </div>
-                                <div
-                                  className={cn(
-                                    BRANCH_STAT_TILE_CLASS,
-                                    "border-green-100/80 bg-green-50 hover:border-green-200 hover:shadow-sm"
-                                  )}
-                                >
-                                  <div>
-                                    <div className="text-2xl font-bold tabular-nums text-green-600 sm:text-3xl">
-                                      {headcounts.evaluators}
+                                    <div>
+                                      <div className="text-2xl font-bold tabular-nums text-blue-600 sm:text-3xl">
+                                        {headcounts.employees}
+                                      </div>
+                                      <div className="mt-0.5 text-xs font-medium text-gray-600 sm:text-sm">
+                                        Employees
+                                      </div>
                                     </div>
-                                    <div className="mt-0.5 text-xs font-medium text-gray-600 sm:text-sm">
-                                      Evaluators
-                                    </div>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() =>
+                                        void openBranchEmployeesModal(branch)
+                                      }
+                                      className={cn(
+                                        BRANCH_STAT_ACTION_BTN_CLASS,
+                                        "border-blue-700 bg-blue-600 text-white hover:bg-blue-700 hover:text-white"
+                                      )}
+                                    >
+                                      <Users className="h-4 w-4 shrink-0" />
+                                      View employees
+                                    </Button>
                                   </div>
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() =>
-                                      void openBranchManagersModal(branch)
-                                    }
+                                  <div
                                     className={cn(
-                                      BRANCH_STAT_ACTION_BTN_CLASS,
-                                      "border-green-700 bg-green-600 text-white hover:bg-green-700 hover:text-white"
+                                      BRANCH_STAT_TILE_CLASS,
+                                      "border-green-100/80 bg-green-50 hover:border-green-200 hover:shadow-sm"
                                     )}
                                   >
-                                    <Users className="h-4 w-4 shrink-0" />
-                                    View evaluators
-                                  </Button>
+                                    <div>
+                                      <div className="text-2xl font-bold tabular-nums text-green-600 sm:text-3xl">
+                                        {headcounts.evaluators}
+                                      </div>
+                                      <div className="mt-0.5 text-xs font-medium text-gray-600 sm:text-sm">
+                                        Evaluators
+                                      </div>
+                                    </div>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() =>
+                                        void openBranchManagersModal(branch)
+                                      }
+                                      className={cn(
+                                        BRANCH_STAT_ACTION_BTN_CLASS,
+                                        "border-green-700 bg-green-600 text-white hover:bg-green-700 hover:text-white"
+                                      )}
+                                    >
+                                      <Users className="h-4 w-4 shrink-0" />
+                                      View evaluators
+                                    </Button>
+                                  </div>
                                 </div>
-                              </div>
-                            </CardContent>
-                          </>
-                        )}
-                      </Card>
-                    );
-                  })
-              ) : null}
+                              </CardContent>
+                            </>
+                          )}
+                        </Card>
+                      );
+                    })
+                ) : null}
+              </div>
             </div>
-          </div>
+        </div>
           {!listBusy &&
             branches &&
             Array.isArray(branches) &&
@@ -919,8 +872,7 @@ export default function DepartmentsTab() {
               }}
             />
           )}
-        </CardContent>
-      </Card>
+      </ManagementPageShell>
 
       {/* Add Branch Modal */}
       <Dialog open={isAddModalOpen} onOpenChangeAction={setIsAddModalOpen}>
@@ -1419,6 +1371,6 @@ export default function DepartmentsTab() {
         isLoading={isBranchManagersLoading}
         dialogAnimationClass={dialogAnimationClass}
       />
-    </div>
+    </>
   );
 }
