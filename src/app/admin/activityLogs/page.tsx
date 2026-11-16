@@ -39,18 +39,104 @@ const SEARCH_DEBOUNCE_MS = 400;
 
 type ActivityLogTypeFilter = "all" | "user" | "evaluation";
 
+/** Normalized row used by the table UI. */
 type ActivityLogRow = {
   id: number;
-  action: string;
-  subject_type: string;
-  subject_id: number | null;
+  /** Backend `type`: `user` | `evaluation` (also accepts legacy action values). */
+  type: "user" | "evaluation" | string;
   subject_label: string;
-  subject_meta: string | null;
-  deleted_by_id: number | null;
+  details_text: string;
   deleted_by_name: string | null;
-  details: Record<string, unknown> | null;
   created_at: string;
 };
+
+type RawActivityLog = Record<string, unknown>;
+
+function displayNameFromUser(u: Record<string, unknown> | null | undefined): string {
+  if (!u) return "";
+  const full = String(u.full_name ?? "").trim();
+  const fn = String(u.fname ?? "").trim();
+  const ln = String(u.lname ?? "").trim();
+  return full || `${fn} ${ln}`.trim();
+}
+
+/** Pull a subject line from backend `info` text. */
+function subjectFromInfo(type: string, info: string): string {
+  const text = info.trim();
+  if (!text) return "—";
+
+  if (type === "user") {
+    const m = text.match(/user\s+name\s+(.+?)\s+has been deleted/i);
+    if (m?.[1]) return m[1].trim();
+    return text;
+  }
+
+  const employee = text.match(/Employee:\s*(.+)/i)?.[1]?.trim();
+  const evalType = text.match(/Evaluation Type:\s*(.+)/i)?.[1]?.trim();
+  if (employee && evalType) return `${employee} · ${evalType}`;
+  if (employee) return employee;
+
+  const firstLine = text.split(/\r?\n/).map((l) => l.trim()).find(Boolean);
+  return firstLine || text;
+}
+
+function normalizeActivityLog(raw: RawActivityLog): ActivityLogRow {
+  const typeRaw = String(raw.type ?? raw.action ?? raw.subject_type ?? "")
+    .trim()
+    .toLowerCase();
+  const type =
+    typeRaw === "user" ||
+    typeRaw === "user_deleted" ||
+    typeRaw === "deleted_user"
+      ? "user"
+      : typeRaw === "evaluation" ||
+          typeRaw === "evaluation_deleted" ||
+          typeRaw === "deleted_evaluation"
+        ? "evaluation"
+        : typeRaw || "evaluation";
+
+  const info = String(raw.info ?? "").trim();
+  const legacyLabel = String(raw.subject_label ?? "").trim();
+  const legacyDetails =
+    raw.details && typeof raw.details === "object"
+      ? (raw.details as Record<string, unknown>)
+      : null;
+
+  let detailsText = info;
+  if (!detailsText && legacyDetails) {
+    detailsText = Object.entries(legacyDetails)
+      .filter(([, v]) => v != null && String(v).trim() !== "")
+      .map(([k, v]) => `${k}: ${String(v)}`)
+      .join(" · ");
+  }
+
+  const deletedByObj =
+    (raw.deletedBy && typeof raw.deletedBy === "object"
+      ? (raw.deletedBy as Record<string, unknown>)
+      : null) ??
+    (raw.deleted_by && typeof raw.deleted_by === "object"
+      ? (raw.deleted_by as Record<string, unknown>)
+      : null);
+
+  const deletedByName =
+    displayNameFromUser(deletedByObj) ||
+    String(raw.deleted_by_name ?? "").trim() ||
+    null;
+
+  const subject =
+    legacyLabel ||
+    (info ? subjectFromInfo(type, info) : "") ||
+    (type === "user" ? "Deleted user" : "Deleted evaluation");
+
+  return {
+    id: Number(raw.id) || 0,
+    type,
+    subject_label: subject,
+    details_text: detailsText || "—",
+    deleted_by_name: deletedByName,
+    created_at: String(raw.created_at ?? ""),
+  };
+}
 
 function formatLogDate(raw: string | null | undefined): string {
   if (!raw) return "—";
@@ -96,10 +182,7 @@ function getActivityLogRowClassName(log: ActivityLogRow): string {
 }
 
 function isUserDeleted(log: ActivityLogRow): boolean {
-  return (
-    log.action === "user_deleted" ||
-    String(log.subject_type ?? "").toLowerCase() === "user"
-  );
+  return String(log.type ?? "").toLowerCase() === "user";
 }
 
 function typeBadge(log: ActivityLogRow) {
@@ -118,33 +201,10 @@ function typeBadge(log: ActivityLogRow) {
 }
 
 function detailSummary(log: ActivityLogRow): string {
-  const details = log.details ?? {};
-  if (isUserDeleted(log)) {
-    const email =
-      (typeof details.email === "string" && details.email) ||
-      log.subject_meta ||
-      "";
-    const empId =
-      typeof details.emp_id === "string" || typeof details.emp_id === "number"
-        ? String(details.emp_id)
-        : "";
-    return [email, empId ? `ID: ${empId}` : ""].filter(Boolean).join(" · ") || "—";
-  }
-
-  const employee =
-    typeof details.employee_name === "string" ? details.employee_name : "";
-  const evaluator =
-    typeof details.evaluator_name === "string" ? details.evaluator_name : "";
-  const status =
-    (typeof details.status === "string" && details.status) ||
-    log.subject_meta ||
-    "";
-  const parts = [
-    employee ? `Employee: ${employee}` : "",
-    evaluator ? `Evaluator: ${evaluator}` : "",
-    status ? `Status: ${status}` : "",
-  ].filter(Boolean);
-  return parts.join(" · ") || "—";
+  const text = String(log.details_text ?? "").trim();
+  if (!text || text === "—") return "—";
+  // Keep multi-line backend `info` readable in a single cell.
+  return text.replace(/\s*\n\s*/g, " · ");
 }
 
 function extractLogsPayload(raw: unknown): {
@@ -159,24 +219,29 @@ function extractLogsPayload(raw: unknown): {
   const root = raw as Record<string, unknown>;
   const logs = (root.logs ?? root.data ?? root) as Record<string, unknown>;
 
+  let data: RawActivityLog[] = [];
+  if (Array.isArray(logs)) {
+    data = logs as RawActivityLog[];
+  } else if (Array.isArray(logs.data)) {
+    data = logs.data as RawActivityLog[];
+  } else if (Array.isArray(root.data)) {
+    data = root.data as RawActivityLog[];
+  }
+
+  const rows = data.map(normalizeActivityLog);
+
   if (Array.isArray(logs)) {
     return {
-      rows: logs as ActivityLogRow[],
-      total: logs.length,
+      rows,
+      total: rows.length,
       lastPage: 1,
       perPage: TABLE_PAGE_SIZE,
     };
   }
 
-  const data = Array.isArray(logs.data)
-    ? (logs.data as ActivityLogRow[])
-    : Array.isArray(root.data)
-      ? (root.data as ActivityLogRow[])
-      : [];
-
   return {
-    rows: data,
-    total: Number(logs.total ?? data.length) || 0,
+    rows,
+    total: Number(logs.total ?? rows.length) || 0,
     lastPage: Number(logs.last_page ?? 1) || 1,
     perPage: Number(logs.per_page ?? TABLE_PAGE_SIZE) || TABLE_PAGE_SIZE,
   };
