@@ -24,6 +24,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -33,7 +40,6 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import SmctLoadingOverlay from "@/components/SmctLoadingOverlay";
-import { Combobox } from "@/components/ui/combobox";
 import EvaluationsPagination from "@/components/paginationComponent";
 import {
   Dialog,
@@ -55,10 +61,22 @@ import {
   violationRowHighlightVariant,
 } from "@/lib/memorandumViolationRowHighlight";
 
-/** Pages to scan when building the month filter (per_page × this ≈ max rows considered). */
-const MONTH_FILTER_PER_PAGE = 500;
-const MONTH_FILTER_MAX_PAGES = 40;
 const VIOLATIONS_CACHE_TTL_MS = 30_000;
+const SEARCH_DEBOUNCE_MS = 400;
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+] as const;
 /** Matches HR `ViolationSummaryPage` table chrome (padding, type scale, zebra rows). */
 const VIOLATION_SUMMARY_TABLE_CLASS =
   "min-w-[52rem] w-full [&_th]:h-auto [&_th]:min-h-8 [&_th]:px-2.5 [&_th]:py-2 [&_th]:align-middle [&_th]:text-[0.6rem] [&_th]:uppercase [&_th]:tracking-wide sm:[&_th]:min-h-9 sm:[&_th]:px-3 sm:[&_th]:py-2.5 sm:[&_th]:text-[0.65rem] [&_td]:min-w-0 [&_td]:px-2.5 [&_td]:py-2 [&_td]:align-top [&_td]:text-xs [&_td]:leading-snug sm:[&_td]:px-3 sm:[&_td]:py-2.5 sm:[&_td]:text-sm sm:[&_td]:leading-snug";
@@ -71,13 +89,19 @@ const violationsInFlightRequests = new Map<string, Promise<unknown>>();
 
 function getViolationsRequestKey(params: {
   search?: string;
-  month?: string;
+  month?: string | number;
+  year?: string | number;
   page?: number;
   per_page?: number;
 }): string {
   return JSON.stringify({
     search: params.search?.trim() ?? "",
-    month: params.month?.trim() ?? "",
+    month:
+      params.month === undefined || params.month === ""
+        ? ""
+        : String(params.month),
+    year:
+      params.year === undefined || params.year === "" ? "" : String(params.year),
     page: params.page ?? 1,
     per_page: params.per_page ?? 10,
   });
@@ -86,7 +110,8 @@ function getViolationsRequestKey(params: {
 async function getMyViolationsRequest(
   params: {
     search?: string;
-    month?: string;
+    month?: string | number;
+    year?: string | number;
     page?: number;
     per_page?: number;
   },
@@ -138,29 +163,63 @@ export type MemorandumViolationRow = {
   created_at?: string | null;
 };
 
-/** YYYY-MM from violation_date for grouping; null if unparseable. */
-function violationDateToYearMonth(violationDate: string): string | null {
-  const v = violationDate?.trim();
-  if (!v) return null;
-  try {
-    const iso = v.includes("T") ? v : `${v}T12:00:00`;
-    const d = parseISO(iso);
-    if (Number.isNaN(d.getTime())) return null;
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-  } catch {
-    return null;
+/** Calendar year from a violation_date string. */
+function yearFromViolationDateString(raw: string): number | null {
+  const s = raw.trim();
+  if (!s) return null;
+  const m = s.match(/^(\d{4})-\d{2}-\d{2}/);
+  if (m) {
+    const y = parseInt(m[1], 10);
+    if (y >= 1990 && y <= 2100) return y;
   }
+  const t = Date.parse(s);
+  if (!Number.isNaN(t)) {
+    const y = new Date(t).getFullYear();
+    if (y >= 1990 && y <= 2100) return y;
+  }
+  return null;
 }
 
-function formatYearMonthLabel(ym: string): string {
-  const parts = ym.split("-");
-  const y = Number(parts[0]);
-  const m = Number(parts[1]);
-  if (!y || !m) return ym;
-  return new Date(y, m - 1, 1).toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
+function parseYearValue(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    const y = Math.trunc(value);
+    if (y >= 1990 && y <= 2100) return y;
+  }
+  if (typeof value === "string" && value.trim() !== "") {
+    const y = parseInt(value.trim(), 10);
+    if (Number.isFinite(y) && y >= 1990 && y <= 2100) return y;
+  }
+  return null;
+}
+
+/** Parse API `years` list, e.g. `[{ "years": 2026 }]`. */
+function extractYearsFromViolationResponse(raw: unknown): number[] {
+  if (!raw || typeof raw !== "object") return [];
+  const root = raw as Record<string, unknown>;
+  const payload =
+    root.data && typeof root.data === "object" && !Array.isArray(root.data)
+      ? (root.data as Record<string, unknown>)
+      : root;
+
+  const sources = [root.years, payload.years, root.available_years, payload.available_years];
+  const found = new Set<number>();
+
+  for (const source of sources) {
+    if (!Array.isArray(source)) continue;
+    for (const item of source) {
+      if (item == null) continue;
+      if (typeof item === "object") {
+        const row = item as Record<string, unknown>;
+        const y = parseYearValue(row.years ?? row.year ?? row.value);
+        if (y !== null) found.add(y);
+        continue;
+      }
+      const y = parseYearValue(item);
+      if (y !== null) found.add(y);
+    }
+  }
+
+  return Array.from(found).sort((a, b) => b - a);
 }
 
 function mapViolationRow(r: Record<string, unknown>): MemorandumViolationRow {
@@ -372,7 +431,13 @@ export default function MyViolationsPanel() {
   const [refreshing, setRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [monthFilter, setMonthFilter] = useState<string>("all");
+  const [monthFilter, setMonthFilter] = useState<string>(() =>
+    String(new Date().getMonth() + 1)
+  );
+  const [yearFilter, setYearFilter] = useState<string>(() =>
+    String(new Date().getFullYear())
+  );
+  const [apiYears, setApiYears] = useState<number[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -383,9 +448,35 @@ export default function MyViolationsPanel() {
 
   const listContextKey = useMemo(
     () =>
-      `${currentPage}|${debouncedSearch}|${monthFilter}|${itemsPerPage}`,
-    [currentPage, debouncedSearch, monthFilter, itemsPerPage]
+      `${currentPage}|${debouncedSearch}|${monthFilter}|${yearFilter}|${itemsPerPage}`,
+    [currentPage, debouncedSearch, monthFilter, yearFilter, itemsPerPage]
   );
+
+  const periodLabel = useMemo(() => {
+    const m = Number(monthFilter);
+    const name =
+      Number.isFinite(m) && m >= 1 && m <= 12 ? MONTH_NAMES[m - 1] : "Selected month";
+    return `${name} ${yearFilter}`;
+  }, [monthFilter, yearFilter]);
+
+  const yearOptions = useMemo(() => {
+    const set = new Set<number>();
+    for (const y of apiYears) set.add(y);
+    const yf = Number(yearFilter);
+    if (Number.isFinite(yf) && yf >= 1990 && yf <= 2100) set.add(yf);
+    for (const row of rows) {
+      const y = yearFromViolationDateString(row.violation_date);
+      if (y !== null) set.add(y);
+    }
+    if (apiYears.length === 0) {
+      const current = new Date().getFullYear();
+      for (let y = current; y >= current - 5; y--) set.add(y);
+    }
+    const list = Array.from(set).sort((a, b) => b - a);
+    return list.length > 0 ? list : [new Date().getFullYear()];
+  }, [apiYears, rows, yearFilter]);
+
+  const isSearchPending = searchTerm.trim() !== debouncedSearch;
 
   const viewerDisplayName = useMemo(() => {
     if (!user) return null;
@@ -405,9 +496,6 @@ export default function MyViolationsPanel() {
     return "other";
   }, [viewFileUrl]);
 
-  const [availableMonths, setAvailableMonths] = useState<string[]>([]);
-  const [monthsLoading, setMonthsLoading] = useState(false);
-  const monthsLoadedRef = useRef(false);
   const loadRequestIdRef = useRef(0);
   const clientActivityAtRef = useRef<Map<string, number>>(new Map());
   const previousRowsByIdRef = useRef<Map<string, string>>(new Map());
@@ -417,100 +505,19 @@ export default function MyViolationsPanel() {
   const listBusy = loading || refreshing;
   const showInitialSkeleton = loading && !refreshing;
 
-  const fetchAvailableMonths = useCallback(async (options?: { force?: boolean }) => {
-    if (options?.force) {
-      monthsLoadedRef.current = false;
-    }
-    monthsLoadedRef.current = true;
-    setMonthsLoading(true);
-    try {
-      const ymSet = new Set<string>();
-      let page = 1;
-      let lastPage = 1;
-      do {
-        const raw = await getMyViolationsRequest(
-          {
-            search: "",
-            month: "",
-            page,
-            per_page: MONTH_FILTER_PER_PAGE,
-          },
-          options
-        );
-        const { rows: pageRows, lastPage: lp } =
-          normalizeViolationsResponse(raw);
-        lastPage = Math.max(1, lp);
-        for (const r of pageRows) {
-          const ym = violationDateToYearMonth(r.violation_date);
-          if (ym) ymSet.add(ym);
-        }
-        page++;
-        if (page > MONTH_FILTER_MAX_PAGES) break;
-      } while (page <= lastPage);
-      setAvailableMonths(
-        Array.from(ymSet).sort((a, b) => b.localeCompare(a))
-      );
-    } catch (e) {
-      console.error(e);
-      setAvailableMonths([]);
-    } finally {
-      setMonthsLoading(false);
-    }
-  }, []);
-
-  const ensureMonthsLoaded = useCallback(() => {
-    if (monthsLoadedRef.current) return;
-    void fetchAvailableMonths();
-  }, [fetchAvailableMonths]);
-
   useEffect(() => {
-    if (rows.length === 0) return;
-
-    setAvailableMonths((prev) => {
-      const ymSet = new Set(prev);
-      for (const row of rows) {
-        const ym = violationDateToYearMonth(row.violation_date);
-        if (ym) ymSet.add(ym);
-      }
-      return Array.from(ymSet).sort((a, b) => b.localeCompare(a));
-    });
-  }, [rows]);
-
-  const monthOptions = useMemo(() => {
-    const opts: { value: string; label: string }[] = [
-      { value: "all", label: "All dates" },
-    ];
-    for (const ym of availableMonths) {
-      opts.push({ value: ym, label: formatYearMonthLabel(ym) });
-    }
-    return opts;
-  }, [availableMonths]);
-
-  useEffect(() => {
-    if (monthFilter === "all") return;
-    if (monthsLoading) return;
-    if (availableMonths.length === 0) {
-      setMonthFilter("all");
-      return;
-    }
-    if (!availableMonths.includes(monthFilter)) {
-      setMonthFilter("all");
-    }
-  }, [monthFilter, availableMonths, monthsLoading]);
-
-  useEffect(() => {
-    const t = window.setTimeout(() => setDebouncedSearch(searchTerm), 350);
+    const t = window.setTimeout(() => {
+      setDebouncedSearch(searchTerm.trim());
+      setCurrentPage(1);
+    }, SEARCH_DEBOUNCE_MS);
     return () => window.clearTimeout(t);
   }, [searchTerm]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [debouncedSearch, monthFilter]);
 
   const load = useCallback(
     async (options?: { softRefresh?: boolean }) => {
       const soft = options?.softRefresh === true;
       const requestId = ++loadRequestIdRef.current;
+      let keepBusyForYearAdjust = false;
       if (soft) {
         setRefreshing(true);
       } else {
@@ -520,13 +527,24 @@ export default function MyViolationsPanel() {
         const raw = await getMyViolationsRequest(
           {
             search: debouncedSearch,
-            month: monthFilter === "all" ? "" : monthFilter,
+            month: monthFilter,
+            year: yearFilter,
             page: currentPage,
             per_page: itemsPerPage,
           },
           { force: soft }
         );
         if (requestId !== loadRequestIdRef.current) return;
+        const yearsFromApi = extractYearsFromViolationResponse(raw);
+        if (yearsFromApi.length > 0) {
+          setApiYears(yearsFromApi);
+          const requestedYear = Number(yearFilter);
+          if (!yearsFromApi.includes(requestedYear)) {
+            keepBusyForYearAdjust = true;
+            setYearFilter(String(yearsFromApi[0]));
+            return;
+          }
+        }
         const { rows: next, total: tot, lastPage } =
           normalizeViolationsResponse(raw);
         setRows(next);
@@ -550,6 +568,9 @@ export default function MyViolationsPanel() {
           msg ?? "Please try again later."
         );
       } finally {
+        if (requestId !== loadRequestIdRef.current || keepBusyForYearAdjust) {
+          return;
+        }
         if (soft) {
           setRefreshing(false);
         } else {
@@ -557,7 +578,7 @@ export default function MyViolationsPanel() {
         }
       }
     },
-    [debouncedSearch, monthFilter, currentPage]
+    [debouncedSearch, monthFilter, yearFilter, currentPage]
   );
 
   useEffect(() => {
@@ -628,9 +649,10 @@ export default function MyViolationsPanel() {
                 My violations
               </CardTitle>
               <CardDescription className="text-base leading-relaxed text-white">
-                Memorandum violations recorded by HR. Search by title or pick a
-                month—only months that already have a violation are listed. Click a
-                row to open full details and attachments.
+                Memorandum violations recorded by HR for{" "}
+                <span className="font-medium text-white">{periodLabel}</span>. Search
+                by title, or choose a month and year. Click a row to open full
+                details and attachments.
               </CardDescription>
             </div>
           </div>
@@ -651,93 +673,112 @@ export default function MyViolationsPanel() {
               listBusy && "pointer-events-none opacity-40"
             )}
           >
-          <div className="flex flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-end">
-            <div className="flex min-w-0 w-full flex-1 flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-end">
-              <div className="min-w-0 w-full flex-1 space-y-2 lg:max-w-md">
-                <Label htmlFor="violations-search" className="text-sm font-medium">
-                  Search
-                </Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                  <Input
-                    id="violations-search"
-                    placeholder="Search by title…"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full min-w-0 pl-9 pr-9"
-                    autoComplete="off"
-                  />
-                  {searchTerm ? (
-                    <button
-                      type="button"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:text-foreground"
-                      onClick={() => setSearchTerm("")}
-                      aria-label="Clear search"
+          <div className="rounded-lg border border-slate-200/80 bg-white/90 p-2.5 shadow-sm backdrop-blur-sm sm:rounded-xl sm:p-3">
+            <div className="flex flex-col gap-2.5 lg:flex-row lg:items-end lg:justify-between lg:gap-3">
+              <div className="grid w-full min-w-0 flex-1 gap-2.5 sm:grid-cols-2 sm:gap-3 lg:grid-cols-12 lg:items-end">
+                <div className="space-y-1 sm:col-span-2 lg:col-span-5">
+                  <div className="flex items-center justify-between gap-2">
+                    <Label
+                      htmlFor="violations-search"
+                      className="text-[0.7rem] font-medium text-slate-700 sm:text-xs"
                     >
-                      ×
-                    </button>
-                  ) : null}
+                      Search
+                    </Label>
+                    {isSearchPending ? (
+                      <span className="text-[0.6rem] text-muted-foreground sm:text-[0.65rem]">
+                        Updating…
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="relative">
+                    <Search
+                      className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground sm:left-2.5"
+                      aria-hidden
+                    />
+                    <Input
+                      id="violations-search"
+                      placeholder="Title, offense…"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="h-8 w-full min-w-0 pl-7 pr-7 text-xs sm:h-9 sm:pl-8 sm:pr-8 sm:text-sm"
+                      autoComplete="off"
+                    />
+                    {searchTerm ? (
+                      <button
+                        type="button"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-slate-100 hover:text-foreground"
+                        onClick={() => setSearchTerm("")}
+                        aria-label="Clear search"
+                      >
+                        ×
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+                <div className="space-y-1 lg:col-span-3">
+                  <Label className="text-[0.7rem] font-medium text-slate-700 sm:text-xs">
+                    Month
+                  </Label>
+                  <Select
+                    value={monthFilter}
+                    onValueChange={(v) => {
+                      setMonthFilter(v);
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="h-8 w-full cursor-pointer bg-white text-xs sm:h-9 sm:text-sm">
+                      <SelectValue placeholder="Month" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MONTH_NAMES.map((name, idx) => (
+                        <SelectItem
+                          key={name}
+                          value={String(idx + 1)}
+                          className="cursor-pointer"
+                        >
+                          {name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1 lg:col-span-2">
+                  <Label className="text-[0.7rem] font-medium text-slate-700 sm:text-xs">
+                    Year
+                  </Label>
+                  <Select
+                    value={yearFilter}
+                    onValueChange={(v) => {
+                      setYearFilter(v);
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="h-8 w-full cursor-pointer bg-white text-xs sm:h-9 sm:text-sm">
+                      <SelectValue placeholder="Year" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {yearOptions.map((y) => (
+                        <SelectItem key={y} value={String(y)} className="cursor-pointer">
+                          {y}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
-              <div className="w-full min-w-0 space-y-2 lg:w-auto lg:min-w-[14rem]">
-                <Label className="text-sm font-medium">Violation month</Label>
-                <Combobox
-                  options={monthOptions}
-                  value={monthFilter}
-                  onValueChangeAction={(v) => setMonthFilter(String(v))}
-                  onOpenChange={(open) => {
-                    if (open) ensureMonthsLoaded();
-                  }}
-                  placeholder={
-                    monthsLoading ? "Loading months…" : "Pick a month"
-                  }
-                  searchPlaceholder="Search month…"
-                  emptyText="No month with violations."
-                  className="w-full min-w-0"
-                  disabled={monthsLoading}
-                />
-              </div>
-            </div>
-            <div className="flex w-full items-end justify-end lg:w-auto lg:shrink-0">
-              <div className="space-y-2">
-                <Label className="text-sm font-medium sr-only lg:not-sr-only">
-                  Refresh list
+              <div className="flex w-full shrink-0 flex-col gap-1 lg:w-auto lg:items-end">
+                <Label className="text-[0.7rem] font-medium text-slate-700 sm:text-xs lg:sr-only">
+                  Actions
                 </Label>
                 <Button
                   type="button"
-                  variant="outline"
                   disabled={listBusy}
-                  onClick={() => {
-                    monthsLoadedRef.current = false;
-                    void fetchAvailableMonths({ force: true });
-                    load({ softRefresh: true });
-                  }}
-                  className="w-full cursor-pointer bg-blue-500 text-white hover:bg-blue-600 hover:text-white gap-2 lg:w-auto disabled:opacity-70"
-                  title="Refresh violations list"
+                  onClick={() => load({ softRefresh: true })}
+                  className="h-8 w-full cursor-pointer gap-1.5 bg-blue-600 px-3 text-xs text-white shadow-sm hover:bg-blue-700 hover:text-white lg:w-auto sm:h-9 sm:gap-2 sm:px-4 sm:text-sm disabled:opacity-70"
+                  title="Reload violation list"
                 >
-                  {listBusy ? (
-                    <span className="flex items-center gap-2">
-                      <span className="relative h-8 w-8 shrink-0">
-                        <span className="absolute inset-0 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                        <span className="absolute inset-0 flex items-center justify-center">
-                          <img
-                            src="/smct.png"
-                            alt=""
-                            className="h-4 w-4 object-contain opacity-95"
-                            width={16}
-                            height={16}
-                            decoding="async"
-                          />
-                        </span>
-                      </span>
-                      <span>{refreshing ? "Refreshing…" : "Loading..."}</span>
-                    </span>
-                  ) : (
-                    <>
-                      <RefreshCw className="h-4 w-4 shrink-0" aria-hidden />
-                      Refresh
-                    </>
-                  )}
+                  <RefreshCw className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden />
+                  {listBusy && loading ? "Loading…" : "Refresh"}
                 </Button>
               </div>
             </div>
@@ -806,13 +847,10 @@ export default function MyViolationsPanel() {
                         />
                         <div className="max-w-sm space-y-0.5 sm:max-w-md">
                           <p className="text-xs font-medium text-slate-800 sm:text-sm">
-                            No violations found
-                            {debouncedSearch || monthFilter !== "all"
-                              ? " for the current filters."
-                              : "."}
+                            No records for {periodLabel}
                           </p>
                           <p className="text-[0.65rem] leading-relaxed text-slate-500 sm:text-xs">
-                            Try adjusting search or month, or refresh the list.
+                            Try another period, clear search, or refresh.
                           </p>
                         </div>
                       </div>

@@ -555,19 +555,28 @@ export const apiService = {
 
   /*
    * Logged-in employee: list memorandum violations recorded against them.
-   * Query: search (title etc.), month (YYYY-MM, optional), page, per_page.
-   * Backend should return a Laravel-style paginator or { data: [], total, ... }.
+   * Query: search, month (1–12), year, page, per_page — same period filters as
+   * the HR / admin violation summary.
+   * Backend should return a Laravel-style paginator or { data: [], total, years }.
    */
   getMyMemorandumViolations: async (params: {
     search?: string;
-    month?: string;
+    month?: string | number;
+    year?: string | number;
     page?: number;
     per_page?: number;
   }): Promise<any> => {
     const response = await api.get("/myMemorandumViolations", {
       params: {
         search: params.search?.trim() ?? "",
-        month: params.month?.trim() ?? "",
+        month:
+          params.month === undefined || params.month === ""
+            ? ""
+            : String(params.month),
+        year:
+          params.year === undefined || params.year === ""
+            ? ""
+            : String(params.year),
         page: params.page ?? 1,
         per_page: params.per_page ?? 10,
       },
