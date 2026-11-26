@@ -62,6 +62,8 @@ import {
 } from "@/lib/memorandumViolationRowHighlight";
 
 const VIOLATIONS_CACHE_TTL_MS = 30_000;
+const MY_VIOLATIONS_SCAN_PER_PAGE = 100;
+const MY_VIOLATIONS_SCAN_MAX_PAGES = 20;
 const SEARCH_DEBOUNCE_MS = 400;
 const MONTH_NAMES = [
   "January",
@@ -162,6 +164,30 @@ export type MemorandumViolationRow = {
   updated_at?: string | null;
   created_at?: string | null;
 };
+
+/** YYYY-MM for `/myMemorandumViolations`, which filters `month` as a year-month. */
+function selectedYearMonth(month: string, year: string): string {
+  const m = Number(month);
+  const y = Number(year);
+  if (!Number.isFinite(m) || m < 1 || m > 12 || !Number.isFinite(y)) return "";
+  return `${y}-${String(m).padStart(2, "0")}`;
+}
+
+function violationDateToYearMonth(violationDate: string): string | null {
+  const v = violationDate?.trim();
+  if (!v) return null;
+  const iso = v.match(/^(\d{4})-(\d{2})/);
+  if (iso) return `${iso[1]}-${iso[2]}`;
+  const t = Date.parse(v);
+  if (Number.isNaN(t)) return null;
+  const d = new Date(t);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function rowMatchesPeriod(row: MemorandumViolationRow, yearMonth: string): boolean {
+  if (!yearMonth) return true;
+  return violationDateToYearMonth(row.violation_date) === yearMonth;
+}
 
 /** Calendar year from a violation_date string. */
 function yearFromViolationDateString(raw: string): number | null {
@@ -369,6 +395,77 @@ function normalizeViolationsResponse(raw: unknown): {
   };
 }
 
+async function loadMyViolationsForPeriod(params: {
+  search: string;
+  yearMonth: string;
+  page: number;
+  perPage: number;
+  force?: boolean;
+}): Promise<{
+  raw: unknown;
+  rows: MemorandumViolationRow[];
+  total: number;
+  lastPage: number;
+}> {
+  const filteredRaw = await getMyViolationsRequest(
+    {
+      search: params.search,
+      month: params.yearMonth,
+      page: params.page,
+      per_page: params.perPage,
+    },
+    { force: params.force }
+  );
+  const filtered = normalizeViolationsResponse(filteredRaw);
+  const inPeriod = filtered.rows.filter((row) =>
+    rowMatchesPeriod(row, params.yearMonth)
+  );
+  const serverHonoredPeriod =
+    filtered.rows.length === 0 || inPeriod.length === filtered.rows.length;
+
+  if (serverHonoredPeriod && (filtered.rows.length > 0 || filtered.total > 0)) {
+    return {
+      raw: filteredRaw,
+      rows: inPeriod,
+      total: filtered.total,
+      lastPage: filtered.lastPage,
+    };
+  }
+
+  const matched: MemorandumViolationRow[] = [];
+  let scanPage = 1;
+  let scanLast = 1;
+  let scanRaw: unknown = filteredRaw;
+  do {
+    const raw = await getMyViolationsRequest(
+      {
+        search: params.search,
+        month: "",
+        page: scanPage,
+        per_page: MY_VIOLATIONS_SCAN_PER_PAGE,
+      },
+      { force: params.force }
+    );
+    scanRaw = raw;
+    const pageResult = normalizeViolationsResponse(raw);
+    scanLast = Math.max(1, pageResult.lastPage);
+    for (const row of pageResult.rows) {
+      if (rowMatchesPeriod(row, params.yearMonth)) matched.push(row);
+    }
+    if (pageResult.rows.length === 0 || pageResult.lastPage <= 1) break;
+    scanPage += 1;
+  } while (scanPage <= scanLast && scanPage <= MY_VIOLATIONS_SCAN_MAX_PAGES);
+
+  const page = Math.max(1, params.page);
+  const start = (page - 1) * params.perPage;
+  return {
+    raw: scanRaw,
+    rows: matched.slice(start, start + params.perPage),
+    total: matched.length,
+    lastPage: Math.max(1, Math.ceil(matched.length / params.perPage)),
+  };
+}
+
 function formatViolationDate(value: string): string {
   if (!value) return "—";
   try {
@@ -524,18 +621,16 @@ export default function MyViolationsPanel() {
         setLoading(true);
       }
       try {
-        const raw = await getMyViolationsRequest(
-          {
-            search: debouncedSearch,
-            month: monthFilter,
-            year: yearFilter,
-            page: currentPage,
-            per_page: itemsPerPage,
-          },
-          { force: soft }
-        );
+        const yearMonth = selectedYearMonth(monthFilter, yearFilter);
+        const loaded = await loadMyViolationsForPeriod({
+          search: debouncedSearch,
+          yearMonth,
+          page: currentPage,
+          perPage: itemsPerPage,
+          force: soft,
+        });
         if (requestId !== loadRequestIdRef.current) return;
-        const yearsFromApi = extractYearsFromViolationResponse(raw);
+        const yearsFromApi = extractYearsFromViolationResponse(loaded.raw);
         if (yearsFromApi.length > 0) {
           setApiYears(yearsFromApi);
           const requestedYear = Number(yearFilter);
@@ -545,8 +640,7 @@ export default function MyViolationsPanel() {
             return;
           }
         }
-        const { rows: next, total: tot, lastPage } =
-          normalizeViolationsResponse(raw);
+        const { rows: next, total: tot, lastPage } = loaded;
         setRows(next);
         setTotal(tot);
         setTotalPages(lastPage);
