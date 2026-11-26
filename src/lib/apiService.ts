@@ -555,8 +555,9 @@ export const apiService = {
 
   /*
    * Logged-in employee: list memorandum violations recorded against them.
-   * Query: search, month (1–12), year, page, per_page — same period filters as
-   * the HR / admin violation summary.
+   * Query: search, month (YYYY-MM, optional), year (optional), page, per_page.
+   * This route filters on `month` as YYYY-MM. The HR summary route is separate
+   * and uses month 1–12 plus year.
    * Backend should return a Laravel-style paginator or { data: [], total, years }.
    */
   getMyMemorandumViolations: async (params: {
